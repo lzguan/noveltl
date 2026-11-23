@@ -1,7 +1,7 @@
 import pytest
-from sqlalchemy import delete, func, insert, select
+from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.access import MemAccessContext
 from src.memory.agent.prompts.term_translation import term_translation_request_prompt
@@ -18,23 +18,27 @@ from src.novels.models import Chapter, ChapterContent
 from test_support.test_data.scenarios import DatabaseScenario
 
 
-def test_naming_context_reuses_alias_renderings_without_treating_them_as_exact_mappings(
-    test_db: Session, sample_scenario: DatabaseScenario
+async def test_naming_context_reuses_alias_renderings_without_treating_them_as_exact_mappings(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario
 ):
     source = sample_scenario.contents["chapter_1_v2"]
-    source.chapter_content_text = "Alpha meets Rejected."
+    await async_test_db.execute(
+        update(ChapterContent)
+        .where(ChapterContent.chapter_content_id == source.chapter_content_id)
+        .values(chapter_content_text="Alpha meets Rejected.")
+    )
     group = MemoryGroup(
         novel_id=sample_scenario.novels["novel_1"].novel_id, memory_group_name="Naming", memory_language="en"
     )
-    test_db.add(group)
-    test_db.flush()
-    alpha = access.create_term(test_db, group.memory_group_id, "Alpha")
-    beta = access.create_term(test_db, group.memory_group_id, "Beta")
-    rejected = access.create_term(test_db, group.memory_group_id, "Rejected")
+    async_test_db.add(group)
+    await async_test_db.flush()
+    alpha = await access.create_term(async_test_db, group.memory_group_id, "Alpha")
+    beta = await access.create_term(async_test_db, group.memory_group_id, "Beta")
+    rejected = await access.create_term(async_test_db, group.memory_group_id, "Rejected")
     rejected.review_status = ReviewStatus.REJECTED
     ctx = MemAccessContext(group.memory_group_id, source.chapter_id, source.chapter_content_id)
-    access.create_memory(
-        test_db,
+    await access.create_memory(
+        async_test_db,
         ctx,
         Creator.AGENT,
         MemoryType.RELATION,
@@ -42,110 +46,118 @@ def test_naming_context_reuses_alias_renderings_without_treating_them_as_exact_m
         "Alpha and Beta identify the same person.",
         mark="alias.persona",
     )
-    test_db.add(TermTranslation(term_id=beta.term_id, translation="Existing Persona", creator_type=Creator.USER))
-    test_db.flush()
-    context = term_translation_context(test_db, ctx)
+    async_test_db.add(TermTranslation(term_id=beta.term_id, translation="Existing Persona", creator_type=Creator.USER))
+    await async_test_db.flush()
+    context = await term_translation_context(async_test_db, ctx)
     assert context is not None
     assert [(term.term, term.kind) for term in context.requested_terms] == [("Alpha", None)]
     assert [mapping.model_dump(mode="json") for mapping in context.established_translations] == [
         {"term": "Beta", "translation": "Existing Persona", "review_status": "pending"}
     ]
-    assert read_term_translations(test_db, ctx, ["Alpha"]) == []
-    create_term_translation(test_db, ctx, "Alpha", "Alpha Rendering")
-    approved = test_db.get(TermTranslation, alpha.term_id)
+    assert await read_term_translations(async_test_db, ctx, ["Alpha"]) == []
+    await create_term_translation(async_test_db, ctx, "Alpha", "Alpha Rendering")
+    approved = await async_test_db.get(TermTranslation, alpha.term_id)
     assert approved is not None
     approved.translation, approved.review_status, approved.creator_type = (
         "Approved Alpha",
         ReviewStatus.APPROVED,
         Creator.USER,
     )
-    test_db.flush()
-    create_term_translation(test_db, ctx, "Alpha", "Must not overwrite")
-    test_db.expire_all()
-    assert test_db.scalar(select(func.count()).select_from(TermTranslation)) == 2
-    assert read_term_translations(test_db, ctx, ["Alpha"])[0].translation == "Approved Alpha"
-    assert term_translation_context(test_db, ctx) is None
+    await async_test_db.flush()
+    await create_term_translation(async_test_db, ctx, "Alpha", "Must not overwrite")
+    async_test_db.expunge_all()
+    assert await async_test_db.scalar(select(func.count()).select_from(TermTranslation)) == 2
+    assert (await read_term_translations(async_test_db, ctx, ["Alpha"]))[0].translation == "Approved Alpha"
+    assert await term_translation_context(async_test_db, ctx) is None
 
 
-def test_canonical_mapping_is_unique_shared_across_chapters_and_deleted_with_its_term(
-    test_db: Session, sample_scenario: DatabaseScenario
+async def test_canonical_mapping_is_unique_shared_across_chapters_and_deleted_with_its_term(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario
 ):
     """Naming and preparation share a current mapping independent of chapter scope."""
     source = sample_scenario.contents["chapter_1_v2"]
     group = MemoryGroup(
         novel_id=sample_scenario.novels["novel_1"].novel_id, memory_group_name="Shared naming", memory_language="en"
     )
-    test_db.add(group)
-    test_db.flush()
-    term = access.create_term(test_db, group.memory_group_id, "Alpha")
+    async_test_db.add(group)
+    await async_test_db.flush()
+    term = await access.create_term(async_test_db, group.memory_group_id, "Alpha")
     later = Chapter(novel_id=group.novel_id, chapter_num=999, chapter_title="Later", chapter_is_public=False)
-    test_db.add(later)
-    test_db.flush()
+    async_test_db.add(later)
+    await async_test_db.flush()
     later_source = ChapterContent(chapter_id=later.chapter_id, chapter_content_version=1, chapter_content_text="Alpha")
-    test_db.add(later_source)
-    test_db.flush()
+    async_test_db.add(later_source)
+    await async_test_db.flush()
     later_ctx = MemAccessContext(group.memory_group_id, later.chapter_id, later_source.chapter_content_id)
     earlier_ctx = MemAccessContext(group.memory_group_id, source.chapter_id, source.chapter_content_id)
-    create_term_translation(test_db, later_ctx, "Alpha", "First rendering")
-    create_term_translation(test_db, earlier_ctx, "Alpha", "Must not overwrite a pending choice")
-    assert read_term_translations(test_db, earlier_ctx, ["Alpha"])[0].translation == "First rendering"
-    with pytest.raises(IntegrityError), test_db.begin_nested():
-        test_db.execute(
-            insert(TermTranslation).values(term_id=term.term_id, translation="Duplicate", creator_type=Creator.AGENT)
-        )
-    test_db.execute(delete(GlossaryTerm).where(GlossaryTerm.term_id == term.term_id))
-    test_db.expire_all()
-    assert test_db.scalar(select(func.count()).select_from(TermTranslation)) == 0
+    await create_term_translation(async_test_db, later_ctx, "Alpha", "First rendering")
+    await create_term_translation(async_test_db, earlier_ctx, "Alpha", "Must not overwrite a pending choice")
+    assert (await read_term_translations(async_test_db, earlier_ctx, ["Alpha"]))[0].translation == "First rendering"
+    with pytest.raises(IntegrityError):
+        async with async_test_db.begin_nested():
+            await async_test_db.execute(
+                insert(TermTranslation).values(
+                    term_id=term.term_id, translation="Duplicate", creator_type=Creator.AGENT
+                )
+            )
+    await async_test_db.execute(delete(GlossaryTerm).where(GlossaryTerm.term_id == term.term_id))
+    async_test_db.expunge_all()
+    assert await async_test_db.scalar(select(func.count()).select_from(TermTranslation)) == 0
 
 
-def test_rejected_mappings_can_be_regenerated_and_rejected_source_terms_are_excluded(
-    test_db: Session, sample_scenario: DatabaseScenario
+async def test_rejected_mappings_can_be_regenerated_and_rejected_source_terms_are_excluded(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario
 ):
     source = sample_scenario.contents["chapter_1_v2"]
     group = MemoryGroup(
         novel_id=sample_scenario.novels["novel_1"].novel_id, memory_group_name="Retry naming", memory_language="en"
     )
-    test_db.add(group)
-    test_db.flush()
-    term = access.create_term(test_db, group.memory_group_id, "Alpha")
+    async_test_db.add(group)
+    await async_test_db.flush()
+    term = await access.create_term(async_test_db, group.memory_group_id, "Alpha")
+    term_id = term.term_id
     ctx = MemAccessContext(group.memory_group_id, source.chapter_id, source.chapter_content_id)
-    create_term_translation(test_db, ctx, "Alpha", "Rejected rendering")
-    row = test_db.get(TermTranslation, term.term_id)
+    await create_term_translation(async_test_db, ctx, "Alpha", "Rejected rendering")
+    row = await async_test_db.get(TermTranslation, term_id)
     assert row is not None
     row.review_status = ReviewStatus.REJECTED
-    test_db.flush()
-    assert read_term_translations(test_db, ctx, ["Alpha"]) == []
-    create_term_translation(test_db, ctx, "Alpha", "Replacement")
-    test_db.expire_all()
-    mapping = read_term_translations(test_db, ctx, ["Alpha"])[0]
+    await async_test_db.flush()
+    assert await read_term_translations(async_test_db, ctx, ["Alpha"]) == []
+    await create_term_translation(async_test_db, ctx, "Alpha", "Replacement")
+    async_test_db.expunge_all()
+    mapping = (await read_term_translations(async_test_db, ctx, ["Alpha"]))[0]
     assert mapping.translation == "Replacement" and mapping.review_status == ReviewStatus.PENDING
-    assert test_db.scalar(select(func.count()).select_from(TermTranslation)) == 1
-    term = test_db.get(GlossaryTerm, term.term_id)
+    assert await async_test_db.scalar(select(func.count()).select_from(TermTranslation)) == 1
+    term = await async_test_db.get(GlossaryTerm, term_id)
     assert term is not None
     term.review_status = ReviewStatus.REJECTED
-    test_db.flush()
-    assert read_term_translations(test_db, ctx, ["Alpha"]) == []
+    await async_test_db.flush()
+    assert await read_term_translations(async_test_db, ctx, ["Alpha"]) == []
 
 
-def test_naming_context_includes_usable_naming_conventions_only_when_enabled(
-    test_db: Session, sample_scenario: DatabaseScenario
+async def test_naming_context_includes_usable_naming_conventions_only_when_enabled(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario
 ):
     """Naming jobs that opt in see the editor's naming policy; others keep their old prompt."""
     source = sample_scenario.contents["chapter_1_v2"]
-    source.chapter_content_text = "Alpha appears."
+    await async_test_db.execute(
+        update(ChapterContent)
+        .where(ChapterContent.chapter_content_id == source.chapter_content_id)
+        .values(chapter_content_text="Alpha appears.")
+    )
     group = MemoryGroup(
         novel_id=sample_scenario.novels["novel_1"].novel_id, memory_group_name="Naming", memory_language="en"
     )
-    test_db.add(group)
-    test_db.flush()
-    access.create_term(test_db, group.memory_group_id, "Alpha")
+    async_test_db.add(group)
+    await async_test_db.flush()
+    await access.create_term(async_test_db, group.memory_group_id, "Alpha")
     for title, category, review_status in [
         ("Floral codenames", ConventionCategory.NAMING, ReviewStatus.APPROVED),
         ("Pinyin names", ConventionCategory.NAMING, ReviewStatus.PENDING),
         ("Discarded", ConventionCategory.NAMING, ReviewStatus.REJECTED),
         ("Register", ConventionCategory.STYLE, ReviewStatus.APPROVED),
     ]:
-        test_db.add(
+        async_test_db.add(
             TranslationConvention(
                 memory_group_id=group.memory_group_id,
                 category=category,
@@ -155,14 +167,14 @@ def test_naming_context_includes_usable_naming_conventions_only_when_enabled(
                 creator_type=Creator.USER,
             )
         )
-    test_db.flush()
+    await async_test_db.flush()
     ctx = MemAccessContext(group.memory_group_id, source.chapter_id, source.chapter_content_id)
 
-    enabled = term_translation_context(test_db, ctx, include_conventions=True)
+    enabled = await term_translation_context(async_test_db, ctx, include_conventions=True)
     assert enabled is not None and enabled.conventions is not None
     assert sorted(convention.title for convention in enabled.conventions) == ["Floral codenames", "Pinyin names"]
     assert "Floral codenames rule" in term_translation_request_prompt("Alpha appears.", 1, "English", enabled)
 
-    disabled = term_translation_context(test_db, ctx)
+    disabled = await term_translation_context(async_test_db, ctx)
     assert disabled is not None and disabled.conventions is None
     assert '"conventions"' not in term_translation_request_prompt("Alpha appears.", 1, "English", disabled)

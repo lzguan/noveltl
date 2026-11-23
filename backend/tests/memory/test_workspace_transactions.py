@@ -1,11 +1,10 @@
-import asyncio
-
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.capabilities import AbstractCapability, Toolset
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.memory.agent.capabilities.conventions import ConventionsOutput, write_conventions_output
 from src.memory.agent.dependencies import MemAgentDeps
@@ -21,12 +20,14 @@ from tests.fixtures.memory_workspaces import ReadScenario
 from tests.fixtures.memory_workspaces import reads as reads
 
 
-def test_tools_commit_drafts_and_model_requests_have_no_open_transaction(test_db: Session, reads: ReadScenario):
+async def test_tools_commit_drafts_and_model_requests_have_no_open_transaction(
+    testing_session_local: sessionmaker[Session], async_test_db: AsyncSession, reads: ReadScenario
+):
     observations = []
 
     def respond(_messages, _info):
-        assert not test_db.in_transaction()
-        with Session(bind=test_db.get_bind()) as other:
+        assert not async_test_db.in_transaction()
+        with testing_session_local() as other:
             observations.append(
                 (
                     other.scalar(select(func.count()).select_from(ShadowTerm)),
@@ -52,22 +53,24 @@ def test_tools_commit_drafts_and_model_requests_have_no_open_transaction(test_db
             Toolset(glossary_definitions_write_toolset),
         ],
     )
-    test_db.commit()
-    asyncio.run(agent.run("Record context.", deps=MemAgentDeps(test_db, reads.current)))
+    await async_test_db.commit()
+    (await agent.run("Record context.", deps=MemAgentDeps(async_test_db, reads.current)))
     assert observations == [(0, 0), (1, 0), (1, 1)]
-    assert not test_db.in_transaction()
+    assert not async_test_db.in_transaction()
 
 
-def test_tool_retry_rolls_back_its_uncommitted_writes_before_next_model_request(test_db: Session, reads: ReadScenario):
+async def test_tool_retry_rolls_back_its_uncommitted_writes_before_next_model_request(
+    testing_session_local: sessionmaker[Session], async_test_db: AsyncSession, reads: ReadScenario
+):
     calls = 0
 
     def respond(_messages, _info):
         nonlocal calls
-        assert not test_db.in_transaction()
+        assert not async_test_db.in_transaction()
         calls += 1
         if calls == 1:
             return ModelResponse(parts=[ToolCallPart("fail_after_write", {})])
-        with Session(bind=test_db.get_bind()) as other:
+        with testing_session_local() as other:
             assert other.scalar(select(func.count()).select_from(ShadowTerm)) == 0
         return ModelResponse(parts=[TextPart("Continue without the failed write.")])
 
@@ -78,8 +81,8 @@ def test_tool_retry_rolls_back_its_uncommitted_writes_before_next_model_request(
 
     @agent.tool(sequential=True)
     @tool_transaction
-    def fail_after_write(ctx: RunContext[MemAgentDeps]) -> str:
-        access.create_term(
+    async def fail_after_write(ctx: RunContext[MemAgentDeps]) -> str:
+        await access.create_term(
             ctx.deps.db,
             ctx.deps.mem_access_context.memory_group_id,
             "Alpha",
@@ -87,24 +90,26 @@ def test_tool_retry_rolls_back_its_uncommitted_writes_before_next_model_request(
         )
         raise ModelRetry("Retry without this write.")
 
-    test_db.commit()
-    asyncio.run(agent.run("Record context.", deps=MemAgentDeps(test_db, reads.current)))
+    await async_test_db.commit()
+    (await agent.run("Record context.", deps=MemAgentDeps(async_test_db, reads.current)))
     assert calls == 2
-    assert not test_db.in_transaction()
+    assert not async_test_db.in_transaction()
 
 
-def test_output_validator_commits_before_after_run_hooks(test_db: Session, reads: ReadScenario):
+async def test_output_validator_commits_before_after_run_hooks(
+    testing_session_local: sessionmaker[Session], async_test_db: AsyncSession, reads: ReadScenario
+):
     observed = []
 
     class ObserveOutput(AbstractCapability[MemAgentDeps]):
         async def after_run(self, ctx, *, result):
             assert not ctx.deps.db.in_transaction()
-            with Session(bind=test_db.get_bind()) as other:
+            with testing_session_local() as other:
                 observed.append(other.scalar(select(func.count()).select_from(ShadowConvention)))
             return result
 
     def respond(_messages, info):
-        assert not test_db.in_transaction()
+        assert not async_test_db.in_transaction()
         return ModelResponse(
             parts=[
                 ToolCallPart(
@@ -121,6 +126,6 @@ def test_output_validator_commits_before_after_run_hooks(test_db: Session, reads
         capabilities=[ObserveOutput()],
     )
     agent.output_validator(write_conventions_output)
-    test_db.commit()
-    asyncio.run(agent.run("Find conventions.", deps=MemAgentDeps(test_db, reads.current)))
+    await async_test_db.commit()
+    (await agent.run("Find conventions.", deps=MemAgentDeps(async_test_db, reads.current)))
     assert observed == [1]

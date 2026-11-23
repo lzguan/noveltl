@@ -1,12 +1,10 @@
-import asyncio
-
 import pytest
 from pydantic import ValidationError
 from pydantic_ai import Agent, ModelRetry, RunContext, RunUsage
 from pydantic_ai.messages import ModelResponse, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.access import MemAccessContext
 from src.memory.agent.capabilities.conventions import ConventionsOutput, write_conventions_output
@@ -19,15 +17,15 @@ from src.memory.types import Creator, ReviewStatus
 from test_support.test_data.scenarios import DatabaseScenario
 
 
-def _group_with_conventions(db: Session, scenario: DatabaseScenario) -> tuple[MemAgentDeps, dict[str, str]]:
+async def _group_with_conventions(db: AsyncSession, scenario: DatabaseScenario) -> tuple[MemAgentDeps, dict[str, str]]:
     """Ranks and Places are agent drafts, Codenames is approved and user-written; handles keyed by title."""
     group = MemoryGroup(
         novel_id=scenario.novels["novel_1"].novel_id, memory_group_name="Conventions", memory_language="en"
     )
     db.add(group)
-    db.flush()
+    await db.flush()
     for title, creator in [("Ranks", Creator.AGENT), ("Codenames", Creator.USER), ("Places", Creator.AGENT)]:
-        row = create_convention(
+        row = await create_convention(
             db,
             group.memory_group_id,
             category=ConventionCategory.NAMING,
@@ -38,7 +36,7 @@ def _group_with_conventions(db: Session, scenario: DatabaseScenario) -> tuple[Me
         )
         if title == "Codenames":
             row.review_status = ReviewStatus.APPROVED
-    db.commit()
+    await db.commit()
     deps = MemAgentDeps(
         db=db,
         mem_access_context=MemAccessContext(
@@ -49,7 +47,8 @@ def _group_with_conventions(db: Session, scenario: DatabaseScenario) -> tuple[Me
     )
     # Hand out handles as the context builder will.
     handles = {
-        row.title: deps.convention_handles.new(row.convention_id) for row in read_conventions(db, group.memory_group_id)
+        row.title: deps.convention_handles.new(row.convention_id)
+        for row in await read_conventions(db, group.memory_group_id)
     }
     return deps, handles
 
@@ -58,11 +57,11 @@ def _ctx(deps: MemAgentDeps) -> RunContext[MemAgentDeps]:
     return RunContext(deps=deps, model=TestModel(), usage=RunUsage())
 
 
-def _stored(db: Session, deps: MemAgentDeps) -> dict[str, tuple[str, Creator, ReviewStatus]]:
+async def _stored(db: AsyncSession, deps: MemAgentDeps) -> dict[str, tuple[str, Creator, ReviewStatus]]:
     db.expire_all()
     return {
         row.title: (row.rule, row.creator_type, row.review_status)
-        for row in read_conventions(db, deps.mem_access_context.memory_group_id)
+        for row in await read_conventions(db, deps.mem_access_context.memory_group_id)
     }
 
 
@@ -86,10 +85,10 @@ def test_output_rejects_a_handle_used_twice_and_blank_text() -> None:
     assert (draft.title, draft.rule, draft.rationale) == ("Ranks", "Use -rank.", None)
 
 
-def test_writes_creates_revisions_and_withdrawals_of_agent_drafts(
-    test_db: Session, sample_scenario: DatabaseScenario
+async def test_writes_creates_revisions_and_withdrawals_of_agent_drafts(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario
 ) -> None:
-    deps, h = _group_with_conventions(test_db, sample_scenario)
+    deps, h = await _group_with_conventions(async_test_db, sample_scenario)
     output = ConventionsOutput.model_validate(
         {
             "create": [
@@ -103,18 +102,22 @@ def test_writes_creates_revisions_and_withdrawals_of_agent_drafts(
         }
     )
 
-    assert write_conventions_output(_ctx(deps), output) is output
+    assert await write_conventions_output(_ctx(deps), output) is output
 
-    assert _stored(test_db, deps) == {
+    assert await _stored(async_test_db, deps) == {
         "Ranks": ("Use -rank for every grade.", Creator.AGENT, ReviewStatus.PENDING),
         "Codenames": UNCHANGED["Codenames"],
         "Seed ladder": ("Egg/Pupa/Seed-rank.", Creator.AGENT, ReviewStatus.PENDING),
         "Status panels": ("Keep 【…】 as [ … ].", Creator.AGENT, ReviewStatus.PENDING),
     }
-    categories = {row.title: row.category for row in read_conventions(test_db, deps.mem_access_context.memory_group_id)}
+    categories = {
+        row.title: row.category
+        for row in await read_conventions(async_test_db, deps.mem_access_context.memory_group_id)
+    }
     assert categories["Status panels"] == categories["Ranks"] == ConventionCategory.STYLE
     recorded_on = {
-        row.title: row.recorded_on for row in read_conventions(test_db, deps.mem_access_context.memory_group_id)
+        row.title: row.recorded_on
+        for row in await read_conventions(async_test_db, deps.mem_access_context.memory_group_id)
     }
     chapter_content_id = deps.mem_access_context.chapter_content_id
     assert recorded_on == {
@@ -129,10 +132,10 @@ def test_writes_creates_revisions_and_withdrawals_of_agent_drafts(
     ("bad_target", "message"),
     [("c9", "Unknown convention handles: c9"), ("Codenames", "are approved, rejected, or user-written")],
 )
-def test_an_unknown_or_locked_handle_rolls_back_the_whole_attempt(
-    test_db: Session, sample_scenario: DatabaseScenario, bad_target: str, message: str
+async def test_an_unknown_or_locked_handle_rolls_back_the_whole_attempt(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario, bad_target: str, message: str
 ) -> None:
-    deps, h = _group_with_conventions(test_db, sample_scenario)
+    deps, h = await _group_with_conventions(async_test_db, sample_scenario)
     output = ConventionsOutput.model_validate(
         {
             "create": [{"category": "naming", "title": "Seed ladder", "rule": "Egg/Pupa/Seed-rank."}],
@@ -142,29 +145,29 @@ def test_an_unknown_or_locked_handle_rolls_back_the_whole_attempt(
     )
 
     with pytest.raises(ModelRetry, match=message):
-        write_conventions_output(_ctx(deps), output)
+        await write_conventions_output(_ctx(deps), output)
 
-    assert _stored(test_db, deps) == UNCHANGED
+    assert await _stored(async_test_db, deps) == UNCHANGED
 
 
-def test_a_draft_approved_after_the_context_was_built_is_locked(
-    test_db: Session, sample_scenario: DatabaseScenario
+async def test_a_draft_approved_after_the_context_was_built_is_locked(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario
 ) -> None:
-    deps, h = _group_with_conventions(test_db, sample_scenario)
-    ranks = test_db.get(TranslationConvention, deps.convention_handles.get_uuid(h["Ranks"]))
+    deps, h = await _group_with_conventions(async_test_db, sample_scenario)
+    ranks = await async_test_db.get(TranslationConvention, deps.convention_handles.get_uuid(h["Ranks"]))
     assert ranks is not None
     ranks.review_status = ReviewStatus.APPROVED
-    test_db.commit()
+    await async_test_db.commit()
 
     with pytest.raises(ModelRetry, match=f"{h['Ranks']} are approved"):
-        write_conventions_output(_ctx(deps), ConventionsOutput(withdraw=[h["Ranks"]]))
+        await write_conventions_output(_ctx(deps), ConventionsOutput(withdraw=[h["Ranks"]]))
 
 
-def test_agent_retries_after_a_rejected_attempt_and_only_the_retry_is_saved(
-    test_db: Session, sample_scenario: DatabaseScenario
+async def test_agent_retries_after_a_rejected_attempt_and_only_the_retry_is_saved(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario
 ) -> None:
     """FunctionModel stands in for inference; validation, retries, and writes are real."""
-    deps, h = _group_with_conventions(test_db, sample_scenario)
+    deps, h = await _group_with_conventions(async_test_db, sample_scenario)
     calls = 0
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
@@ -179,7 +182,7 @@ def test_agent_retries_after_a_rejected_attempt_and_only_the_retry_is_saved(
     agent = Agent(FunctionModel(respond), deps_type=MemAgentDeps, output_type=ConventionsOutput)
     agent.output_validator(write_conventions_output)
 
-    result = asyncio.run(agent.run("Summarize conventions.", deps=deps))
+    result = await agent.run("Summarize conventions.", deps=deps)
 
     assert calls == 2
     feedback = [
@@ -190,7 +193,7 @@ def test_agent_retries_after_a_rejected_attempt_and_only_the_retry_is_saved(
     ]
     assert len(feedback) == 2 and "Nothing from this attempt was saved" in feedback[0]
     # The first attempt's create was rolled back, so the convention exists once.
-    assert _stored(test_db, deps) == {
+    assert await _stored(async_test_db, deps) == {
         "Ranks": UNCHANGED["Ranks"],
         "Codenames": UNCHANGED["Codenames"],
         "Seed ladder": ("Egg/Pupa/Seed-rank.", Creator.AGENT, ReviewStatus.PENDING),

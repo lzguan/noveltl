@@ -1,6 +1,5 @@
 """Conventions stage with FunctionModel in place of inference; context, tools, and writes are real."""
 
-import asyncio
 import json
 
 import pytest
@@ -13,7 +12,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.languages.models import Language
 from src.memory.access import MemAccessContext
@@ -33,17 +32,16 @@ from src.memory.plugins.term_search.access import TextOccurrences, count_text_oc
 from src.memory.types import Creator, JobStatus, ReviewStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
-from test_support.database import run_with_async_session
 
 MODEL = "deepseek:deepseek-v4-flash-low"
 CHAPTER_TEXTS = {1: ["种级出现。"], 2: ["旧版卵级", "卵级与种级，种级。"], 3: ["蛹级在后面。"]}
 
 
-def _setup(db: Session) -> tuple[Novel, MemoryGroup, dict[int, MemAccessContext]]:
+async def _setup(db: AsyncSession) -> tuple[Novel, MemoryGroup, dict[int, MemAccessContext]]:
     language = Language(language_name="Chinese", language_code="zh")
     source_work = SourceWork(source_work_title="Agent source")
     db.add_all([language, source_work])
-    db.flush()
+    await db.flush()
     novel = Novel(
         novel_title="Agent novel",
         novel_description=None,
@@ -54,36 +52,36 @@ def _setup(db: Session) -> tuple[Novel, MemoryGroup, dict[int, MemAccessContext]
         language_code=language.language_code,
     )
     db.add(novel)
-    db.flush()
+    await db.flush()
     group = MemoryGroup(memory_group_name="Agent", novel_id=novel.novel_id, memory_language=language.language_code)
     db.add(group)
-    db.flush()
+    await db.flush()
     contexts: dict[int, MemAccessContext] = {}
     for chapter_num, versions in CHAPTER_TEXTS.items():
         chapter = Chapter(
             chapter_num=chapter_num, chapter_title=f"Ch{chapter_num}", chapter_is_public=False, novel_id=novel.novel_id
         )
         db.add(chapter)
-        db.flush()
+        await db.flush()
         for version, text in enumerate(versions, start=1):
             content = ChapterContent(
                 chapter_id=chapter.chapter_id, chapter_content_version=version, chapter_content_text=text
             )
             db.add(content)
-            db.flush()
+            await db.flush()
             contexts[chapter_num] = MemAccessContext(
                 group.memory_group_id, chapter.chapter_id, content.chapter_content_id
             )
     for term in ["种级", "卵级"]:
-        glossary.create_term(db, group.memory_group_id, term, TermKind.TITLE)
-    db.commit()
+        await glossary.create_term(db, group.memory_group_id, term, TermKind.TITLE)
+    await db.commit()
     return novel, group, contexts
 
 
-def test_text_occurrences_use_latest_content_up_to_the_context_chapter(test_db: Session) -> None:
-    _, _, contexts = _setup(test_db)
+async def test_text_occurrences_use_latest_content_up_to_the_context_chapter(async_test_db: AsyncSession) -> None:
+    _, _, contexts = await _setup(async_test_db)
 
-    results = count_text_occurrences(test_db, contexts[2], ["种级", "卵级", "蛹级", "无", "种级"])
+    results = await count_text_occurrences(async_test_db, contexts[2], ["种级", "卵级", "蛹级", "无", "种级"])
 
     assert results == [
         TextOccurrences("种级", first_chapter_num=1, chapter_count=2, match_count=3),
@@ -94,24 +92,24 @@ def test_text_occurrences_use_latest_content_up_to_the_context_chapter(test_db: 
     ]
 
 
-def test_text_occurrences_reject_empty_text_without_aborting_the_transaction(test_db: Session) -> None:
-    _, _, contexts = _setup(test_db)
+async def test_text_occurrences_reject_empty_text_without_aborting_the_transaction(async_test_db: AsyncSession) -> None:
+    _, _, contexts = await _setup(async_test_db)
 
     for texts in [[""], ["种级", ""]]:
         with pytest.raises(ValueError, match="Search texts must be non-empty"):
-            count_text_occurrences(test_db, contexts[2], texts)
+            await count_text_occurrences(async_test_db, contexts[2], texts)
 
-    assert count_text_occurrences(test_db, contexts[2], []) == []
-    assert count_text_occurrences(test_db, contexts[2], ["种级", " "]) == [
+    assert await count_text_occurrences(async_test_db, contexts[2], []) == []
+    assert await count_text_occurrences(async_test_db, contexts[2], ["种级", " "]) == [
         TextOccurrences("种级", first_chapter_num=1, chapter_count=2, match_count=3),
         TextOccurrences(" ", first_chapter_num=None, chapter_count=0, match_count=0),
     ]
 
 
-def test_stage_retries_an_empty_occurrence_text_and_accepts_the_corrected_call(
-    test_db: Session, monkeypatch: pytest.MonkeyPatch
+async def test_stage_retries_an_empty_occurrence_text_and_accepts_the_corrected_call(
+    async_test_db: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, _, contexts = _setup(test_db)
+    _, _, contexts = await _setup(async_test_db)
     seen: list = []
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
@@ -123,8 +121,8 @@ def test_stage_retries_an_empty_occurrence_text_and_accepts_the_corrected_call(
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {})])
 
     monkeypatch.setattr(conventions_agent, "model_configuration", lambda _: (FunctionModel(respond), {}))
-    deps = MemAgentDeps(db=test_db, mem_access_context=contexts[2])
-    result = asyncio.run(run_conventions_stage(deps, 2, "English", SummarizeConventionsStageConfig(model_name=MODEL)))
+    deps = MemAgentDeps(db=async_test_db, mem_access_context=contexts[2])
+    result = await run_conventions_stage(deps, 2, "English", SummarizeConventionsStageConfig(model_name=MODEL))
 
     assert result is not None
     assert len(seen) == 3
@@ -163,15 +161,15 @@ def _fake_agent(monkeypatch: pytest.MonkeyPatch, seen: list) -> None:
     monkeypatch.setattr(conventions_agent, "model_configuration", lambda _: (FunctionModel(respond), {}))
 
 
-def test_stage_shows_the_range_calls_tools_and_writes_conventions(
-    test_db: Session, monkeypatch: pytest.MonkeyPatch
+async def test_stage_shows_the_range_calls_tools_and_writes_conventions(
+    async_test_db: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, group, contexts = _setup(test_db)
+    _, group, contexts = await _setup(async_test_db)
     seen: list = []
     _fake_agent(monkeypatch, seen)
-    deps = MemAgentDeps(db=test_db, mem_access_context=contexts[2])
+    deps = MemAgentDeps(db=async_test_db, mem_access_context=contexts[2])
 
-    result = asyncio.run(run_conventions_stage(deps, 2, "English", SummarizeConventionsStageConfig(model_name=MODEL)))
+    result = await run_conventions_stage(deps, 2, "English", SummarizeConventionsStageConfig(model_name=MODEL))
 
     assert result is not None
     prompt = next(part for part in seen[0][0].parts if isinstance(part, UserPromptPart))
@@ -186,7 +184,7 @@ def test_stage_shows_the_range_calls_tools_and_writes_conventions(
         if isinstance(part, ToolReturnPart) and part.tool_name == "term_occurrences"
     )
     assert [entry["term"] for entry in json.loads(tool_return.model_response_str())] == ["种级", "卵级"]
-    [stored] = read_conventions(test_db, group.memory_group_id)
+    [stored] = await read_conventions(async_test_db, group.memory_group_id)
     assert (stored.title, stored.creator_type, stored.review_status) == (
         "Rank ladder",
         Creator.AGENT,
@@ -194,44 +192,43 @@ def test_stage_shows_the_range_calls_tools_and_writes_conventions(
     )
 
 
-def test_stage_skips_the_model_when_no_terms_occur_in_the_range(
-    test_db: Session, monkeypatch: pytest.MonkeyPatch
+async def test_stage_skips_the_model_when_no_terms_occur_in_the_range(
+    async_test_db: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, _, contexts = _setup(test_db)
+    _, _, contexts = await _setup(async_test_db)
     seen: list = []
     _fake_agent(monkeypatch, seen)
-    deps = MemAgentDeps(db=test_db, mem_access_context=contexts[3])
+    deps = MemAgentDeps(db=async_test_db, mem_access_context=contexts[3])
 
     config = SummarizeConventionsStageConfig(model_name=MODEL, since_chapter_num=3)
-    assert asyncio.run(run_conventions_stage(deps, 3, "English", config)) is None
+    assert (await run_conventions_stage(deps, 3, "English", config)) is None
     assert seen == []
 
 
-def test_conventions_job_commits_the_agent_output_with_its_task(
-    test_db: Session, testing_session_local, monkeypatch: pytest.MonkeyPatch
+async def test_conventions_job_commits_the_agent_output_with_its_task(
+    async_test_db: AsyncSession, testing_async_session_local, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _, group, _ = _setup(test_db)
+    _, group, _ = await _setup(async_test_db)
     _fake_agent(monkeypatch, [])
-    job_id = run_with_async_session(
-        test_db,
-        lambda db: make_job(
-            db,
-            group.memory_group_id,
-            None,
-            None,
-            JobParamsV3(stages=[SummarizeConventionsStageConfig(model_name=MODEL)]),
-        ),
+    job_id = await make_job(
+        async_test_db,
+        group.memory_group_id,
+        None,
+        None,
+        JobParamsV3(stages=[SummarizeConventionsStageConfig(model_name=MODEL)]),
     )
 
     async def consume():
-        return [item async for item in agent_tasks.run_all_tasks(testing_session_local, job_id)]
+        return [item async for item in agent_tasks.run_all_tasks(testing_async_session_local, job_id)]
 
-    [completed] = asyncio.run(consume())
+    [completed] = await consume()
 
-    test_db.expire_all()
-    [task] = test_db.scalars(select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == job_id)).all()
+    async_test_db.expunge_all()
+    [task] = (
+        await async_test_db.scalars(select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == job_id))
+    ).all()
     assert task.task_status == JobStatus.COMPLETED and completed.stage_name == "summarize_conventions"
-    assert [row.title for row in read_conventions(test_db, group.memory_group_id)] == ["Rank ladder"]
+    assert [row.title for row in await read_conventions(async_test_db, group.memory_group_id)] == ["Rank ladder"]
 
 
 def test_request_prompt_states_an_explicit_start_including_zero() -> None:

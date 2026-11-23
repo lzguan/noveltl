@@ -1,13 +1,11 @@
-import asyncio
 import re
 import uuid
-from collections.abc import Awaitable, Callable, Generator
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.engine import make_url
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -71,17 +69,3 @@ def temporary_postgres_database(
                 quoted_name = connection.dialect.identifier_preparer.quote(database_name)
                 connection.exec_driver_sql(f"DROP DATABASE IF EXISTS {quoted_name} WITH (FORCE)")
         maintenance_engine.dispose()
-
-
-def run_with_async_session[T](db: Session, operation: Callable[[AsyncSession], Awaitable[T]]) -> T:
-    """Run an async database operation from a sync test against the same database as ``db``."""
-
-    async def run() -> T:
-        engine = create_async_engine(db.get_bind().engine.url, poolclass=NullPool)
-        try:
-            async with AsyncSession(engine, expire_on_commit=False) as async_db:
-                return await operation(async_db)
-        finally:
-            await engine.dispose()
-
-    return asyncio.run(run())

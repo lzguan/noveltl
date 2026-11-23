@@ -3,7 +3,7 @@ from pydantic import ValidationError
 from pydantic_ai import ModelRetry, RunContext, RunUsage
 from pydantic_ai.models.test import TestModel
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
@@ -41,17 +41,17 @@ def test_user_term_names_are_only_trimmed() -> None:
         CreateGlossaryTerm(term="   ")
 
 
-def test_agent_adds_the_normalized_term_and_rejects_names_that_normalize_to_nothing(
-    test_db: Session, sample_scenario: DatabaseScenario
+async def test_agent_adds_the_normalized_term_and_rejects_names_that_normalize_to_nothing(
+    async_test_db: AsyncSession, sample_scenario: DatabaseScenario
 ) -> None:
     group = MemoryGroup(
         novel_id=sample_scenario.novels["novel_1"].novel_id, memory_group_name="Term names", memory_language="en"
     )
-    test_db.add(group)
-    test_db.flush()
+    async_test_db.add(group)
+    await async_test_db.flush()
     ctx = RunContext(
         deps=MemAgentDeps(
-            db=test_db,
+            db=async_test_db,
             mem_access_context=MemAccessContext(
                 group.memory_group_id,
                 sample_scenario.chapters["chapter_1"].chapter_id,
@@ -62,11 +62,13 @@ def test_agent_adds_the_normalized_term_and_rejects_names_that_normalize_to_noth
         usage=RunUsage(),
     )
 
-    assert add_term(ctx, "【次元化身】", TermKind.TECHNIQUE) == "Term 次元化身 added successfully."
+    assert await add_term(ctx, "【次元化身】", TermKind.TECHNIQUE) == "Term 次元化身 added successfully."
     with pytest.raises(ModelRetry, match="already exists"):
-        add_term(ctx, " 次元化身 ", TermKind.TECHNIQUE)
+        await add_term(ctx, " 次元化身 ", TermKind.TECHNIQUE)
     with pytest.raises(ModelRetry, match="empty"):
-        add_term(ctx, "“ ”", TermKind.OTHER)
+        await add_term(ctx, "“ ”", TermKind.OTHER)
 
-    stored = test_db.scalars(select(GlossaryTerm.term).where(GlossaryTerm.memory_group_id == group.memory_group_id))
+    stored = await async_test_db.scalars(
+        select(GlossaryTerm.term).where(GlossaryTerm.memory_group_id == group.memory_group_id)
+    )
     assert list(stored) == ["次元化身"]

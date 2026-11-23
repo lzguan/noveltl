@@ -1,23 +1,23 @@
 import hashlib
 import re
 import uuid
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from typing import BinaryIO
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.files.async_storage import AsyncObjectStore
 from src.files.exceptions import StoredFileNotFoundException
 from src.files.models import StoredFile
-from src.files.storage import ObjectStore
 
 _NAMESPACE_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62})$")
 _COPY_CHUNK_SIZE = 1024 * 1024
 
 
-def create_file(
-    db: Session,
-    store: ObjectStore,
+async def create_file(
+    db: AsyncSession,
+    store: AsyncObjectStore,
     content: BinaryIO,
     *,
     storage_name: str,
@@ -35,7 +35,7 @@ def create_file(
     digest = hashlib.sha256()
     byte_size = 0
 
-    with store.create(
+    async with store.create(
         object_key,
         content_type=content_type,
         content_encoding=content_encoding,
@@ -43,7 +43,7 @@ def create_file(
         while chunk := content.read(_COPY_CHUNK_SIZE):
             digest.update(chunk)
             byte_size += len(chunk)
-            writer.write(chunk)
+            await writer.write(chunk)
 
     stored_file = StoredFile(
         file_id=file_id,
@@ -60,20 +60,21 @@ def create_file(
     return stored_file
 
 
-def get_file(db: Session, file_id: uuid.UUID) -> StoredFile:
-    stored_file = db.scalar(select(StoredFile).where(StoredFile.file_id == file_id))
+async def get_file(db: AsyncSession, file_id: uuid.UUID) -> StoredFile:
+    stored_file = await db.scalar(select(StoredFile).where(StoredFile.file_id == file_id))
     if stored_file is None:
         raise StoredFileNotFoundException(f"Stored file with ID {file_id} not found")
     return stored_file
 
 
-def fetch_file(
-    db: Session,
-    store: ObjectStore,
+async def fetch_file(
+    db: AsyncSession,
+    store: AsyncObjectStore,
     file_id: uuid.UUID,
     *,
     chunk_size: int = _COPY_CHUNK_SIZE,
-) -> Iterator[bytes]:
+) -> AsyncIterator[bytes]:
     """Fetch a recorded file from object storage."""
-    stored_file = get_file(db, file_id)
-    return store.fetch(stored_file.object_key, chunk_size=chunk_size)
+    stored_file = await get_file(db, file_id)
+    async for chunk in store.fetch(stored_file.object_key, chunk_size=chunk_size):
+        yield chunk

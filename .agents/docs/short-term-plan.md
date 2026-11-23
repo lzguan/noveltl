@@ -17,9 +17,10 @@ hashing via `asyncio.to_thread`; the auth dependencies use the async session, so
 unconverted services briefly use two connections per request), `novels` with
 `editing` and the glossary `GET /terms` query, and `labels`.
 
-Remaining: `autolabels` (4 routes), then `memory` (largest, mechanical) and the
-`translations` routes. Moving workers off Celery is a separate project per
-worker, only when that worker needs changes anyway.
+Done on `feature/taskiq-agent-workers`: the whole memory module (routes, services,
+access layer, agent tools, task bookkeeping, workers) is on async sessions, and the
+memory agent worker runs on taskiq. Remaining: `autolabels` (4 routes) and the
+`translations` routes plus slice 2 (translations worker).
 
 - Deferred (user decision, 2026-11-23): `filters` stays sync; the user does not
   use it. Sync routes run in the threadpool, so the only costs are a second

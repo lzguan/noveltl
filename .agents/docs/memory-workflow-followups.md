@@ -66,7 +66,7 @@ agent-written rows. Deferred by the user (2026-11-07).
 ## Failure logging and workspace cleanup
 
 Failed tasks get one `logger.exception` line in `arun_tasks`; the JSONL result
-sink in [celery.py](../../backend/src/memory/agent/dispatch/celery.py) records
+sink in [log_results.py](../../backend/src/memory/agent/dispatch/log_results.py) records
 only completed and skipped tasks. A `memoryAgent.failed` event would have two
 shapes: the full `AgentRunResult` when publication fails after a finished run,
 and a partial transcript from `capture_run_messages` when `agent.run` raises.

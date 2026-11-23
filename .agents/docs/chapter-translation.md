@@ -22,6 +22,13 @@ as optional context by translation prompts.
 | Provider transport and response codecs | [clients/](../../backend/src/translations/clients/), [codecs/](../../backend/src/translations/codecs/) |
 | Frontend pipeline builder and results viewer | [translations panel](../../frontend/src/edit/panels/translations/) |
 
+## API and worker sessions
+
+The translation API uses `AsyncSession`. Creation calls the shared SQL-only
+`create_job` through `AsyncSession.run_sync` on the same session and transaction.
+Controls commit before awaiting dispatch, and the Celery callbacks run blocking
+broker publication in a thread. The Celery step runner still uses sync sessions.
+
 ## Streams, signatures, and full-state artifacts
 
 A job's data flows as named **streams**, each with a type (`StreamType`: `chapter`,

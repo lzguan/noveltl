@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.novels.models import Novel
@@ -22,7 +22,7 @@ from src.translations.service import TranslationNotFoundError, _job
 from src.translations.types import TranslationTaskStatus as State
 
 
-def _summaries(db: Session, jobs: list[TranslationJob]) -> list[TranslationJobSummary]:
+async def _summaries(db: AsyncSession, jobs: list[TranslationJob]) -> list[TranslationJobSummary]:
     if not jobs:
         return []
     ids = [job.job_id for job in jobs]
@@ -68,9 +68,9 @@ def _summaries(db: Session, jobs: list[TranslationJob]) -> list[TranslationJobSu
         func.count().filter(and_(recoverable, b.failed == 0)).label("resumable_batches"),
         func.count().filter(recoverable).label("retryable_batches"),
     ).group_by(b.job_id)
-    progress = {row["job_id"]: TranslationProgress.model_validate(row) for row in db.execute(query).mappings()}
+    progress = {row["job_id"]: TranslationProgress.model_validate(row) for row in (await db.execute(query)).mappings()}
     stages: dict[UUID, list[TranslationStageRead]] = {job_id: [] for job_id in ids}
-    for stage in db.scalars(
+    for stage in await db.scalars(
         select(TranslationStage).where(TranslationStage.job_id.in_(ids)).order_by(TranslationStage.stage_num)
     ):
         stages[stage.job_id].append(TranslationStageRead.model_validate(stage))
@@ -85,29 +85,35 @@ def _summaries(db: Session, jobs: list[TranslationJob]) -> list[TranslationJobSu
     ]
 
 
-def list_translation_jobs(db: Session, user: User, novel_id: UUID, *, offset: int, limit: int) -> TranslationJobPage:
+async def list_translation_jobs(
+    db: AsyncSession, user: User, novel_id: UUID, *, offset: int, limit: int
+) -> TranslationJobPage:
     if (
-        db.scalar(
+        await db.scalar(
             novel_mod_access_select(select(Novel.novel_id).where(Novel.novel_id == novel_id), user, edit_only=True)
         )
         is None
     ):
         raise TranslationNotFoundError("Novel not found")
     scope = TranslationJob.novel_id == novel_id
-    total = db.scalar(select(func.count()).select_from(TranslationJob).where(scope)) or 0
+    total = await db.scalar(select(func.count()).select_from(TranslationJob).where(scope)) or 0
     # Jobs currently have no creation timestamp. UUID order is stable, not chronological.
     jobs = list(
-        db.scalars(select(TranslationJob).where(scope).order_by(TranslationJob.job_id).offset(offset).limit(limit))
+        await db.scalars(
+            select(TranslationJob).where(scope).order_by(TranslationJob.job_id).offset(offset).limit(limit)
+        )
     )
-    return TranslationJobPage(items=_summaries(db, jobs), total=total)
+    return TranslationJobPage(items=await _summaries(db, jobs), total=total)
 
 
-def read_translation_batches(db: Session, user: User, job_id: UUID, *, offset: int, limit: int) -> TranslationBatchPage:
-    job = _job(db, user, job_id)
-    observed_at = db.execute(select(func.now())).scalar_one()
-    summary = _summaries(db, [job])[0]
+async def read_translation_batches(
+    db: AsyncSession, user: User, job_id: UUID, *, offset: int, limit: int
+) -> TranslationBatchPage:
+    job = await _job(db, user, job_id)
+    observed_at = (await db.execute(select(func.now()))).scalar_one()
+    summary = (await _summaries(db, [job]))[0]
     batches = list(
-        db.scalars(
+        await db.scalars(
             select(TranslationBatch)
             .where(TranslationBatch.job_id == job_id)
             .order_by(TranslationBatch.batch_num)
@@ -117,7 +123,7 @@ def read_translation_batches(db: Session, user: User, job_id: UUID, *, offset: i
     )
     tasks: dict[UUID, list[TranslationTaskRead]] = {batch.batch_id: [] for batch in batches}
     if tasks:
-        for task in db.scalars(
+        for task in await db.scalars(
             select(TranslationTask)
             .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
             .where(TranslationTask.batch_id.in_(tasks))

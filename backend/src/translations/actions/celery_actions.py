@@ -119,10 +119,12 @@ class CeleryActionCallbacks(ActionCallbacks):
 
         async def dispatch(task_id: uuid.UUID, *, delay: timedelta | None = None) -> None:
             if delay is None:
-                celery_task.apply_async((task_id,))
+                await asyncio.to_thread(celery_task.apply_async, (task_id,))
             else:
                 # A deadline already passed means the gate is open; fire at once.
-                celery_task.apply_async((task_id,), countdown=max(delay, timedelta(0)).total_seconds())
+                await asyncio.to_thread(
+                    celery_task.apply_async, (task_id,), countdown=max(delay, timedelta(0)).total_seconds()
+                )
 
         self._steps.append(ActionStep(expect, during, finish, dispatch))
         return celery_task
@@ -143,9 +145,9 @@ class CeleryActionCallbacks(ActionCallbacks):
 
     async def entrypoint(self, x: uuid.UUID) -> None:
         if self._intermediate:
-            self._intermediate[0].apply_async((x,))
+            await asyncio.to_thread(self._intermediate[0].apply_async, (x,))
         else:
-            self.exitpoint(x)
+            await asyncio.to_thread(self.exitpoint, x)
 
     def exitpoint(self, x: uuid.UUID) -> None:
         ready = ready_next_task(SessionLocal, x)

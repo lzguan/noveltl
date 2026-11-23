@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.auth.utils import create_access_token
@@ -44,7 +45,9 @@ def seed_job(db: Session, novel_id: UUID) -> tuple[TranslationJob, list[list[Tra
 
 # The viewer needs authorized, bounded snapshots with SQL counts matching task
 # states, including mixed failures and live/expired leases. Keep PostgreSQL real.
-def test_viewer_counts_pagination_and_access(test_db: Session, sample_scenario: DatabaseScenario) -> None:
+async def test_viewer_counts_pagination_and_access(
+    test_db: Session, async_test_db: AsyncSession, sample_scenario: DatabaseScenario
+) -> None:
     user = sample_scenario.users["admin"]
     novel_id = sample_scenario.novels["novel_1"].novel_id
     job, tasks = seed_job(test_db, novel_id)
@@ -63,12 +66,12 @@ def test_viewer_counts_pagination_and_access(test_db: Session, sample_scenario: 
     test_db.commit()
     other, _ = seed_job(test_db, novel_id)
     foreign, _ = seed_job(test_db, sample_scenario.novels["novel_2"].novel_id)
-    page = list_translation_jobs(test_db, user, novel_id, offset=0, limit=1)
-    second = list_translation_jobs(test_db, user, novel_id, offset=1, limit=1)
+    page = await list_translation_jobs(async_test_db, user, novel_id, offset=0, limit=1)
+    second = await list_translation_jobs(async_test_db, user, novel_id, offset=1, limit=1)
     assert page.total == second.total == 2
     assert {page.items[0].job_id, second.items[0].job_id} == {job.job_id, other.job_id}
     assert foreign.job_id not in {page.items[0].job_id, second.items[0].job_id}
-    detail = read_translation_batches(test_db, user, job.job_id, offset=0, limit=5)
+    detail = await read_translation_batches(async_test_db, user, job.job_id, offset=0, limit=5)
     assert detail.total == 6 and len(detail.items) == 5
     assert [batch.batch_num for batch in detail.items] == list(range(5))
     assert all(len(batch.tasks) == 2 for batch in detail.items)
@@ -84,16 +87,16 @@ def test_viewer_counts_pagination_and_access(test_db: Session, sample_scenario: 
         resumable_batches=2,
         retryable_batches=4,
     )
-    last = read_translation_batches(test_db, user, job.job_id, offset=5, limit=5)
+    last = await read_translation_batches(async_test_db, user, job.job_id, offset=5, limit=5)
     assert [batch.batch_num for batch in last.items] == [5]
     assert last.job.progress == detail.job.progress
-    assert list_translation_jobs(test_db, user, novel_id, offset=20, limit=5).items == []
+    assert (await list_translation_jobs(async_test_db, user, novel_id, offset=20, limit=5)).items == []
     for read in (
-        lambda: list_translation_jobs(test_db, sample_scenario.users["user"], novel_id, offset=0, limit=5),
-        lambda: read_translation_batches(test_db, sample_scenario.users["user"], job.job_id, offset=0, limit=5),
+        lambda: list_translation_jobs(async_test_db, sample_scenario.users["user"], novel_id, offset=0, limit=5),
+        lambda: read_translation_batches(async_test_db, sample_scenario.users["user"], job.job_id, offset=0, limit=5),
     ):
         with pytest.raises(TranslationNotFoundError):
-            read()
+            await read()
 
 
 def test_viewer_routes_and_batch_control_scope(

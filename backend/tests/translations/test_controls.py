@@ -1,3 +1,4 @@
+import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Event
@@ -8,6 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.auth.utils import create_access_token
@@ -16,16 +18,16 @@ from src.translations.actions.registry import resume_step
 from src.translations.celery_app import app
 from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
 from src.translations.schemas import TranslationJobCreate
-from src.translations.service import Control, TranslationNotFoundError, control_translation_job, create_translation_job
+from src.translations.service import Control, control_translation_job
 from src.translations.tasks.claims import TranslationClaimLostError, finish_claim
+from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
 
 
 def make_job(db: Session, scenario: DatabaseScenario, *, loaded: bool = True) -> tuple[UUID, list[TranslationTask]]:
-    job_id = create_translation_job(
+    job_id = create_job(
         db,
-        scenario.users["admin"],
         TranslationJobCreate.model_validate(
             {
                 "novel_id": scenario.novels["novel_1"].novel_id,
@@ -71,8 +73,9 @@ def test_registered_steps_resolve_recovery_boundaries(state: State, expected: St
     assert resume_step("translate", State.COMPLETE) is None
 
 
-def test_cancel_fences_worker_and_retry_preserves_provider_output(
+async def test_cancel_fences_worker_and_retry_preserves_provider_output(
     test_db: Session,
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
@@ -85,7 +88,7 @@ def test_cancel_fences_worker_and_retry_preserves_provider_output(
     current.claim_expires_at = test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=5)
     test_db.commit()
     # The operator can cancel a live worker. Its token must no longer commit.
-    cancelled = control_translation_job(test_db, user, job_id, "cancel", batch_id=current.batch_id)
+    cancelled = await control_translation_job(async_test_db, user, job_id, "cancel", batch_id=current.batch_id)
     assert cancelled.affected_batch_ids == [current.batch_id]
     test_db.refresh(current)
     test_db.refresh(following)
@@ -93,7 +96,7 @@ def test_cancel_fences_worker_and_retry_preserves_provider_output(
     assert following.failed_at is not None and following.status == State.WAITING
     with testing_session_local.begin() as db, pytest.raises(TranslationClaimLostError):
         finish_claim(db, current.task_id, token, during=State.FINALIZING, finish=State.COMPLETE)
-    assert not control_translation_job(test_db, user, job_id, "resume").affected_batch_ids
+    assert not (await control_translation_job(async_test_db, user, job_id, "resume")).affected_batch_ids
 
     def observe(*args: object, **kwargs: object) -> None:
         with testing_session_local() as db:
@@ -105,13 +108,14 @@ def test_cancel_fences_worker_and_retry_preserves_provider_output(
 
     queued = Mock(side_effect=observe)
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.finalize"], "apply_async", queued)
-    retried = control_translation_job(test_db, user, job_id, "retry", batch_id=current.batch_id)
+    retried = await control_translation_job(async_test_db, user, job_id, "retry", batch_id=current.batch_id)
     assert retried.dispatched_task_ids == [current.task_id]
     queued.assert_called_once_with((current.task_id,))
 
 
-def test_resume_skips_live_claim_then_resumes_expired_poll_and_reports_broker_failure(
+async def test_resume_skips_live_claim_then_resumes_expired_poll_and_reports_broker_failure(
     test_db: Session,
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -124,20 +128,23 @@ def test_resume_skips_live_claim_then_resumes_expired_poll_and_reports_broker_fa
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.poll"], "apply_async", queued)
     user = sample_scenario.users["admin"]
     for operation in ("resume", "retry"):
-        assert not control_translation_job(test_db, user, job_id, operation).affected_batch_ids
+        assert not (await control_translation_job(async_test_db, user, job_id, operation)).affected_batch_ids
     queued.assert_not_called()
     current.claim_expires_at = test_db.scalar(select(func.clock_timestamp())) - timedelta(seconds=1)
     test_db.commit()
-    result = control_translation_job(test_db, user, job_id, "resume")
+    result = await control_translation_job(async_test_db, user, job_id, "resume")
     assert result.dispatch_failed_task_ids == [current.task_id] and not result.dispatched_task_ids
     test_db.refresh(current)
     assert current.claim_token is None and current.failed_at is None and current.status == State.PROCESSING
     queued.side_effect = None
-    assert control_translation_job(test_db, user, job_id, "resume").dispatched_task_ids == [current.task_id]
+    assert (await control_translation_job(async_test_db, user, job_id, "resume")).dispatched_task_ids == [
+        current.task_id
+    ]
 
 
-def test_cancel_fences_inflight_exitpoint(
+async def test_cancel_fences_inflight_exitpoint(
     test_db: Session,
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
@@ -149,7 +156,7 @@ def test_cancel_fences_inflight_exitpoint(
     monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
-    test_db.execute(
+    await async_test_db.execute(
         update(TranslationTask).where(TranslationTask.task_id == following.task_id).values(error="pending cancel")
     )
     entered = Event()
@@ -165,9 +172,9 @@ def test_cancel_fences_inflight_exitpoint(
             worker = pool.submit(translate.callbacks.exitpoint, current_id)
             try:
                 assert entered.wait(5)
-                control_translation_job(test_db, sample_scenario.users["admin"], job_id, "cancel")
+                await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "cancel")
             finally:
-                test_db.rollback()  # Release the lock even if the test fails.
+                await async_test_db.rollback()  # Release the lock even if the test fails.
             worker.result(timeout=5)
     finally:
         event.remove(engine, "before_cursor_execute", observe)
@@ -176,8 +183,9 @@ def test_cancel_fences_inflight_exitpoint(
     queued.assert_not_called()
 
 
-def test_controls_isolate_batches_and_resume_later_stage(
+async def test_controls_isolate_batches_and_resume_later_stage(
     test_db: Session,
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -192,8 +200,8 @@ def test_controls_isolate_batches_and_resume_later_stage(
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
     user = sample_scenario.users["admin"]
-    control_translation_job(test_db, user, job_id, "cancel", batch_id=first.batch_id)
-    resumed = control_translation_job(test_db, user, job_id, "resume")
+    await control_translation_job(async_test_db, user, job_id, "cancel", batch_id=first.batch_id)
+    resumed = await control_translation_job(async_test_db, user, job_id, "resume")
     assert resumed.dispatched_task_ids == [waiting.task_id]
     test_db.refresh(waiting)
     assert waiting.status == State.READY and waiting.failed_at is None
@@ -201,13 +209,14 @@ def test_controls_isolate_batches_and_resume_later_stage(
     assert first.failed_at is not None
     waiting.status = State.COMPLETE
     test_db.commit()
-    retried = control_translation_job(test_db, user, job_id, "retry")
+    retried = await control_translation_job(async_test_db, user, job_id, "retry")
     assert retried.dispatched_task_ids == [first.task_id]
     assert retried.affected_batch_ids == [first.batch_id]
 
 
-def test_retry_preparation_discards_stale_provider_ids(
+async def test_retry_preparation_discards_stale_provider_ids(
     test_db: Session,
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -218,14 +227,14 @@ def test_retry_preparation_discards_stale_provider_ids(
     test_db.commit()
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
-    result = control_translation_job(test_db, sample_scenario.users["admin"], job_id, "retry")
+    result = await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "retry")
     assert result.dispatched_task_ids == [task.task_id]
     test_db.refresh(task)
     assert task.status == State.READY and task.provider_batch_id is None and task.provider_output_id is None
 
 
 def test_router_controls_and_permissions(
-    client: TestClient, test_db: Session, sample_scenario: DatabaseScenario, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, sample_scenario: DatabaseScenario, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     headers = {
         "Authorization": "Bearer "
@@ -256,15 +265,18 @@ def test_router_controls_and_permissions(
         response = client.post(f"/translation-jobs/{job_id}/{suffix}", headers=headers)
         assert response.status_code == 200 and response.json()["dispatchedTaskIds"] == [task_id]
     assert client.post(f"/translation-jobs/{job_id}/batches/{uuid4()}/cancel", headers=headers).status_code == 404
-    with pytest.raises(TranslationNotFoundError):
-        control_translation_job(test_db, sample_scenario.users["user"], UUID(job_id), "cancel")
+    viewer_headers = {
+        "Authorization": "Bearer "
+        + create_access_token({"sub": sample_scenario.users["user"].user_name}, timedelta(minutes=5))
+    }
+    assert client.post(f"/translation-jobs/{job_id}/cancel-all", headers=viewer_headers).status_code == 404
 
 
 @pytest.mark.parametrize("operation", ["start", "resume", "retry"])
 def test_control_does_not_overwrite_concurrent_worker_claim(
     test_db: Session,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
     operation: Control,
 ) -> None:
@@ -290,14 +302,14 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
     started = Event()
     backend_pids: list[int] = []
 
-    def control():
-        with testing_session_local() as db:
-            backend_pids.append(db.scalar(select(func.pg_backend_pid())))
+    async def control():
+        async with testing_async_session_local() as db:
+            backend_pids.append(await db.scalar(select(func.pg_backend_pid())))
             started.set()
-            return control_translation_job(db, user, job_id, operation)
+            return await control_translation_job(db, user, job_id, operation)
 
     with ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(control)
+        future = pool.submit(lambda: asyncio.run(control()))
         try:
             assert started.wait(5)
             deadline = monotonic() + 5
@@ -315,8 +327,9 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
 
 
 @pytest.mark.parametrize("operation", ["resume", "retry"])
-def test_recovery_schedules_poll_at_persisted_deadline(
+async def test_recovery_schedules_poll_at_persisted_deadline(
     test_db: Session,
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
     operation: Control,
@@ -332,7 +345,7 @@ def test_recovery_schedules_poll_at_persisted_deadline(
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.poll"], "apply_async", queued)
     for _ in range(2):
-        result = control_translation_job(test_db, sample_scenario.users["admin"], job_id, operation)
+        result = await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, operation)
         assert result.dispatched_task_ids == [task.task_id]
         # A duration, never the deadline itself: the consuming worker releases
         # the message against its own clock, not the database's.
@@ -347,7 +360,7 @@ def test_recovery_schedules_poll_at_persisted_deadline(
     test_db.commit()
     prepare = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", prepare)
-    control_translation_job(test_db, sample_scenario.users["admin"], job_id, "retry")
+    await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "retry")
     test_db.refresh(task)
     assert task.status == State.READY and task.next_poll_at is None
     prepare.assert_called_once_with((task.task_id,))

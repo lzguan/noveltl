@@ -23,7 +23,7 @@ omit memories whose terms do not exist.
 
 
 @tool_transaction
-def initial_glossary_context(ctx: RunContext[MemAgentDeps]) -> str:
+async def initial_glossary_context(ctx: RunContext[MemAgentDeps]) -> str:
     """Inject a snapshot of matching terms at the start of a run."""
     context_key = "glossary"
     cached = ctx.deps.initial_plugin_contexts.get(context_key)
@@ -32,7 +32,7 @@ def initial_glossary_context(ctx: RunContext[MemAgentDeps]) -> str:
 
     terms = [
         AgentGlossaryTerm.model_validate(term)
-        for term in access.get_terms_in_chapter(
+        for term in await access.get_terms_in_chapter(
             ctx.deps.db,
             ctx.deps.mem_access_context,
             access.contains_query,

@@ -91,7 +91,7 @@ other compatible relationships may coexist.
 
 
 @tool_transaction
-def relation_memories(
+async def relation_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     category: RelationReadCategory,
@@ -108,7 +108,7 @@ def relation_memories(
         marks = list(ALIAS_MARKS)
     else:
         marks = [category]
-    page = common.access.inspect_terms(
+    page = await common.access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
@@ -125,7 +125,7 @@ def relation_memories(
 
 
 @tool_transaction
-def new_relation_memory(
+async def new_relation_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=2)],
@@ -133,7 +133,7 @@ def new_relation_memory(
     scope: Scope | None = None,
 ) -> str:
     """Create a categorized relation between exact glossary terms."""
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         common.strip_marker(content, category),
         term_names,
@@ -145,7 +145,7 @@ def new_relation_memory(
 
 
 @tool_transaction
-def supersede_relation_memory(
+async def supersede_relation_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
@@ -153,7 +153,7 @@ def supersede_relation_memory(
     scope: Scope | None = None,
 ) -> str:
     """Supersede an active relation with one categorized replacement."""
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         common.strip_marker(content, category),
@@ -165,9 +165,9 @@ def supersede_relation_memory(
 
 
 @tool_transaction
-def expire_relation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_relation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire an active relation that explicitly stopped being true."""
-    return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(RELATION_WRITE_CATEGORIES))
+    return await common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(RELATION_WRITE_CATEGORIES))
 
 
 glossary_relations_read_toolset = FunctionToolset(

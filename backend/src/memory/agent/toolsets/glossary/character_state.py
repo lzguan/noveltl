@@ -60,7 +60,7 @@ Use gender_perception_memories for the separate directional observer query.
 
 
 @tool_transaction
-def character_state_memories(
+async def character_state_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     skip: Annotated[int, Field(ge=0)] = 0,
@@ -69,7 +69,7 @@ def character_state_memories(
     impersonation_skip: Annotated[int, Field(ge=0)] = 0,
 ) -> AgentCharacterStatePage[str]:
     """Read a bounded page of generic and gender facts, independent of enabled writers."""
-    page = common.access.inspect_terms(
+    page = await common.access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
@@ -89,7 +89,7 @@ def character_state_memories(
     )
     if not isinstance(page, AgentGlossaryMemoryPage):
         raise RuntimeError("Character state retrieval must preserve alias context")
-    impersonations = common.access.inspect_terms(
+    impersonations = await common.access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],

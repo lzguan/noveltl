@@ -70,7 +70,7 @@ def _mark(category: AliasCategory) -> str:
 
 
 @tool_transaction
-def new_alias_memory(
+async def new_alias_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=2, max_length=2)],
@@ -78,7 +78,7 @@ def new_alias_memory(
 ) -> str:
     """Create one typed active pair alias without merging either term's memories."""
     _distinct_pair(term_names)
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         content,
         term_names,
@@ -90,7 +90,7 @@ def new_alias_memory(
 
 
 @tool_transaction
-def supersede_alias_memory(
+async def supersede_alias_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
@@ -99,7 +99,7 @@ def supersede_alias_memory(
 ) -> str:
     """Replace one earlier pair alias with a corrected typed active pair alias."""
     _distinct_pair(term_names)
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         content,
@@ -112,9 +112,9 @@ def supersede_alias_memory(
 
 
 @tool_transaction
-def expire_alias_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_alias_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire one pair alias that explicitly stopped being true."""
-    return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(ALIAS_MARKS))
+    return await common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(ALIAS_MARKS))
 
 
 glossary_aliases_write_toolset = FunctionToolset(

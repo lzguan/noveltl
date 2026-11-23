@@ -26,7 +26,7 @@ discover possible candidates, or gather general background.
 """.strip()
 
 
-def term_memories(
+async def term_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: str,
     memory_type: MemoryType,
@@ -36,7 +36,7 @@ def term_memories(
     term_search: str | None,
 ) -> Page[AgentGlossaryMemory[str]]:
     """Retrieve one filtered page and translate UUIDs for the agent."""
-    page = access.inspect_terms(
+    page = await access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
@@ -57,7 +57,7 @@ def strip_marker(content: str, category: str) -> str:
     return content
 
 
-def create_memory(
+async def create_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: list[str],
@@ -69,8 +69,8 @@ def create_memory(
     """Create a glossary memory and translate its database UUID for the agent."""
     db = ctx.deps.db
     try:
-        with db.begin_nested():
-            new_memory, _ = access.create_memory(
+        async with db.begin_nested():
+            new_memory, _ = await access.create_memory(
                 db,
                 ctx.deps.mem_access_context,
                 Creator.AGENT,
@@ -81,7 +81,7 @@ def create_memory(
                 mark,
             )
     except GlossaryTermNotFoundException as exc:
-        missing_term_names = access.get_missing_term_names(
+        missing_term_names = await access.get_missing_term_names(
             db,
             ctx.deps.mem_access_context.memory_group_id,
             term_names,
@@ -102,7 +102,7 @@ def create_memory(
     return ctx.deps.memory_handles.new(new_memory.memory_id)
 
 
-def supersede_memory(
+async def supersede_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
@@ -120,8 +120,8 @@ def supersede_memory(
         raise ModelRetry(f"Memory {memory_id} not found.") from exc
 
     try:
-        with ctx.deps.db.begin_nested():
-            new_memory, _ = access.supersede_memory(
+        async with ctx.deps.db.begin_nested():
+            new_memory, _ = await access.supersede_memory(
                 ctx.deps.db,
                 ctx.deps.mem_access_context,
                 current_id,
@@ -134,7 +134,7 @@ def supersede_memory(
                 expected_marks,
             )
     except GlossaryTermNotFoundException as exc:
-        missing_term_names = access.get_missing_term_names(
+        missing_term_names = await access.get_missing_term_names(
             ctx.deps.db,
             ctx.deps.mem_access_context.memory_group_id,
             replacement_term_names or [],
@@ -156,7 +156,7 @@ def supersede_memory(
     return ctx.deps.memory_handles.new(new_memory.memory_id)
 
 
-def expire_memory(
+async def expire_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     memory_types: list[MemoryType],
@@ -170,8 +170,8 @@ def expire_memory(
         raise ModelRetry(f"Memory {memory_id} not found.") from exc
 
     try:
-        with ctx.deps.db.begin_nested():
-            access.expire_memory(
+        async with ctx.deps.db.begin_nested():
+            await access.expire_memory(
                 ctx.deps.db,
                 ctx.deps.mem_access_context,
                 current_id,

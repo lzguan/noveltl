@@ -43,7 +43,7 @@ appearance facts remain readable; do not duplicate one merely to categorize it.
 
 
 @tool_transaction
-def new_appearance_memory(
+async def new_appearance_memory(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     field: AppearanceField,
@@ -52,7 +52,7 @@ def new_appearance_memory(
 ) -> str:
     """Record one identifying feature or recurring attire claim."""
     mark = APPEARANCE_MARKS[field]
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         common.strip_marker(content, mark),
         [term_name],
@@ -64,7 +64,7 @@ def new_appearance_memory(
 
 
 @tool_transaction
-def supersede_appearance_memory(
+async def supersede_appearance_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     term_name: Annotated[str, Field(min_length=1)],
@@ -74,7 +74,7 @@ def supersede_appearance_memory(
 ) -> str:
     """Replace the same feature, including a legacy unstructured appearance fact."""
     mark = APPEARANCE_MARKS[field]
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         common.strip_marker(content, mark),
@@ -87,9 +87,9 @@ def supersede_appearance_memory(
 
 
 @tool_transaction
-def expire_appearance_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_appearance_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """End an appearance claim without affecting other character domains."""
-    return common.expire_memory(
+    return await common.expire_memory(
         ctx,
         memory_id,
         [MemoryType.FACT],

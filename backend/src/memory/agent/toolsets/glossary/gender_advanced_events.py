@@ -93,7 +93,7 @@ enforce that policy.
 
 
 @tool_transaction
-def gender_event_memories(
+async def gender_event_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     event_kind: GenderEventKind,
@@ -105,7 +105,7 @@ def gender_event_memories(
     kinds: tuple[GenderEventKind, ...] = (
         ("body_swap", "possession") if event_kind in ("body_swap", "possession") else (event_kind,)
     )
-    page = access.inspect_terms(
+    page = await access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
@@ -119,7 +119,7 @@ def gender_event_memories(
 
 
 @tool_transaction
-def new_gender_event_memory(
+async def new_gender_event_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=1)],
@@ -128,7 +128,7 @@ def new_gender_event_memory(
 ) -> str:
     """Create one body-swap, possession, or reveal event."""
     mark = GENDER_EVENT_MARKS[event_kind]
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         common.strip_marker(content, mark),
         term_names,
@@ -153,7 +153,7 @@ def create_glossary_gender_advanced_events_write_toolset(
     retention = config
 
     @tool_transaction
-    def new_gender_transformation_event_memory(
+    async def new_gender_transformation_event_memory(
         ctx: RunContext[MemAgentDeps],
         subject_term_name: Annotated[str, Field(min_length=1)],
         content: str,
@@ -162,8 +162,8 @@ def create_glossary_gender_advanced_events_write_toolset(
         mark = GENDER_EVENT_MARKS["transformation"]
         db = ctx.deps.db
         try:
-            with db.begin_nested():
-                new_memory, _ = access.create_memory(
+            async with db.begin_nested():
+                new_memory, _ = await access.create_memory(
                     db,
                     ctx.deps.mem_access_context,
                     Creator.AGENT,
@@ -173,7 +173,7 @@ def create_glossary_gender_advanced_events_write_toolset(
                     Scope.PERSIST,
                     mark,
                 )
-                chapter_num, memories = access.read_agent_event_history(
+                chapter_num, memories = await access.read_agent_event_history(
                     db, ctx.deps.mem_access_context, subject_term_name, mark
                 )
                 memories_by_id = {memory.memory_id: memory for memory in memories}
@@ -209,7 +209,7 @@ def create_glossary_gender_advanced_events_write_toolset(
                 expired_roots = set(occurrence_roots[retention.keep_first : max(retention.keep_first, stop)])
                 for memory in active_memories:
                     if roots_by_memory[memory.memory_id] in expired_roots:
-                        access.expire_memory(
+                        await access.expire_memory(
                             db,
                             ctx.deps.mem_access_context,
                             memory.memory_id,
@@ -218,7 +218,7 @@ def create_glossary_gender_advanced_events_write_toolset(
                             end_offset=1 if memory.memory_start_num == chapter_num else 0,
                         )
         except GlossaryTermNotFoundException as exc:
-            missing_term_names = access.get_missing_term_names(
+            missing_term_names = await access.get_missing_term_names(
                 db,
                 ctx.deps.mem_access_context.memory_group_id,
                 [subject_term_name],
@@ -239,7 +239,7 @@ def create_glossary_gender_advanced_events_write_toolset(
         return ctx.deps.memory_handles.new(new_memory.memory_id)
 
     @tool_transaction
-    def supersede_gender_transformation_event_memory(
+    async def supersede_gender_transformation_event_memory(
         ctx: RunContext[MemAgentDeps],
         memory_id: str,
         subject_term_name: Annotated[str, Field(min_length=1)],
@@ -252,7 +252,7 @@ def create_glossary_gender_advanced_events_write_toolset(
         except KeyError as exc:
             raise ModelRetry(f"Memory {memory_id} not found.") from exc
 
-        if not access.can_supersede_agent_event(
+        if not await access.can_supersede_agent_event(
             ctx.deps.db, ctx.deps.mem_access_context, current_id, subject_term_name, mark
         ):
             raise ModelRetry(
@@ -261,7 +261,7 @@ def create_glossary_gender_advanced_events_write_toolset(
                 "the exact subject's current transformation history before making a different call."
             )
 
-        return common.supersede_memory(
+        return await common.supersede_memory(
             ctx,
             memory_id,
             common.strip_marker(content, mark),
@@ -273,7 +273,7 @@ def create_glossary_gender_advanced_events_write_toolset(
         )
 
     @tool_transaction
-    def supersede_gender_event_memory(
+    async def supersede_gender_event_memory(
         ctx: RunContext[MemAgentDeps],
         memory_id: str,
         content: str,
@@ -282,7 +282,7 @@ def create_glossary_gender_advanced_events_write_toolset(
     ) -> str:
         """Correct or replace one body-swap, possession, or reveal occurrence."""
         mark = GENDER_EVENT_MARKS[event_kind]
-        return common.supersede_memory(
+        return await common.supersede_memory(
             ctx,
             memory_id,
             common.strip_marker(content, mark),

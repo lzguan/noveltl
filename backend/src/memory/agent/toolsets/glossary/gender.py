@@ -56,7 +56,7 @@ approved memories change only on clear textual evidence.
 
 
 @tool_transaction
-def gender_memories(
+async def gender_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     skip: Annotated[int, Field(ge=0)] = 0,
@@ -64,18 +64,18 @@ def gender_memories(
     term_search: Annotated[str | None, Field(min_length=1)] = None,
 ) -> Page[AgentGlossaryMemory[str]]:
     """Retrieve active gender memories for one exact person term."""
-    return common.term_memories(ctx, term_name, MemoryType.FACT, GENDER_MARK, skip, limit, term_search)
+    return await common.term_memories(ctx, term_name, MemoryType.FACT, GENDER_MARK, skip, limit, term_search)
 
 
 @tool_transaction
-def new_gender_memory(
+async def new_gender_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=1, max_length=1)],
     scope: Scope | None = None,
 ) -> str:
     """Create a gender memory for one exact person term."""
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         common.strip_marker(content, GENDER_MARK),
         term_names,
@@ -87,7 +87,7 @@ def new_gender_memory(
 
 
 @tool_transaction
-def supersede_gender_memory(
+async def supersede_gender_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
@@ -95,7 +95,7 @@ def supersede_gender_memory(
     scope: Scope | None = None,
 ) -> str:
     """Supersede a gender memory and associate its replacement with one exact person term."""
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         common.strip_marker(content, GENDER_MARK),
@@ -108,9 +108,9 @@ def supersede_gender_memory(
 
 
 @tool_transaction
-def expire_gender_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_gender_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire a gender memory whose exact attribute explicitly stopped being true."""
-    return common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=[GENDER_MARK])
+    return await common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=[GENDER_MARK])
 
 
 glossary_gender_read_toolset = FunctionToolset(

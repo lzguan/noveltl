@@ -10,7 +10,7 @@ from pydantic_ai.models import ModelRequestContext
 
 from src.memory import access
 from src.memory.agent.dependencies import MemAgentDeps
-from src.memory.agent.transactions import atool_transaction
+from src.memory.agent.transactions import tool_transaction
 from src.schemas import Model
 
 CONTINUITY_SUMMARY_INSTRUCTIONS = """
@@ -76,7 +76,7 @@ class ContinuitySummaryCapability(AbstractCapability[MemAgentDeps]):
     def get_instructions(self) -> str:
         return CONTINUITY_SUMMARY_INSTRUCTIONS
 
-    @atool_transaction
+    @tool_transaction
     async def before_model_request(
         self,
         ctx: RunContext[MemAgentDeps],
@@ -85,16 +85,16 @@ class ContinuitySummaryCapability(AbstractCapability[MemAgentDeps]):
         if self._summary_handled:
             return request_context
         self._summary_handled = True
-        if summary := access.read_previous_continuity_summary(ctx.deps.db, ctx.deps.mem_access_context):
+        if summary := await access.read_previous_continuity_summary(ctx.deps.db, ctx.deps.mem_access_context):
             _append_summary_to_user_prompt(ctx, request_context, summary)
         return request_context
 
-    @atool_transaction
+    @tool_transaction
     async def after_run(
         self,
         ctx: RunContext[MemAgentDeps],
         *,
         result: AgentRunResult[ContinuitySummaryOutput],
     ) -> AgentRunResult[ContinuitySummaryOutput]:
-        access.write_continuity_summary(ctx.deps.db, ctx.deps.mem_access_context, result.output.summary)
+        await access.write_continuity_summary(ctx.deps.db, ctx.deps.mem_access_context, result.output.summary)
         return result

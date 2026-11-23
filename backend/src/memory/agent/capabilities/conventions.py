@@ -46,7 +46,7 @@ class ConventionsOutput(Model):
 
 
 @tool_transaction
-def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsOutput) -> ConventionsOutput:
+async def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsOutput) -> ConventionsOutput:
     deps = ctx.deps
     group_id = deps.mem_access_context.memory_group_id
     unknown: list[str] = []
@@ -59,10 +59,10 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
             unknown.append(handle)
             return None
 
-    savepoint = deps.db.begin_nested()
+    savepoint = await deps.db.begin_nested()
     try:
         for draft in output.create:
-            create_convention(
+            await create_convention(
                 deps.db,
                 group_id,
                 category=draft.category,
@@ -78,7 +78,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
             if target is None:
                 continue
             try:
-                update_convention(
+                await update_convention(
                     deps.db,
                     group_id,
                     target,
@@ -98,7 +98,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
             if target is None:
                 continue
             try:
-                delete_convention(
+                await delete_convention(
                     deps.db,
                     group_id,
                     target,
@@ -109,13 +109,13 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
             except ConventionNotFoundException:
                 locked.append(handle)
     except Exception:
-        savepoint.rollback()
+        await savepoint.rollback()
         raise
     if not unknown and not locked:
-        savepoint.commit()
+        await savepoint.commit()
         return output
 
-    savepoint.rollback()
+    await savepoint.rollback()
     problems: list[str] = []
     if unknown:
         problems.append(f"Unknown convention handles: {', '.join(unknown)}. Use handles from the context.")

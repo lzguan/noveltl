@@ -44,16 +44,17 @@ class TermOccurrences(AgentModel):
 
 
 @tool_transaction
-def search_glossary_terms(
+async def search_glossary_terms(
     ctx: RunContext[MemAgentDeps], query: Annotated[str, Field(min_length=1, max_length=50)]
 ) -> TermSearchResult:
     """Find glossary terms whose source form contains the query, with their current translations."""
     db, access_ctx = ctx.deps.db, ctx.deps.mem_access_context
-    count, terms = glossary.search_terms(
+    count, terms = await glossary.search_terms(
         db, access_ctx.memory_group_id, query, limit=MAX_SEARCH_RESULTS, workspace_id=access_ctx.workspace_id
     )
     translations = {
-        mapping.term: mapping.translation for mapping in read_term_translations(db, access_ctx, [t.term for t in terms])
+        mapping.term: mapping.translation
+        for mapping in await read_term_translations(db, access_ctx, [t.term for t in terms])
     }
     return TermSearchResult(
         count=count,
@@ -62,7 +63,7 @@ def search_glossary_terms(
 
 
 @tool_transaction
-def term_occurrences(
+async def term_occurrences(
     ctx: RunContext[MemAgentDeps],
     texts: Annotated[list[Annotated[str, Field(min_length=1)]], Field(min_length=1, max_length=20)],
 ) -> list[TermOccurrences]:
@@ -74,7 +75,7 @@ def term_occurrences(
             chapter_count=result.chapter_count,
             match_count=result.match_count,
         )
-        for result in count_text_occurrences(ctx.deps.db, ctx.deps.mem_access_context, texts)
+        for result in await count_text_occurrences(ctx.deps.db, ctx.deps.mem_access_context, texts)
     ]
 
 

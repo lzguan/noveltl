@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from pydantic_ai import AgentRunResult
+from pydantic_ai.tool_manager import ToolManager
 from sqlalchemy import select
 from sqlalchemy.orm import Session, aliased, sessionmaker
 
@@ -171,13 +172,15 @@ async def _run_single_task(
     deps = MemAgentDeps(db, context)
     try:
         stage = stages[task.stage_num]
-        match stage:
-            case RecordMemoriesStageConfig():
-                result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
-            case SummarizeConventionsStageConfig():
-                result = await run_conventions_stage(deps, cnum, lang_name, stage)
-            case TranslateTermsStageConfig():
-                result = await run_term_translation_stage(deps, cctext, cnum, lang_name, stage)
+        # Every tool in a run shares deps.db, which cannot serve concurrent operations.
+        with ToolManager.parallel_execution_mode("sequential"):
+            match stage:
+                case RecordMemoriesStageConfig():
+                    result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
+                case SummarizeConventionsStageConfig():
+                    result = await run_conventions_stage(deps, cnum, lang_name, stage)
+                case TranslateTermsStageConfig():
+                    result = await run_term_translation_stage(deps, cctext, cnum, lang_name, stage)
         db.commit()
         return CompletedMemoryTask(
             memory_job_id=task.memory_job_id,

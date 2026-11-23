@@ -117,7 +117,7 @@ is not an independent ability.
 
 
 @tool_transaction
-def fact_memories(
+async def fact_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     category: FactCategory,
@@ -127,7 +127,7 @@ def fact_memories(
 ) -> Page[AgentGlossaryMemory[str]]:
     """Retrieve active facts for one exact term; ability and limitation share a result set."""
     marks = ["ability", "limitation"] if category in ("ability", "limitation") else [category]
-    page = common.access.inspect_terms(
+    page = await common.access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
@@ -141,7 +141,7 @@ def fact_memories(
 
 
 @tool_transaction
-def new_fact_memory(
+async def new_fact_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=1, max_length=1)],
@@ -149,7 +149,7 @@ def new_fact_memory(
     scope: Scope | None = None,
 ) -> str:
     """Create a categorized fact for one primary glossary term."""
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         common.strip_marker(content, category),
         term_names,
@@ -161,7 +161,7 @@ def new_fact_memory(
 
 
 @tool_transaction
-def supersede_fact_memory(
+async def supersede_fact_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
@@ -170,7 +170,7 @@ def supersede_fact_memory(
     scope: Scope | None = None,
 ) -> str:
     """Supersede an active fact and associate its replacement with one exact primary term."""
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         common.strip_marker(content, category),
@@ -183,9 +183,9 @@ def supersede_fact_memory(
 
 
 @tool_transaction
-def expire_fact_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_fact_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire an active fact that explicitly stopped being true."""
-    return common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=list(FACT_CATEGORIES))
+    return await common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=list(FACT_CATEGORIES))
 
 
 glossary_facts_read_toolset = FunctionToolset(

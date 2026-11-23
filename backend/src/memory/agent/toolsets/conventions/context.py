@@ -48,7 +48,7 @@ def _shorten(text: str) -> str:
     return text if len(text) <= MAX_MEMORY_CHARS else text[: MAX_MEMORY_CHARS - 1] + "…"
 
 
-def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> ConventionsContext:
+async def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> ConventionsContext:
     db, ctx = deps.db, deps.mem_access_context
     conventions = [
         ContextConvention(
@@ -60,21 +60,21 @@ def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> Co
             review_status=row.review_status,
             editable=row.creator_type == Creator.AGENT and row.review_status == ReviewStatus.PENDING,
         )
-        for row in read_conventions(db, ctx.memory_group_id, workspace_id=ctx.workspace_id)
+        for row in await read_conventions(db, ctx.memory_group_id, workspace_id=ctx.workspace_id)
     ]
-    range_terms, terms_truncated = glossary.get_terms_in_chapter_range(
+    range_terms, terms_truncated = await glossary.get_terms_in_chapter_range(
         db, ctx, start_chapter_num, limit=MAX_CONTEXT_TERMS
     )
     range_terms.sort(key=lambda row: (row.term.term_kind or "", row.first_chapter_num, row.term.term))
     terms = [row.term for row in range_terms]
-    definition_page = glossary.inspect_terms(
+    definition_page = await glossary.inspect_terms(
         db, ctx, [term.term for term in terms], [MemoryType.DEFINITION], limit=MAX_CONTEXT_MEMORIES
     )
     definitions: dict[str, str] = {}
     for row in definition_page.rows:
         for associated in row.terms:
             definitions.setdefault(associated.term, row.memory.memory_content)
-    alias_page = glossary.inspect_terms(
+    alias_page = await glossary.inspect_terms(
         db,
         ctx,
         [term.term for term in terms],
@@ -87,7 +87,8 @@ def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> Co
         for associated in row.terms:
             aliases.setdefault(associated.term, []).append(_shorten(row.memory.memory_content))
     translations = {
-        mapping.term: mapping.translation for mapping in read_term_translations(db, ctx, [term.term for term in terms])
+        mapping.term: mapping.translation
+        for mapping in await read_term_translations(db, ctx, [term.term for term in terms])
     }
     return ConventionsContext(
         conventions=conventions,

@@ -38,14 +38,14 @@ def _claim(actor: str, target: str, content: str) -> str:
 
 
 @tool_transaction
-def new_impersonation_memory(
+async def new_impersonation_memory(
     ctx: RunContext[MemAgentDeps],
     actor_term_name: Annotated[str, Field(min_length=1)],
     target_term_name: Annotated[str, Field(min_length=1)],
     content: str,
 ) -> str:
     """Record actor -> target state; content adds source-grounded context."""
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         _claim(actor_term_name, target_term_name, content),
         [actor_term_name, target_term_name],
@@ -57,7 +57,7 @@ def new_impersonation_memory(
 
 
 @tool_transaction
-def supersede_impersonation_memory(
+async def supersede_impersonation_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     actor_term_name: Annotated[str, Field(min_length=1)],
@@ -65,7 +65,7 @@ def supersede_impersonation_memory(
     content: str,
 ) -> str:
     """Replace an active impersonation with its complete directional claim."""
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         _claim(actor_term_name, target_term_name, content),
@@ -78,9 +78,9 @@ def supersede_impersonation_memory(
 
 
 @tool_transaction
-def expire_impersonation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_impersonation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """End an impersonation without ending either individual's identity."""
-    return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=[IMPERSONATION_MARK])
+    return await common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=[IMPERSONATION_MARK])
 
 
 glossary_impersonation_write_toolset = FunctionToolset(

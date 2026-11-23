@@ -40,6 +40,13 @@ worker, only when that worker needs changes anyway.
   (`src/memory/plugins/conventions/access.py`) and have
   `src/translations/actions/common/inputs.py` await `read_conventions` directly. The
   helper exists only because that worker is still sync (user request, 2026-11-23).
+- Future option (discussed 2026-11-23, not needed now): per-tool sessions. Replace the
+  shared `MemAgentDeps.db` with a session factory; `tool_transaction` opens one session
+  per call. Removes shared-session hazards and would allow parallel tool calls, but needs
+  write-race handling (read-modify-write on shadow rows, unique constraints), takes more
+  connections, and touches all ~76 tools. Order between dependent calls in one response
+  still needs sequential mode. Today each stage runs under
+  `ToolManager.parallel_execution_mode("sequential")` with one shared session.
 - Future options for publication cost, only if profiling still shows it after the async move:
   cache `_operations` SQL rendered once with sentinel UUIDs (~6.5 ms per publish), or a
   `publish_workspace(uuid, uuid)` plpgsql function (one round trip, shorter lock hold; per-table

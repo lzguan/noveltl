@@ -134,12 +134,12 @@ def _mark(aspect: GenderFactAspect) -> str:
 
 
 @tool_transaction
-def gender_state(
+async def gender_state(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
 ) -> AdvancedGenderState:
     """Retrieve active gender states and change rules for one exact person term."""
-    page = access.inspect_terms(
+    page = await access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
@@ -158,7 +158,7 @@ def gender_state(
 
 
 @tool_transaction
-def new_gender_fact_memory(
+async def new_gender_fact_memory(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     aspect: GenderFactAspect,
@@ -168,7 +168,7 @@ def new_gender_fact_memory(
     """Create one missing gender state or independent change rule for one person."""
     mark = _mark(aspect)
     if aspect != "change_rule":
-        existing = access.inspect_terms(
+        existing = await access.inspect_terms(
             ctx.deps.db,
             ctx.deps.mem_access_context,
             [term_name],
@@ -182,7 +182,7 @@ def new_gender_fact_memory(
                 f"{term_name} already has an active {aspect} memory. Call character_state_memories and either leave it "
                 "unchanged or supersede its handle; do not create another memory for this aspect."
             )
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         common.strip_marker(content, mark),
         [term_name],
@@ -194,7 +194,7 @@ def new_gender_fact_memory(
 
 
 @tool_transaction
-def supersede_gender_fact_memory(
+async def supersede_gender_fact_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     term_name: Annotated[str, Field(min_length=1)],
@@ -204,7 +204,7 @@ def supersede_gender_fact_memory(
 ) -> str:
     """Replace one gender state or one particular change rule."""
     mark = _mark(aspect)
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         common.strip_marker(content, mark),
@@ -217,9 +217,9 @@ def supersede_gender_fact_memory(
 
 
 @tool_transaction
-def expire_gender_fact_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_gender_fact_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire a gender state or change rule that explicitly stopped being true."""
-    return common.expire_memory(
+    return await common.expire_memory(
         ctx,
         memory_id,
         [MemoryType.FACT],

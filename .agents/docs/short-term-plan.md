@@ -17,13 +17,16 @@ hashing via `asyncio.to_thread`; the auth dependencies use the async session, so
 unconverted services briefly use two connections per request), `novels` with
 `editing` and the glossary `GET /terms` query, and `labels`.
 
-Remaining: `filters`, `autolabels`, then `memory` and `translations` together
-with the Celery-to-taskiq move.
+Remaining: `autolabels` (4 routes), then `memory` (largest, mechanical) and the
+`translations` routes. Moving workers off Celery is a separate project per
+worker, only when that worker needs changes anyway.
 
-- Open decision for `filters`: its job state machine (`src/filters/lifecycle.py`)
-  is shared by the HTTP service and the Celery runners. Proposed: keep it sync
-  and call it from async code with `await db.run_sync(...)` (same connection and
-  transaction) until the workers move; use `dispatcher.aenqueue`.
+- Deferred (user decision, 2026-11-23): `filters` stays sync; the user does not
+  use it. Sync routes run in the threadpool, so the only costs are a second
+  connection per request and keeping sync paths in shared helpers (notably
+  `src/filters/permissions.py` during the label permission refactor). When it is
+  converted, prefer converting `src/filters/lifecycle.py` together with its
+  worker; until then the fallback is `await db.run_sync(...)` from async code.
 - Rejected: `asyncio.run` from sync code into async functions (needs a new
   session and transaction, breaks pooled async connections across loops, fails
   inside a running loop); sync duplicates of shared readers.

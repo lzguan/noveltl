@@ -22,6 +22,10 @@ export type QueuePromotionResult =
 
 type LoopRequest = "none" | "poll" | "reseed";
 
+function trackedPromotionIds(state: PromotionJobsState, queuedIds: readonly string[]) {
+	return new Set([...state.active.map((job) => job.promotionId), ...queuedIds]);
+}
+
 export function usePromotionJobs({
 	novelId,
 	onJobFinished,
@@ -60,14 +64,9 @@ export function usePromotionJobs({
 			notify();
 		};
 
-		const trackedIds = () =>
-			[
-				...stateRef.current.active.map((job) => job.promotionId),
-				...queuedIdsRef.current,
-			].slice(0, MAX_TRACKED_PROMOTIONS);
-
 		const nextDelay = (): number | null => {
-			if (seeded && trackedIds().length === 0) return null;
+			if (seeded && stateRef.current.active.length === 0 && queuedIdsRef.current.length === 0)
+				return null;
 			return Math.min(
 				PROMOTION_POLL_INTERVAL_MS * 2 ** consecutiveFailures,
 				MAX_POLL_BACKOFF_MS,
@@ -86,7 +85,9 @@ export function usePromotionJobs({
 			});
 
 		const poll = async () => {
-			const requestedIds = trackedIds();
+			const requestedIds = [
+				...trackedPromotionIds(stateRef.current, queuedIdsRef.current),
+			].slice(0, MAX_TRACKED_PROMOTIONS);
 			if (requestedIds.length === 0) return;
 			const resp = await readLabelPromotionsNovelsNovelIdLabelPromotionsGet(
 				novelId,
@@ -113,9 +114,14 @@ export function usePromotionJobs({
 			);
 			if (resp.status !== 200) throw new Error(`Loading promotions failed: ${resp.status}`);
 			if (abort.signal.aborted) return;
+			const queuedIds = queuedIdsRef.current;
 			const seen = new Set(resp.data.map((job) => job.promotionId));
-			queuedIdsRef.current = queuedIdsRef.current.filter((id) => !seen.has(id));
-			const { state: next, newlyFinished } = applySeed(stateRef.current, resp.data);
+			queuedIdsRef.current = queuedIds.filter((id) => !seen.has(id));
+			const { state: next, newlyFinished } = applySeed(
+				stateRef.current,
+				resp.data,
+				queuedIds,
+			);
 			commit(next, newlyFinished);
 			seeded = true;
 		};
@@ -159,7 +165,7 @@ export function usePromotionJobs({
 			request: CreateLabelDataByAutoLabel,
 		): Promise<QueuePromotionResult> => {
 			if (
-				stateRef.current.active.length + queuedIdsRef.current.length >=
+				trackedPromotionIds(stateRef.current, queuedIdsRef.current).size >=
 				MAX_TRACKED_PROMOTIONS
 			) {
 				return { ok: false, reason: "tooMany" };

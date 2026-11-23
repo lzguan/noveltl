@@ -166,3 +166,103 @@ test("a poll that changes nothing does not re-render", async () => {
 	expect(read.mock.calls.length).toBeGreaterThanOrEqual(3);
 	expect(renders).toBe(rendersAfterSeed);
 });
+
+test("a job queued during a reseed that lists it as finished reports its finish once without repolling", async () => {
+	let resolveReseed: (value: ReturnType<typeof listResponse>) => void = () => {};
+	read.mockResolvedValueOnce(listResponse([])).mockReturnValueOnce(
+		new Promise((resolve) => {
+			resolveReseed = resolve;
+		}),
+	);
+	create.mockResolvedValue({
+		status: 202,
+		data: { promotionId: "a", itemCount: 1 },
+		headers: new Headers(),
+	});
+	const onJobFinished = vi.fn();
+
+	const { result } = renderHook(() => usePromotionJobs({ novelId: "novel", onJobFinished }));
+	await advance(0);
+	act(() => result.current.refresh());
+	await advance(0);
+	await act(async () => {
+		await result.current.queue("group", { runId: "run" });
+	});
+	await act(async () => {
+		resolveReseed(listResponse([job("a", "done", 1)]));
+	});
+	await advance(PROMOTION_POLL_INTERVAL_MS * 2);
+
+	expect(read).toHaveBeenCalledTimes(2);
+	expect(read.mock.calls[1][1]).toEqual({ limit: MAX_TRACKED_PROMOTIONS });
+	expect(onJobFinished).toHaveBeenCalledExactlyOnceWith(job("a", "done", 1));
+	expect(result.current.jobs.map((j) => j.promotionId)).toEqual(["a"]);
+});
+
+test("a queued job that becomes active then finishes across two reseeds only reports its finish once", async () => {
+	let resolveFirstReseed: (value: ReturnType<typeof listResponse>) => void = () => {};
+	read.mockResolvedValueOnce(listResponse([]))
+		.mockReturnValueOnce(
+			new Promise((resolve) => {
+				resolveFirstReseed = resolve;
+			}),
+		)
+		.mockResolvedValueOnce(listResponse([job("a", "done", 1)]));
+	create.mockResolvedValue({
+		status: 202,
+		data: { promotionId: "a", itemCount: 1 },
+		headers: new Headers(),
+	});
+	const onJobFinished = vi.fn();
+
+	const { result } = renderHook(() => usePromotionJobs({ novelId: "novel", onJobFinished }));
+	await advance(0);
+	act(() => result.current.refresh());
+	await advance(0);
+	await act(async () => {
+		await result.current.queue("group", { runId: "run" });
+	});
+	act(() => result.current.refresh());
+	await act(async () => {
+		resolveFirstReseed(listResponse([job("a", "processing", 0)]));
+	});
+	await advance(PROMOTION_POLL_INTERVAL_MS * 2);
+
+	expect(read).toHaveBeenCalledTimes(3);
+	expect(read.mock.calls[2][1]).toEqual({ limit: MAX_TRACKED_PROMOTIONS });
+	expect(onJobFinished).toHaveBeenCalledExactlyOnceWith(job("a", "done", 1));
+	expect(result.current.jobs.map((j) => j.promotionId)).toEqual(["a"]);
+});
+
+test("counts a queued job listed by a reseed once when admitting another job", async () => {
+	const active = Array.from({ length: MAX_TRACKED_PROMOTIONS - 2 }, (_, i) =>
+		job(String(i), "processing"),
+	);
+	let resolveSeed: (value: ReturnType<typeof listResponse>) => void = () => {};
+	read.mockReturnValueOnce(
+		new Promise((resolve) => {
+			resolveSeed = resolve;
+		}),
+	).mockReturnValueOnce(new Promise(() => {}));
+	create.mockImplementation(async (_group, { runId }) => ({
+		status: 202,
+		data: { promotionId: runId, itemCount: 1 },
+		headers: new Headers(),
+	}));
+	const { result } = renderHook(() =>
+		usePromotionJobs({ novelId: "novel", onJobFinished: vi.fn() }),
+	);
+	await act(async () => {
+		await result.current.queue("group", { runId: "overlap" });
+	});
+	await act(async () => {
+		resolveSeed(listResponse([...active, job("overlap", "pending")]));
+	});
+	await act(async () => {
+		expect(await result.current.queue("group", { runId: "tenth" })).toMatchObject({ ok: true });
+		expect(await result.current.queue("group", { runId: "eleventh" })).toEqual({
+			ok: false,
+			reason: "tooMany",
+		});
+	});
+});

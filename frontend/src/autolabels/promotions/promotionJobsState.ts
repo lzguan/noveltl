@@ -31,12 +31,16 @@ function arrange(
 export function applySeed(
 	previous: PromotionJobsState,
 	jobs: readonly LabelPromotionJob[],
+	queuedIds: readonly string[] = [],
 ): { state: PromotionJobsState; newlyFinished: LabelPromotionJob[] } {
-	const previouslyActive = new Set(previous.active.map((job) => job.promotionId));
+	const previouslyTracked = new Set([
+		...previous.active.map((job) => job.promotionId),
+		...queuedIds,
+	]);
 	const finished = jobs.filter((job) => !isActive(job));
 	return {
 		state: arrange(jobs.filter(isActive), finished),
-		newlyFinished: finished.filter((job) => previouslyActive.has(job.promotionId)),
+		newlyFinished: finished.filter((job) => previouslyTracked.has(job.promotionId)),
 	};
 }
 

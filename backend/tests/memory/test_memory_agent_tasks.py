@@ -34,6 +34,7 @@ from src.memory.shadow_models import MemoryWorkspace, ShadowTerm
 from src.memory.types import Creator, JobStatus, MemoryType, ReviewStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
+from test_support.database import run_with_async_session
 
 
 def _make_memory_job(
@@ -87,12 +88,15 @@ def _make_memory_job(
     test_db.add(memory_group)
     test_db.commit()
 
-    memory_job_id = make_job(
+    memory_job_id = run_with_async_session(
         test_db,
-        memory_group.memory_group_id,
-        None,
-        None,
-        params or JobParams(model_name="deepseek:deepseek-v4-flash-low", toolsets=toolsets or {}),
+        lambda db: make_job(
+            db,
+            memory_group.memory_group_id,
+            None,
+            None,
+            params or JobParams(model_name="deepseek:deepseek-v4-flash-low", toolsets=toolsets or {}),
+        ),
     )
     return memory_job_id, [chapter.chapter_id for chapter in chapters]
 
@@ -570,7 +574,7 @@ def test_naming_failure_preserves_recording_and_retry_runs_only_naming(
 
     # Starting again must not skip a failed stage and silently advance.
     assert asyncio.run(consume()) == []
-    assert reset_failed_task(test_db, job_id, chapter_id, 1)
+    assert run_with_async_session(test_db, lambda db: reset_failed_task(db, job_id, chapter_id, 1))
     fail_naming = False
     completed = asyncio.run(agent_tasks.run_one_task(testing_session_local, job_id, chapter_id, 1))
     assert completed is not None and completed.stage_name == "translate_terms"

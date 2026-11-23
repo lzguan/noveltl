@@ -2,6 +2,7 @@ import uuid
 from datetime import timedelta
 
 from sqlalchemy import Select, and_, func, insert, literal, or_, select, tuple_, union_all, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.memory.agent.config import (
@@ -120,7 +121,7 @@ def release_job(
     return True
 
 
-def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
+async def abort_job(db: AsyncSession, memory_job_id: uuid.UUID) -> bool:
     """Fail active tasks and clear the job claim, invalidating the current worker."""
     abort_stmt = (
         update(MemoryJob)
@@ -130,11 +131,11 @@ def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
     )
 
     try:
-        aborted_job_id = db.scalar(abort_stmt)
+        aborted_job_id = await db.scalar(abort_stmt)
         if aborted_job_id is None:
-            db.rollback()
+            await db.rollback()
             return False
-        db.execute(
+        await db.execute(
             update(MemoryChapterTask)
             .where(
                 MemoryChapterTask.memory_job_id == memory_job_id,
@@ -142,9 +143,9 @@ def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
             )
             .values(task_status=JobStatus.FAILED)
         )
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return True
 
@@ -193,8 +194,8 @@ def stage_task_chapters(stage: StageConfig, chapters: Select[uuid.UUID]) -> Sele
             return chapters.order_by(Chapter.chapter_num.desc()).limit(1)
 
 
-def make_job(
-    db: Session,
+async def make_job(
+    db: AsyncSession,
     memory_group_id: uuid.UUID,
     start_chapter_num: int | None,
     end_chapter_num: int | None,
@@ -243,8 +244,8 @@ def make_job(
     tasks = union_all(*task_rows).subquery()
 
     try:
-        db.execute(job_stmt)
-        db.execute(
+        await db.execute(job_stmt)
+        await db.execute(
             insert(MemoryChapterTask).from_select(
                 [
                     MemoryChapterTask.memory_job_id,
@@ -254,9 +255,9 @@ def make_job(
                 select(tasks.c.memory_job_id, tasks.c.chapter_id, tasks.c.stage_num),
             )
         )
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
     return memory_job_id
@@ -376,14 +377,14 @@ def fail_task(
     return True
 
 
-def reset_failed_task(
-    db: Session,
+async def reset_failed_task(
+    db: AsyncSession,
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     stage_num: int = 0,
 ) -> bool:
     """Return a failed task to pending so a worker can claim it again."""
-    reset_chapter_id = db.scalar(
+    reset_chapter_id = await db.scalar(
         update(MemoryChapterTask)
         .where(
             MemoryChapterTask.memory_job_id == memory_job_id,
@@ -395,7 +396,7 @@ def reset_failed_task(
         .returning(MemoryChapterTask.chapter_id)
     )
     if reset_chapter_id is None:
-        db.rollback()
+        await db.rollback()
         return False
-    db.commit()
+    await db.commit()
     return True

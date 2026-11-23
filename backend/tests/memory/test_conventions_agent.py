@@ -33,6 +33,7 @@ from src.memory.plugins.term_search.access import TextOccurrences, count_text_oc
 from src.memory.types import Creator, JobStatus, ReviewStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
+from test_support.database import run_with_async_session
 
 MODEL = "deepseek:deepseek-v4-flash-low"
 CHAPTER_TEXTS = {1: ["种级出现。"], 2: ["旧版卵级", "卵级与种级，种级。"], 3: ["蛹级在后面。"]}
@@ -211,12 +212,15 @@ def test_conventions_job_commits_the_agent_output_with_its_task(
 ) -> None:
     _, group, _ = _setup(test_db)
     _fake_agent(monkeypatch, [])
-    job_id = make_job(
+    job_id = run_with_async_session(
         test_db,
-        group.memory_group_id,
-        None,
-        None,
-        JobParamsV3(stages=[SummarizeConventionsStageConfig(model_name=MODEL)]),
+        lambda db: make_job(
+            db,
+            group.memory_group_id,
+            None,
+            None,
+            JobParamsV3(stages=[SummarizeConventionsStageConfig(model_name=MODEL)]),
+        ),
     )
 
     async def consume():

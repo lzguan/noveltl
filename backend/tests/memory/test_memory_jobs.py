@@ -22,6 +22,7 @@ from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, Novel, SourceWork
+from test_support.database import run_with_async_session
 
 
 def _complete_task(db: Session, memory_job_id: uuid.UUID, chapter_id: uuid.UUID, stage_num: int = 0) -> None:
@@ -104,7 +105,7 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
             "glossary_events_write": {},
         },
     )
-    memory_job_id = make_job(test_db, memory_group.memory_group_id, 2, 4, params)
+    memory_job_id = run_with_async_session(test_db, lambda db: make_job(db, memory_group.memory_group_id, 2, 4, params))
 
     job = test_db.get(MemoryJob, memory_job_id)
     assert job is not None
@@ -156,7 +157,7 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     assert refresh_job(test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is False
     assert refresh_job(test_db, memory_job_id, third_token, timedelta(minutes=5)) is True
 
-    assert abort_job(test_db, uuid.uuid4()) is False
+    assert run_with_async_session(test_db, lambda db: abort_job(db, uuid.uuid4())) is False
     assert release_job(test_db, memory_job_id, third_token) is True
 
     third_token = uuid.uuid4()
@@ -214,7 +215,7 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     assert reclaimed_task.task_status == JobStatus.PROCESSING
     assert reclaimed_task.attempt_count == 2
 
-    assert abort_job(test_db, memory_job_id) is True
+    assert run_with_async_session(test_db, lambda db: abort_job(db, memory_job_id)) is True
     test_db.refresh(reclaimed_task)
     test_db.refresh(claimed_again)
     assert reclaimed_task.task_status == JobStatus.FAILED
@@ -264,7 +265,9 @@ def test_stages_run_as_job_wide_barriers(test_db: Session) -> None:
             "translate_terms": {"model_name": "deepseek:deepseek-v4-flash-low"},
         }
     )
-    memory_job_id = make_job(test_db, memory_group.memory_group_id, None, None, params)
+    memory_job_id = run_with_async_session(
+        test_db, lambda db: make_job(db, memory_group.memory_group_id, None, None, params)
+    )
     token = uuid.uuid4()
     assert claim_job(test_db, memory_job_id, token, timedelta(minutes=5)) is not None
     first, second = (chapter.chapter_id for chapter in chapters)

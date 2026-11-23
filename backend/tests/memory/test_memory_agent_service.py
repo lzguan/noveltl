@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import pytest
 from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.memory.agent.config import JobParamsV1 as JobParams
@@ -61,8 +62,9 @@ def _create_group(db: Session, scenario: DatabaseScenario, novel_key: str) -> Me
         JobParamsV2(translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low")),
     ],
 )
-def test_create_and_query_job_respect_memory_group_permissions(
+async def test_create_and_query_job_respect_memory_group_permissions(
     test_db: Session,
+    async_test_db: AsyncSession,
     novel_permission_scenario: DatabaseScenario,
     params: JobParams | JobParamsV2,
 ) -> None:
@@ -71,26 +73,29 @@ def test_create_and_query_job_respect_memory_group_permissions(
     viewer = novel_permission_scenario.users["other"]
 
     with pytest.raises(MemoryGroupNotFoundException):
-        create_job(test_db, viewer, group.memory_group_id, None, None, params)
+        await create_job(async_test_db, viewer, group.memory_group_id, None, None, params)
 
-    job = create_job(test_db, owner, group.memory_group_id, None, None, params)
+    job = await create_job(async_test_db, owner, group.memory_group_id, None, None, params)
 
-    assert query_job(test_db, viewer, job.memory_job_id) == job
-    assert query_jobs(test_db, viewer, group.memory_group_id) == [job]
-    summary = query_job_summary(test_db, viewer, job.memory_job_id).summary
+    assert await query_job(async_test_db, viewer, job.memory_job_id) == job
+    assert await query_jobs(async_test_db, viewer, group.memory_group_id) == [job]
+    summary = (await query_job_summary(async_test_db, viewer, job.memory_job_id)).summary
     assert summary.job == job
     assert summary.task_counts.pending == 1
     assert summary.task_counts.processing == 0
     assert summary.task_counts.completed == 0
     assert summary.task_counts.failed == 0
-    assert query_job_summaries(test_db, viewer, group.memory_group_id).summaries == [summary]
-    page = query_tasks(test_db, viewer, job.memory_job_id)
+    assert (await query_job_summaries(async_test_db, viewer, group.memory_group_id)).summaries == [summary]
+    page = await query_tasks(async_test_db, viewer, job.memory_job_id)
     assert page.count == 1
     assert page.rows[0].chapter_num == 1
     assert page.rows[0].task_status == JobStatus.PENDING
     task = page.rows[0]
-    assert query_task(test_db, viewer, job.memory_job_id, task.chapter_id) == task
-    assert start_task(test_db, owner, RecordingMemoryAgentDispatcher(), job.memory_job_id, task.chapter_id) == task
+    assert await query_task(async_test_db, viewer, job.memory_job_id, task.chapter_id) == task
+    assert (
+        await start_task(async_test_db, owner, RecordingMemoryAgentDispatcher(), job.memory_job_id, task.chapter_id)
+        == task
+    )
 
     test_db.execute(
         update(MemoryChapterTask)
@@ -98,13 +103,14 @@ def test_create_and_query_job_respect_memory_group_permissions(
         .values(task_status=JobStatus.FAILED)
     )
     test_db.commit()
-    failed_summary = query_job_summary(test_db, viewer, job.memory_job_id).summary
+    failed_summary = (await query_job_summary(async_test_db, viewer, job.memory_job_id)).summary
     assert failed_summary.task_counts.pending == 0
     assert failed_summary.task_counts.failed == 1
 
 
-def test_tasks_are_listed_in_the_order_the_schedule_runs_them(
+async def test_tasks_are_listed_in_the_order_the_schedule_runs_them(
     test_db: Session,
+    async_test_db: AsyncSession,
     novel_permission_scenario: DatabaseScenario,
 ) -> None:
     group = _create_group(test_db, novel_permission_scenario, "ov")
@@ -122,9 +128,9 @@ def test_tasks_are_listed_in_the_order_the_schedule_runs_them(
         record_memories=RecordMemoriesConfig(model_name="deepseek:deepseek-v4-flash-low", toolsets={}),
         translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low"),
     )
-    job = create_job(test_db, owner, group.memory_group_id, None, None, params)
+    job = await create_job(async_test_db, owner, group.memory_group_id, None, None, params)
 
-    rows = query_tasks(test_db, owner, job.memory_job_id).rows
+    rows = (await query_tasks(async_test_db, owner, job.memory_job_id)).rows
 
     # Stage barriers: every recording task runs before any naming task.
     assert [(row.stage_num, row.chapter_id) for row in rows] == [
@@ -135,15 +141,16 @@ def test_tasks_are_listed_in_the_order_the_schedule_runs_them(
     ]
 
 
-def test_jobs_are_stored_as_written_and_returned_as_v3(
+async def test_jobs_are_stored_as_written_and_returned_as_v3(
     test_db: Session,
+    async_test_db: AsyncSession,
     novel_permission_scenario: DatabaseScenario,
 ) -> None:
     group = _create_group(test_db, novel_permission_scenario, "ov")
     owner = novel_permission_scenario.users["owner"]
     params = JobParamsV2(translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low"))
 
-    job = create_job(test_db, owner, group.memory_group_id, None, None, params)
+    job = await create_job(async_test_db, owner, group.memory_group_id, None, None, params)
 
     stored = test_db.get(MemoryJob, job.memory_job_id)
     assert stored is not None and stored.job_params == params.model_dump(mode="json")
@@ -152,18 +159,19 @@ def test_jobs_are_stored_as_written_and_returned_as_v3(
     )
 
 
-def test_start_and_retry_publish_only_runnable_work(
+async def test_start_and_retry_publish_only_runnable_work(
     test_db: Session,
+    async_test_db: AsyncSession,
     novel_permission_scenario: DatabaseScenario,
 ) -> None:
     group = _create_group(test_db, novel_permission_scenario, "oe")
     editor = novel_permission_scenario.users["other"]
     chapter_id = novel_permission_scenario.chapters["owner_editor"].chapter_id
     dispatcher = RecordingMemoryAgentDispatcher()
-    job = create_job(test_db, editor, group.memory_group_id, None, None, PARAMS)
+    job = await create_job(async_test_db, editor, group.memory_group_id, None, None, PARAMS)
 
-    start_job(test_db, editor, dispatcher, job.memory_job_id)
-    start_task(test_db, editor, dispatcher, job.memory_job_id, chapter_id)
+    await start_job(async_test_db, editor, dispatcher, job.memory_job_id)
+    await start_task(async_test_db, editor, dispatcher, job.memory_job_id, chapter_id)
 
     assert dispatcher.jobs == [job.memory_job_id]
     assert dispatcher.tasks == [(job.memory_job_id, chapter_id, 0)]
@@ -178,7 +186,7 @@ def test_start_and_retry_publish_only_runnable_work(
     )
     test_db.commit()
 
-    retried = retry_task(test_db, editor, dispatcher, job.memory_job_id, chapter_id)
+    retried = await retry_task(async_test_db, editor, dispatcher, job.memory_job_id, chapter_id)
 
     assert retried.task_status == JobStatus.PENDING
     assert dispatcher.tasks == [
@@ -186,17 +194,18 @@ def test_start_and_retry_publish_only_runnable_work(
         (job.memory_job_id, chapter_id, 0),
     ]
     with pytest.raises(MemoryChapterTaskStateException):
-        retry_task(test_db, editor, dispatcher, job.memory_job_id, chapter_id)
+        await retry_task(async_test_db, editor, dispatcher, job.memory_job_id, chapter_id)
 
 
-def test_retry_restores_failed_status_when_publication_fails(
+async def test_retry_restores_failed_status_when_publication_fails(
     test_db: Session,
+    async_test_db: AsyncSession,
     novel_permission_scenario: DatabaseScenario,
 ) -> None:
     group = _create_group(test_db, novel_permission_scenario, "oe")
     editor = novel_permission_scenario.users["other"]
     chapter_id = novel_permission_scenario.chapters["owner_editor"].chapter_id
-    job = create_job(test_db, editor, group.memory_group_id, None, None, PARAMS)
+    job = await create_job(async_test_db, editor, group.memory_group_id, None, None, PARAMS)
     test_db.execute(
         update(MemoryChapterTask)
         .where(MemoryChapterTask.memory_job_id == job.memory_job_id)
@@ -206,19 +215,20 @@ def test_retry_restores_failed_status_when_publication_fails(
     dispatcher = RecordingMemoryAgentDispatcher(enqueue_error=MemoryAgentEnqueueFailedException("broker unavailable"))
 
     with pytest.raises(MemoryAgentEnqueueFailedException, match="broker unavailable"):
-        retry_task(test_db, editor, dispatcher, job.memory_job_id, chapter_id)
+        await retry_task(async_test_db, editor, dispatcher, job.memory_job_id, chapter_id)
 
-    assert query_task(test_db, editor, job.memory_job_id, chapter_id).task_status == JobStatus.FAILED
+    assert (await query_task(async_test_db, editor, job.memory_job_id, chapter_id)).task_status == JobStatus.FAILED
 
 
-def test_delete_operations_reject_active_work_and_job_delete_cascades_tasks(
+async def test_delete_operations_reject_active_work_and_job_delete_cascades_tasks(
     test_db: Session,
+    async_test_db: AsyncSession,
     novel_permission_scenario: DatabaseScenario,
 ) -> None:
     group = _create_group(test_db, novel_permission_scenario, "oe")
     editor = novel_permission_scenario.users["other"]
     chapter_id = novel_permission_scenario.chapters["owner_editor"].chapter_id
-    job = create_job(test_db, editor, group.memory_group_id, None, None, PARAMS)
+    job = await create_job(async_test_db, editor, group.memory_group_id, None, None, PARAMS)
     claim_token = uuid.uuid4()
     assert claim_job(test_db, job.memory_job_id, claim_token, timedelta(minutes=5)) is not None
     test_db.execute(
@@ -229,9 +239,9 @@ def test_delete_operations_reject_active_work_and_job_delete_cascades_tasks(
     test_db.commit()
 
     with pytest.raises(MemoryChapterTaskStateException):
-        delete_task(test_db, editor, job.memory_job_id, chapter_id)
+        await delete_task(async_test_db, editor, job.memory_job_id, chapter_id)
     with pytest.raises(MemoryJobStateException):
-        delete_job(test_db, editor, job.memory_job_id)
+        await delete_job(async_test_db, editor, job.memory_job_id)
 
     test_db.execute(
         update(MemoryJob)
@@ -239,7 +249,7 @@ def test_delete_operations_reject_active_work_and_job_delete_cascades_tasks(
         .values(claim_expires_at=func.now() - timedelta(seconds=1))
     )
     test_db.commit()
-    delete_job(test_db, editor, job.memory_job_id)
+    await delete_job(async_test_db, editor, job.memory_job_id)
 
     assert test_db.get(MemoryJob, job.memory_job_id) is None
     assert (
@@ -248,13 +258,14 @@ def test_delete_operations_reject_active_work_and_job_delete_cascades_tasks(
     )
 
 
-def test_deleting_memory_group_cascades_jobs_and_tasks(
+async def test_deleting_memory_group_cascades_jobs_and_tasks(
     test_db: Session,
+    async_test_db: AsyncSession,
     novel_permission_scenario: DatabaseScenario,
 ) -> None:
     group = _create_group(test_db, novel_permission_scenario, "oe")
     editor = novel_permission_scenario.users["other"]
-    job = create_job(test_db, editor, group.memory_group_id, None, None, PARAMS)
+    job = await create_job(async_test_db, editor, group.memory_group_id, None, None, PARAMS)
 
     test_db.delete(group)
     test_db.commit()

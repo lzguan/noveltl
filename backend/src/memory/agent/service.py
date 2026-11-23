@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, func, or_, select, tuple_, update
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.memory.agent import schemas
@@ -41,8 +41,8 @@ memory_job_task_counts = (
 )
 
 
-def create_job(
-    db: Session,
+async def create_job(
+    db: AsyncSession,
     user: User,
     memory_group_id: UUID,
     start_chapter_num: int | None,
@@ -53,20 +53,20 @@ def create_job(
     statement = select(MemoryGroup).where(MemoryGroup.memory_group_id == memory_group_id)
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        db.execute(statement).scalar_one()
+        (await db.execute(statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryGroupNotFoundException(f"Memory group {memory_group_id} not found or not accessible.") from exc
 
-    memory_job_id = make_job(db, memory_group_id, start_chapter_num, end_chapter_num, params)
-    return query_job(db, user, memory_job_id)
+    memory_job_id = await make_job(db, memory_group_id, start_chapter_num, end_chapter_num, params)
+    return await query_job(db, user, memory_job_id)
 
 
-def query_jobs(db: Session, user: User, memory_group_id: UUID) -> list[schemas.MemoryJob]:
+async def query_jobs(db: AsyncSession, user: User, memory_group_id: UUID) -> list[schemas.MemoryJob]:
     """Return jobs belonging to an accessible memory group, newest first."""
     group_statement = select(MemoryGroup).where(MemoryGroup.memory_group_id == memory_group_id)
     group_statement = memory_group_mod_access_select(group_statement, user)
     try:
-        db.execute(group_statement).scalar_one()
+        (await db.execute(group_statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryGroupNotFoundException(f"Memory group {memory_group_id} not found or not accessible.") from exc
 
@@ -75,10 +75,10 @@ def query_jobs(db: Session, user: User, memory_group_id: UUID) -> list[schemas.M
         .where(MemoryJobModel.memory_group_id == memory_group_id)
         .order_by(MemoryJobModel.created_at.desc(), MemoryJobModel.memory_job_id)
     )
-    return [schemas.MemoryJob.model_validate(job) for job in db.scalars(statement).all()]
+    return [schemas.MemoryJob.model_validate(job) for job in (await db.scalars(statement)).all()]
 
 
-def query_job(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJob:
+async def query_job(db: AsyncSession, user: User, memory_job_id: UUID) -> schemas.MemoryJob:
     """Return one accessible memory-agent job without exposing its claim token."""
     statement = (
         select(MemoryJobModel)
@@ -87,13 +87,13 @@ def query_job(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJob
     )
     statement = memory_group_mod_access_select(statement, user)
     try:
-        return schemas.MemoryJob.model_validate(db.execute(statement).scalar_one())
+        return schemas.MemoryJob.model_validate((await db.execute(statement)).scalar_one())
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
 
 
-def query_job_summaries(
-    db: Session,
+async def query_job_summaries(
+    db: AsyncSession,
     user: User,
     memory_group_id: UUID,
 ) -> schemas.MemoryJobSummaryList:
@@ -101,7 +101,7 @@ def query_job_summaries(
     group_statement = select(MemoryGroup).where(MemoryGroup.memory_group_id == memory_group_id)
     group_statement = memory_group_mod_access_select(group_statement, user)
     try:
-        db.execute(group_statement).scalar_one()
+        (await db.execute(group_statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryGroupNotFoundException(f"Memory group {memory_group_id} not found or not accessible.") from exc
 
@@ -121,7 +121,7 @@ def query_job_summaries(
         .where(MemoryJobModel.memory_group_id == memory_group_id)
         .order_by(MemoryJobModel.created_at.desc(), MemoryJobModel.memory_job_id)
     )
-    server_time = db.execute(select(func.now())).scalar_one()
+    server_time = (await db.execute(select(func.now()))).scalar_one()
     return schemas.MemoryJobSummaryList(
         server_time=server_time,
         summaries=[
@@ -135,12 +135,12 @@ def query_job_summaries(
                 ),
                 is_claimed=is_claimed,
             )
-            for job, pending, processing, completed, failed, is_claimed in db.execute(statement).all()
+            for job, pending, processing, completed, failed, is_claimed in (await db.execute(statement)).all()
         ],
     )
 
 
-def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJobSummarySnapshot:
+async def query_job_summary(db: AsyncSession, user: User, memory_job_id: UUID) -> schemas.MemoryJobSummarySnapshot:
     """Return aggregate task progress for one accessible memory-agent job."""
     statement = (
         select(
@@ -160,10 +160,10 @@ def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.M
     )
     statement = memory_group_mod_access_select(statement, user)
     try:
-        job, pending, processing, completed, failed, is_claimed = db.execute(statement).one()
+        job, pending, processing, completed, failed, is_claimed = (await db.execute(statement)).one()
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
-    server_time = db.execute(select(func.now())).scalar_one()
+    server_time = (await db.execute(select(func.now()))).scalar_one()
     return schemas.MemoryJobSummarySnapshot(
         server_time=server_time,
         summary=schemas.MemoryJobSummary(
@@ -179,8 +179,8 @@ def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.M
     )
 
 
-def query_tasks(
-    db: Session,
+async def query_tasks(
+    db: AsyncSession,
     user: User,
     memory_job_id: UUID,
     skip: int = 0,
@@ -194,29 +194,31 @@ def query_tasks(
     )
     job_statement = memory_group_mod_access_select(job_statement, user)
     try:
-        job_params = db.execute(job_statement).scalar_one()
+        job_params = (await db.execute(job_statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
     schedule = get_schedule(job_params_adapter.validate_python(job_params))
 
-    rows = db.execute(
-        select(
-            MemoryChapterTaskModel.memory_job_id,
-            MemoryChapterTaskModel.chapter_id,
-            MemoryChapterTaskModel.stage_num,
-            Chapter.chapter_num,
-            MemoryChapterTaskModel.task_status,
-            MemoryChapterTaskModel.attempt_count,
-            MemoryChapterTaskModel.created_at,
-            MemoryChapterTaskModel.updated_at,
+    rows = (
+        await db.execute(
+            select(
+                MemoryChapterTaskModel.memory_job_id,
+                MemoryChapterTaskModel.chapter_id,
+                MemoryChapterTaskModel.stage_num,
+                Chapter.chapter_num,
+                MemoryChapterTaskModel.task_status,
+                MemoryChapterTaskModel.attempt_count,
+                MemoryChapterTaskModel.created_at,
+                MemoryChapterTaskModel.updated_at,
+            )
+            .join(Chapter, Chapter.chapter_id == MemoryChapterTaskModel.chapter_id)
+            .where(MemoryChapterTaskModel.memory_job_id == memory_job_id)
+            .order_by(*schedule.run_order())
+            .offset(skip)
+            .limit(limit)
         )
-        .join(Chapter, Chapter.chapter_id == MemoryChapterTaskModel.chapter_id)
-        .where(MemoryChapterTaskModel.memory_job_id == memory_job_id)
-        .order_by(*schedule.run_order())
-        .offset(skip)
-        .limit(limit)
     ).mappings()
-    count = db.scalar(
+    count = await db.scalar(
         select(func.count())
         .select_from(MemoryChapterTaskModel)
         .where(MemoryChapterTaskModel.memory_job_id == memory_job_id)
@@ -227,8 +229,8 @@ def query_tasks(
     )
 
 
-def query_task(
-    db: Session,
+async def query_task(
+    db: AsyncSession,
     user: User,
     memory_job_id: UUID,
     chapter_id: UUID,
@@ -257,15 +259,15 @@ def query_task(
     )
     statement = memory_group_mod_access_select(statement, user)
     try:
-        return schemas.MemoryChapterTask.model_validate(db.execute(statement).mappings().one())
+        return schemas.MemoryChapterTask.model_validate((await db.execute(statement)).mappings().one())
     except NoResultFound as exc:
         raise MemoryChapterTaskNotFoundException(
             f"Memory task for job {memory_job_id} and chapter {chapter_id} not found or not accessible."
         ) from exc
 
 
-def start_job(
-    db: Session,
+async def start_job(
+    db: AsyncSession,
     user: User,
     dispatcher: MemoryAgentDispatcher,
     memory_job_id: UUID,
@@ -278,11 +280,11 @@ def start_job(
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        job = db.execute(statement).scalar_one()
+        job = (await db.execute(statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
 
-    has_runnable_task = db.scalar(
+    has_runnable_task = await db.scalar(
         select(MemoryChapterTaskModel.chapter_id)
         .where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
@@ -293,7 +295,7 @@ def start_job(
     if has_runnable_task is None:
         raise MemoryJobStateException(f"Memory job {memory_job_id} has no runnable tasks.")
     schedule = get_schedule(job_params_adapter.validate_python(job.job_params))
-    first_unfinished = db.scalar(
+    first_unfinished = await db.scalar(
         select(MemoryChapterTaskModel.task_status).where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
             tuple_(MemoryChapterTaskModel.chapter_id, MemoryChapterTaskModel.stage_num).in_(
@@ -303,12 +305,12 @@ def start_job(
     )
     if first_unfinished == JobStatus.FAILED:
         raise MemoryJobStateException("Retry the failed stage before starting remaining work.")
-    dispatcher.enqueue_job(memory_job_id)
+    await dispatcher.aenqueue_job(memory_job_id)
     return schemas.MemoryJob.model_validate(job)
 
 
-def start_task(
-    db: Session,
+async def start_task(
+    db: AsyncSession,
     user: User,
     dispatcher: MemoryAgentDispatcher,
     memory_job_id: UUID,
@@ -329,7 +331,7 @@ def start_task(
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        task, chapter_num, job_params = db.execute(statement).one()
+        task, chapter_num, job_params = (await db.execute(statement)).one()
     except NoResultFound as exc:
         raise MemoryChapterTaskNotFoundException(
             f"Memory task for job {memory_job_id} and chapter {chapter_id} not found or not accessible."
@@ -338,9 +340,9 @@ def start_task(
     if task.task_status != JobStatus.PENDING:
         raise MemoryChapterTaskStateException(f"Memory task for chapter {chapter_id} is not pending.")
     schedule = get_schedule(job_params_adapter.validate_python(job_params))
-    if db.scalar(select(schedule.unfinished_prerequisites(memory_job_id, chapter_id, stage_num))):
+    if await db.scalar(select(schedule.unfinished_prerequisites(memory_job_id, chapter_id, stage_num))):
         raise MemoryChapterTaskStateException("Complete earlier stages of this job first.")
-    dispatcher.enqueue_task(memory_job_id, chapter_id, stage_num)
+    await dispatcher.aenqueue_task(memory_job_id, chapter_id, stage_num)
     return schemas.MemoryChapterTask(
         memory_job_id=task.memory_job_id,
         chapter_id=task.chapter_id,
@@ -353,8 +355,8 @@ def start_task(
     )
 
 
-def retry_task(
-    db: Session,
+async def retry_task(
+    db: AsyncSession,
     user: User,
     dispatcher: MemoryAgentDispatcher,
     memory_job_id: UUID,
@@ -374,19 +376,19 @@ def retry_task(
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        db.execute(statement).scalar_one()
+        (await db.execute(statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryChapterTaskNotFoundException(
             f"Memory task for job {memory_job_id} and chapter {chapter_id} not found or not accessible."
         ) from exc
 
-    if not reset_failed_task(db, memory_job_id, chapter_id, stage_num):
+    if not await reset_failed_task(db, memory_job_id, chapter_id, stage_num):
         raise MemoryChapterTaskStateException(f"Memory task for chapter {chapter_id} is not failed.")
 
     try:
-        dispatcher.enqueue_task(memory_job_id, chapter_id, stage_num)
+        await dispatcher.aenqueue_task(memory_job_id, chapter_id, stage_num)
     except MemoryAgentEnqueueFailedException:
-        db.execute(
+        await db.execute(
             update(MemoryChapterTaskModel)
             .where(
                 MemoryChapterTaskModel.memory_job_id == memory_job_id,
@@ -396,12 +398,12 @@ def retry_task(
             )
             .values(task_status=JobStatus.FAILED)
         )
-        db.commit()
+        await db.commit()
         raise
-    return query_task(db, user, memory_job_id, chapter_id, stage_num)
+    return await query_task(db, user, memory_job_id, chapter_id, stage_num)
 
 
-def abort_job(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJob:
+async def abort_job(db: AsyncSession, user: User, memory_job_id: UUID) -> schemas.MemoryJob:
     """Fail active tasks and clear the claim on an accessible memory job."""
     statement = (
         select(MemoryJobModel.memory_job_id)
@@ -410,16 +412,16 @@ def abort_job(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJob
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        db.execute(statement).scalar_one()
+        (await db.execute(statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
 
-    if not abort_job_claim(db, memory_job_id):
+    if not await abort_job_claim(db, memory_job_id):
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} no longer exists.")
-    return query_job(db, user, memory_job_id)
+    return await query_job(db, user, memory_job_id)
 
 
-def delete_task(db: Session, user: User, memory_job_id: UUID, chapter_id: UUID, stage_num: int = 0) -> None:
+async def delete_task(db: AsyncSession, user: User, memory_job_id: UUID, chapter_id: UUID, stage_num: int = 0) -> None:
     """Delete a non-processing chapter task."""
     statement = (
         select(MemoryChapterTaskModel)
@@ -433,7 +435,7 @@ def delete_task(db: Session, user: User, memory_job_id: UUID, chapter_id: UUID, 
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        task = db.execute(statement).scalar_one()
+        task = (await db.execute(statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryChapterTaskNotFoundException(
             f"Memory task for job {memory_job_id} and chapter {chapter_id} not found or not accessible."
@@ -441,7 +443,7 @@ def delete_task(db: Session, user: User, memory_job_id: UUID, chapter_id: UUID, 
 
     if task.task_status == JobStatus.PROCESSING:
         raise MemoryChapterTaskStateException(f"Memory task for chapter {chapter_id} is processing.")
-    deleted_chapter_id = db.scalar(
+    deleted_chapter_id = await db.scalar(
         delete(MemoryChapterTaskModel)
         .where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
@@ -452,12 +454,12 @@ def delete_task(db: Session, user: User, memory_job_id: UUID, chapter_id: UUID, 
         .returning(MemoryChapterTaskModel.chapter_id)
     )
     if deleted_chapter_id is None:
-        db.rollback()
+        await db.rollback()
         raise MemoryChapterTaskStateException(f"Memory task for chapter {chapter_id} changed state.")
-    db.commit()
+    await db.commit()
 
 
-def delete_job(db: Session, user: User, memory_job_id: UUID) -> None:
+async def delete_job(db: AsyncSession, user: User, memory_job_id: UUID) -> None:
     """Delete an unclaimed or expired job and cascade its chapter tasks."""
     statement = (
         select(MemoryJobModel.memory_job_id)
@@ -466,11 +468,11 @@ def delete_job(db: Session, user: User, memory_job_id: UUID) -> None:
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        db.execute(statement).scalar_one()
+        (await db.execute(statement)).scalar_one()
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
 
-    deleted_job_id = db.scalar(
+    deleted_job_id = await db.scalar(
         delete(MemoryJobModel)
         .where(
             MemoryJobModel.memory_job_id == memory_job_id,
@@ -482,6 +484,6 @@ def delete_job(db: Session, user: User, memory_job_id: UUID) -> None:
         .returning(MemoryJobModel.memory_job_id)
     )
     if deleted_job_id is None:
-        db.rollback()
+        await db.rollback()
         raise MemoryJobStateException(f"Memory job {memory_job_id} is currently claimed.")
-    db.commit()
+    await db.commit()

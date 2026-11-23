@@ -10,9 +10,11 @@ from sqlalchemy.orm import Session
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.auth.utils import create_access_token
+from src.autolabels.constants import MAX_POLLED_PROMOTIONS, AutoLabelProgress
 from src.autolabels.models import AutoLabel, LabelPromotionJobItem
 from src.autolabels.promotions.processing import process_promotion_job
-from src.labels.models import LabelData
+from src.labels.constants import LabelRole
+from src.labels.models import LabelContributor, LabelData
 from test_support.autolabels import RecordingPromotionDispatcher
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.autolabels.test_promotion_processing import _add_autolabelled_chapters
@@ -153,3 +155,83 @@ async def test_listing_reports_progress_counts_and_failures(
     test_db.commit()
     hidden = client.get(f"/label-promotions/{promotion_id}/failures", headers=_headers(outsider))
     assert hidden.json() == []
+
+
+def test_listing_by_promotion_ids_returns_only_those_jobs(
+    client: TestClient, test_db: Session, xianxia_autolabels_scenario: DatabaseScenario
+) -> None:
+    scenario = xianxia_autolabels_scenario
+    _add_autolabelled_chapters(test_db, scenario)
+    test_db.commit()
+    owner = scenario.users["owner"]
+    promotion_id = _promote(client, scenario, owner).json()["promotionId"]
+    url = f"/novels/{scenario.novels['novel'].novel_id}/label-promotions"
+
+    tracked = client.get(
+        url, params={"promotionIds": [promotion_id, str(uuid.uuid4())], "limit": 1}, headers=_headers(owner)
+    )
+    other_novel = client.get(
+        f"/novels/{uuid.uuid4()}/label-promotions", params={"promotionIds": [promotion_id]}, headers=_headers(owner)
+    )
+    too_many = client.get(
+        url,
+        params={"promotionIds": [str(uuid.uuid4()) for _ in range(MAX_POLLED_PROMOTIONS + 1)]},
+        headers=_headers(owner),
+    )
+
+    assert tracked.status_code == status.HTTP_200_OK
+    assert [job["promotionId"] for job in tracked.json()] == [promotion_id]
+    assert other_novel.json() == []
+    assert too_many.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+def test_label_group_viewers_cannot_promote(
+    client: TestClient,
+    test_db: Session,
+    xianxia_autolabels_scenario: DatabaseScenario,
+    recording_promotion_dispatcher: RecordingPromotionDispatcher,
+) -> None:
+    scenario = xianxia_autolabels_scenario
+    owner = scenario.users["owner"]
+    contributor = test_db.execute(
+        select(LabelContributor).where(
+            LabelContributor.label_group_id == scenario.label_groups["labels"].label_group_id,
+            LabelContributor.user_id == owner.user_id,
+        )
+    ).scalar_one()
+    contributor.label_contributor_role = LabelRole.VIEWER
+    test_db.commit()
+
+    response = _promote(client, scenario, owner)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert recording_promotion_dispatcher.promotions == []
+
+
+def test_promotion_ignores_autolabels_from_other_novels_in_the_run(
+    client: TestClient,
+    test_db: Session,
+    xianxia_autolabels_scenario: DatabaseScenario,
+    scifi_scenario: DatabaseScenario,
+) -> None:
+    scenario = xianxia_autolabels_scenario
+    foreign_content = scifi_scenario.contents["novel:xianxia-translation-chapter-0001-v0001"]
+    foreign = AutoLabel(
+        auto_label_data=[],
+        auto_label_status=AutoLabelProgress.DONE,
+        chapter_content_id=foreign_content.chapter_content_id,
+        run_id=scenario.autolabel_runs["cluener"].run_id,
+    )
+    test_db.add(foreign)
+    test_db.commit()
+
+    response = _promote(client, scenario, scenario.users["owner"])
+
+    assert response.status_code == status.HTTP_202_ACCEPTED
+    assert response.json()["itemCount"] == len(scenario.autolabels)
+    item_ids = test_db.scalars(
+        select(LabelPromotionJobItem.auto_label_id).where(
+            LabelPromotionJobItem.promotion_id == uuid.UUID(response.json()["promotionId"])
+        )
+    ).all()
+    assert foreign.auto_label_id not in item_ids

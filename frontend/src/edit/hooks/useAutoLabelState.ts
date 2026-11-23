@@ -31,7 +31,6 @@ export function useAutoLabelState() {
 		null,
 	);
 	const [refreshing, refreshingRef, commitRefreshing] = useSyncState(false);
-	const [promoting, promotingRef, commitPromoting] = useSyncState(false);
 
 	const addRun = useCallback(
 		(run: AutoLabelRunView) => {
@@ -90,14 +89,6 @@ export function useAutoLabelState() {
 		[refreshingRef, commitRefreshing],
 	);
 
-	const setPromoting = useCallback(
-		(value: boolean) => {
-			promotingRef.current = value;
-			commitPromoting();
-		},
-		[promotingRef, commitPromoting],
-	);
-
 	const [chapterMatchMap, setChapterMatchMap] = useState<
 		Map<ALRProvId, Map<CProvId, ChapterMatchStatus>>
 	>(new Map());
@@ -106,19 +97,16 @@ export function useAutoLabelState() {
 		runs,
 		selectedRunId,
 		refreshing,
-		promoting,
 		chapterMatchMap,
 		runsRef,
 		selectedRunIdRef,
 		refreshingRef,
-		promotingRef,
 		addRun,
 		setRun,
 		setRunsList,
 		removeRun,
 		setSelected,
 		setRefreshing,
-		setPromoting,
 		setChapterMatchMap,
 	};
 }

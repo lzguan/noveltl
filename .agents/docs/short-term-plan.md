@@ -8,7 +8,7 @@ Working rules agreed for this list: one slice per commit, the user reviews each
 commit; HTTP requests must return fast and long work goes to a worker; no
 heavy processing in the backend container.
 
-## 1. Async backend (in progress, branch `feature/psycopg3`, not pushed)
+## 1. Async backend (partly merged in #144)
 
 Done, one commit each: psycopg 3 driver swap (psycopg exception classes such
 as `UniqueViolation` instead of SQLSTATE strings), async engine and
@@ -36,13 +36,13 @@ with the Celery-to-taskiq move.
   the 10 ms threshold); whole-novel upload parse 34 ms; term search and label
   span checks well under 15 ms.
 
-## 2. Autolabel promotion as a background job (in progress, branch `feature/label-promotion-jobs`, uncommitted)
+## 2. Autolabel promotion as a background job (backend merged in #144; frontend in progress)
 
 Measured on a real 381-chapter run copied to the test DB: about 5 ms per
 chapter, about 10 s for 1,900 chapters in one request, event-loop stalls up to
 about 1 s; no regression from the async/psycopg 3 change versus `master`.
 
-Done (uncommitted): promotion code, its schemas, and its endpoint moved from
+Done: promotion code, its schemas, and its endpoint moved from
 `labels` to `src/autolabels/promotions/processing.py` (pure move; OpenAPI unchanged), so
 `labels` no longer imports `autolabels`. Model and migration
 `4ea4c662b46f`: `label_promotion_jobs` (run, group, requester, requested filter,
@@ -66,22 +66,38 @@ Agreed next:
   position` in batches, commit each batch's labels and item outcomes together,
   extend the lease per batch. An item whose autolabel content version is no
   longer the chapter's latest fails as "chapter changed".
-- Frontend: a hook polls the novel's list, and when a job it saw active
-  finishes, reloads the target label group in every open chapter (new
-  `novelDataManager` operation looping `chaptersIndex` and calling
-  `reloadGroup`); keep the workspace lock for now. Later, consider moving run
-  listing and creation out of the controller too, keeping the preview there.
+- Later, consider moving run listing and creation out of the controller too,
+  keeping the preview there.
 - Before deployment, add a sweeper that redispatches stale pending promotions
   and jobs with expired claims. Recovery uses the original job ID and works
   after the client disconnects. Keep the active-job conflict on repeat POSTs.
   Cover a failed initial enqueue followed by one sweep, plus duplicate delivery
   with a single set of persisted labels.
-- Later (user request, 2026-11-22): a per-job promotion mode. Today only chapters
-  without label data in the group are filled; chapters that already have one fail
-  with "already has label data". Wanted options include inserting into existing
-  label datas without overwriting existing labels, and inserting eagerly. A
-  `mode` column on `label_promotion_jobs` defaulting to today's behaviour would
-  carry it; only the insert statement's choice of label datas and spans changes.
+- Later, after the promotion UI (user request, 2026-11-22): eager promotion.
+  Today only chapters without label data in the group are filled; chapters that
+  already have one fail with "already has label data". Wanted: insert into
+  existing label datas, skipping (user toggle, on by default) only label datas
+  with at least one label. A `mode` column on `label_promotion_jobs` would carry
+  it; only the insert statement's choice of label datas and spans changes.
+- Frontend polling (done on branch `feature/label-promotion-polling`, not yet a
+  PR): `GET .../label-promotions?promotionIds=` (max `MAX_POLLED_PROMOTIONS` =
+  10, `limit` still applies). `frontend/src/autolabels/promotions/` holds the
+  pure reducers, `usePromotionJobs` and the prop-only `PromotionJobsList`; new
+  autolabel code goes under `src/autolabels/`, existing code moves there
+  gradually as it stops needing the controller. `AutoLabelPanel` owns the hook
+  (the tab is `keepMounted`; polling does not pause on hidden tabs). The hook's
+  effect is a single consumer loop: producers set `pending` (a reseed beats a
+  poll) and call `notify`, so only one read is ever in flight. On finish,
+  `labelGroupMgr.reloadPromotedLabelGroup` reloads the group in loaded chapters,
+  open chapter first. Accepted: edits attempted during a reload are rejected (a
+  reload waits for in-flight edits via ID-repo reservations); jobs started
+  elsewhere appear only on mount, a 409 or `refresh`. Removed: the workspace
+  lock, the controller promotion path, and the synchronous
+  `POST /label-groups/{id}/label-datas/auto-labels` route.
+- Follow-up: test fixtures (`tests/fixtures/scenarios.py`) and three
+  integration tests still seed through `insert_label_datas_by_autolabels`; move
+  them to the job path, then delete it and `CreateLabelDataByAutoLabelStatus`.
+  Small open choice: count in-flight POSTs in `queue`'s cap check.
 
 ## 3. Label permission refactor
 

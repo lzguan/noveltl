@@ -25,9 +25,7 @@ import type {
   CreateGlossaryTerm,
   CreateLabelData,
   CreateLabelDataByAutoLabel,
-  CreateLabelDataByAutoLabelStatus,
   CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams,
-  CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams,
   CreateLabelGroup,
   CreateLabelGroupLabelGroupsPostParams,
   CreateMemoryGroup,
@@ -1856,83 +1854,6 @@ return customFetch<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse>
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createLabelData)
-  }
-);}
-
-
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse200 = {
-  data: CreateLabelDataByAutoLabelStatus
-  status: 200
-}
-
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse404 = {
-  data: DetailHTTPErrorResponse
-  status: 404
-}
-
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse409 = {
-  data: RequestConflictErrorResponse
-  status: 409
-}
-
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse200) & {
-  headers: Headers;
-};
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse404 | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse409 | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422) & {
-  headers: Headers;
-};
-
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError)
-
-export const getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl = (labelGroupId: string,
-    params?: CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/label-groups/${labelGroupId}/label-datas/auto-labels?${stringifiedParams}` : `/api/label-groups/${labelGroupId}/label-datas/auto-labels`
-}
-
-/**
- * Creates label datas and populates labels from autolabel results.
- * @summary Create Label Datas By Auto Labels
- */
-export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost = async (labelGroupId: string,
-    createLabelDataByAutoLabel: CreateLabelDataByAutoLabel,
-    params?: CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse>(getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl(labelGroupId,params),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(createLabelDataByAutoLabel)
   }
 );}
 
@@ -5045,6 +4966,14 @@ export const getReadLabelPromotionsNovelsNovelIdLabelPromotionsGetUrl = (novelId
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["promotionIds"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
 
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : String(value))
@@ -5058,6 +4987,8 @@ export const getReadLabelPromotionsNovelsNovelIdLabelPromotionsGetUrl = (novelId
 
 /**
  * List a novel's label promotion jobs: active ones first, then the most recently updated.
+ *
+ * With `promotionIds`, return only those jobs; ids that are missing or not readable are omitted.
  * @summary Read Label Promotions
  */
 export const readLabelPromotionsNovelsNovelIdLabelPromotionsGet = async (novelId: string,

@@ -1,6 +1,7 @@
 from enum import IntEnum, StrEnum
 
 MAX_MODEL_NAME_LEN = 128
+MAX_POLLED_PROMOTIONS = 10
 
 
 class AutoLabelProgress(StrEnum):

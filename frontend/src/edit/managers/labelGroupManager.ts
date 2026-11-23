@@ -6,7 +6,7 @@ import type {
 	NovelUserEvent,
 	TriggerEvent,
 } from "../controller/types/controllerTypes";
-import { ActionHappened, CProvId, LGProvId, LProvId } from "../controller/types/idTypes";
+import { ActionHappened, CProvId, LGProvId, LGServId, LProvId } from "../controller/types/idTypes";
 import { Prov } from "../controller/types/helperTypes";
 import type { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import type { EditorData } from "../hooks/useEditorState";
@@ -331,6 +331,27 @@ export function createLabelGroupManager({
 		controllerUserEvent({ eventType: "loadLabelData", labelGroupId, chapterId: cid });
 	}
 
+	function labelGroupServerId(labelGroupId: LGProvId): string | null {
+		return Effect.runSync(controllerGetters.labelGroupServerId(labelGroupId));
+	}
+
+	function reloadPromotedLabelGroup(labelGroupServId: string) {
+		Effect.runSync(
+			Effect.gen(function* () {
+				const labelGroupId = yield* controllerGetters.labelGroupIdFromServerId(
+					LGServId(labelGroupServId),
+				);
+				if (labelGroupId === null) return;
+				yield* reloadLabelGroupInLoadedChapters({
+					getters: controllerGetters,
+					controllerUserEvent,
+					labelGroupId,
+					activeChapterId: readChapterId(),
+				});
+			}),
+		);
+	}
+
 	function handleControllerEvent(
 		_getters: NovelGetters,
 		event: TriggerEvent,
@@ -380,6 +401,37 @@ export function createLabelGroupManager({
 		setActive,
 		addLabelGroup,
 		reloadLabelData,
+		labelGroupServerId,
+		reloadPromotedLabelGroup,
 		updateLabelGroupStatus,
 	};
+}
+
+function reloadLabelGroupInLoadedChapters({
+	getters,
+	controllerUserEvent,
+	labelGroupId,
+	activeChapterId,
+}: {
+	getters: NovelGetters;
+	controllerUserEvent(event: NovelUserEvent): void;
+	labelGroupId: LGProvId;
+	activeChapterId: CProvId | null;
+}): Effect.Effect<void> {
+	return Effect.gen(function* () {
+		const chapterIds = yield* getters.chapterIds();
+		const ordered =
+			activeChapterId !== null && chapterIds.includes(activeChapterId)
+				? [activeChapterId, ...chapterIds.filter((id) => id !== activeChapterId)]
+				: chapterIds;
+		for (const chapterId of ordered) {
+			const chapterSlot = yield* Effect.result(getters.chapterGetterSlot(chapterId));
+			if (chapterSlot._tag === "Failure" || chapterSlot.success.status !== "ready") continue;
+			const chapterGetters = chapterSlot.success.data.chapterGetters;
+			if (chapterGetters.isDestroyed()) continue;
+			const labelDataSlot = yield* Effect.result(chapterGetters.labelDataSlot(labelGroupId));
+			if (labelDataSlot._tag === "Failure") continue;
+			controllerUserEvent({ eventType: "loadLabelData", labelGroupId, chapterId });
+		}
+	});
 }

@@ -35,15 +35,15 @@ export function PromoteAutoLabelDialog({
 	run,
 	labelGroups,
 	defaultLabelGroupId,
-	promoting,
+	submitting,
 	onPromote,
 	onClose,
 }: {
 	run: AutoLabelRunView;
 	labelGroups: [LGProvId, LabelGroupView][];
 	defaultLabelGroupId: LGProvId | null;
-	promoting: boolean;
-	onPromote: (labelGroupId: LGProvId, filter: ChapterFilter) => void;
+	submitting: boolean;
+	onPromote: (labelGroupId: LGProvId, filter: ChapterFilter) => Promise<string | null>;
 	onClose: () => void;
 }) {
 	const [labelGroupId, setLabelGroupId] = useState<LGProvId | null>(
@@ -51,6 +51,7 @@ export function PromoteAutoLabelDialog({
 	);
 	const [start, setStart] = useState("");
 	const [end, setEnd] = useState("");
+	const [error, setError] = useState<string | null>(null);
 
 	return (
 		<Dialog
@@ -75,7 +76,7 @@ export function PromoteAutoLabelDialog({
 								const match = labelGroups.find(([id]) => id === value);
 								if (match) setLabelGroupId(match[0]);
 							}}
-							disabled={promoting}
+							disabled={submitting}
 						>
 							<SelectTrigger id="promote-label-group" className="w-full">
 								<SelectValue placeholder="Choose a label group" />
@@ -99,7 +100,7 @@ export function PromoteAutoLabelDialog({
 								inputMode="numeric"
 								placeholder="First"
 								value={start}
-								disabled={promoting}
+								disabled={submitting}
 								onChange={(event) => setStart(event.target.value)}
 							/>
 						</Field>
@@ -110,28 +111,34 @@ export function PromoteAutoLabelDialog({
 								inputMode="numeric"
 								placeholder="Last"
 								value={end}
-								disabled={promoting}
+								disabled={submitting}
 								onChange={(event) => setEnd(event.target.value)}
 							/>
 						</Field>
 					</div>
 				</FieldGroup>
+				{error !== null && (
+					<p role="alert" className="text-xs text-destructive">
+						{error}
+					</p>
+				)}
 				<DialogFooter>
 					<Button type="button" variant="outline" onClick={onClose}>
 						Cancel
 					</Button>
 					<Button
 						type="button"
-						disabled={labelGroupId === null || promoting}
+						disabled={labelGroupId === null || submitting}
 						onClick={() => {
 							if (labelGroupId === null) return;
-							onPromote(labelGroupId, {
+							setError(null);
+							void onPromote(labelGroupId, {
 								start: parseChapterNum(start),
 								end: parseChapterNum(end),
-							});
+							}).then(setError);
 						}}
 					>
-						{promoting ? "Promoting..." : "Promote"}
+						{submitting ? "Starting..." : "Promote"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

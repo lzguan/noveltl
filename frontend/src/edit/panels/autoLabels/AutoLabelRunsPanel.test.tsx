@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useEffect } from "react";
 import { DoNothingParamsValue } from "@/api/models";
 import { Prov } from "../../controller/types/helperTypes";
@@ -50,7 +50,7 @@ function Harness({
 	onDeselectRun,
 	onReloadRun,
 	setActive = () => undefined,
-	onPromote = () => undefined,
+	onPromote = async () => null,
 }: {
 	onSelectRun: (runId: typeof RUN_A_ID) => void;
 	onDeselectRun: () => void;
@@ -83,6 +83,7 @@ function Harness({
 			labelGroups={LABEL_GROUPS}
 			activeId={NAMES_ID}
 			setActive={setActive}
+			promotionSubmitting={false}
 			onPromote={onPromote}
 		/>
 	);
@@ -138,7 +139,7 @@ describe("AutoLabelRunsPanel", () => {
 
 	it("promotes a run from its actions menu into the chosen label group", async () => {
 		const setActive = vi.fn();
-		const onPromote = vi.fn();
+		const onPromote = vi.fn().mockResolvedValue(null);
 		render(
 			<Harness
 				onSelectRun={vi.fn()}
@@ -149,17 +150,46 @@ describe("AutoLabelRunsPanel", () => {
 			/>,
 		);
 
-		const menu = await screen.findByRole("button", { name: "More actions for Run 22222222" });
-		fireEvent.keyDown(menu, { key: "Enter" });
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Promote…" }));
-
-		const dialog = within(await screen.findByRole("dialog"));
+		const dialog = await openPromoteDialog();
 		expect(dialog.getByRole("combobox", { name: "Label group" })).toHaveTextContent("Names");
 		fireEvent.change(dialog.getByLabelText("Start chapter"), { target: { value: "2" } });
 		fireEvent.click(dialog.getByRole("button", { name: "Promote" }));
 
+		expect(onPromote).toHaveBeenCalledWith(
+			expect.objectContaining({ run: expect.objectContaining({ runId: RUN_B_ID }) }),
+			NAMES_ID,
+			{ start: 2, end: undefined },
+		);
+		await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 		expect(setActive).toHaveBeenCalledWith(NAMES_ID);
-		expect(onPromote).toHaveBeenCalledWith(RUN_B_ID, NAMES_ID, { start: 2, end: undefined });
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+	});
+
+	it("keeps the dialog open and shows the error when a promotion cannot start", async () => {
+		const setActive = vi.fn();
+		render(
+			<Harness
+				onSelectRun={vi.fn()}
+				onDeselectRun={vi.fn()}
+				onReloadRun={vi.fn()}
+				setActive={setActive}
+				onPromote={async () => "Could not start the promotion."}
+			/>,
+		);
+
+		const dialog = await openPromoteDialog();
+		fireEvent.click(dialog.getByRole("button", { name: "Promote" }));
+
+		expect(await dialog.findByRole("alert")).toHaveTextContent(
+			"Could not start the promotion.",
+		);
+		expect(screen.getByRole("dialog")).toBeInTheDocument();
+		expect(setActive).not.toHaveBeenCalled();
 	});
 });
+
+async function openPromoteDialog() {
+	const menu = await screen.findByRole("button", { name: "More actions for Run 22222222" });
+	fireEvent.keyDown(menu, { key: "Enter" });
+	fireEvent.click(await screen.findByRole("menuitem", { name: "Promote…" }));
+	return within(await screen.findByRole("dialog"));
+}

@@ -7,6 +7,7 @@ import type {
 	CProvId,
 	CServId,
 	LGProvId,
+	LGServId,
 	LProvId,
 	LServId,
 	ProvAutoLabel,
@@ -74,6 +75,8 @@ export interface NovelGetters {
 	chapterContentServerId: (chapterId: CProvId) => Effect.Effect<CCServId | null>;
 	chapterContentIdFromServerId: (chapterContentId: CCServId) => Effect.Effect<CCProvId | null>;
 	labelIdFromServerId: (labelId: LServId) => Effect.Effect<LProvId | null>;
+	labelGroupIdFromServerId: (labelGroupId: LGServId) => Effect.Effect<LGProvId | null>;
+	labelGroupServerId: (labelGroupId: LGProvId) => Effect.Effect<LGServId | null>;
 	chapterGetterSlot: (chapterId: CProvId) => Effect.Effect<ChapterGetterSlot, NotFoundException>;
 	labelGroupSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelGroupSlot, NotFoundException>;
 	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;
@@ -137,12 +140,6 @@ export type NovelUserEvent =
 			eventType: "loadAutoLabelData";
 			autoLabelId: AProvId;
 			flags?: { now: boolean; forPreview: boolean };
-	  }
-	| {
-			eventType: "promoteAutoLabelRun";
-			runId: ALRProvId;
-			chapterFilter: ChapterFilter;
-			labelGroupId: LGProvId;
 	  };
 
 /**
@@ -198,28 +195,6 @@ export type TriggerEvent =
 			eventType: "autoLabelRunCreated";
 			run: ProvAutoLabelRun;
 			autoLabels: Omit<ProvAutoLabel, "autoLabelData">[];
-	  }
-	| {
-			eventType: "autoLabelRunPromotionFinished";
-			runId: ALRProvId;
-			outcome: "success";
-			labelGroupId: LGProvId;
-			chapterFilter: ChapterFilter;
-			success: readonly {
-				chapterId: CProvId;
-				chapterContentId: CCProvId;
-			}[];
-			errors: readonly {
-				chapterId: CProvId;
-				chapterContentId: CCProvId;
-				error: string;
-			}[];
-	  }
-	| {
-			eventType: "autoLabelRunPromotionFinished";
-			runId: ALRProvId;
-			outcome: "failure";
-			error: Error;
 	  }
 	| { eventType: "autoLabelRunsRefreshed" }
 	| { eventType: "autoLabelRunReloaded"; runId: ALRProvId }

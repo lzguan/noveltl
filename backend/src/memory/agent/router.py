@@ -3,11 +3,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.database import get_db
+from src.database import get_async_db
 from src.memory.agent.dispatch.dependencies import get_dispatcher
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
 from src.memory.agent.schemas import (
@@ -110,13 +110,13 @@ def read_memory_agent_config(
     status_code=status.HTTP_201_CREATED,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def add_memory_job(
+async def add_memory_job(
     request: CreateMemoryJob,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> MemoryJob:
     try:
-        return create_job(
+        return await create_job(
             db,
             current_user,
             request.memory_group_id,
@@ -133,13 +133,13 @@ def add_memory_job(
     response_model=list[MemoryJob],
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memory_jobs(
+async def read_memory_jobs(
     memory_group_id: Annotated[UUID, Query(alias="memoryGroupId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[MemoryJob]:
     try:
-        return query_jobs(db, current_user, memory_group_id)
+        return await query_jobs(db, current_user, memory_group_id)
     except MemoryGroupNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -149,13 +149,13 @@ def read_memory_jobs(
     response_model=MemoryJob,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memory_job(
+async def read_memory_job(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> MemoryJob:
     try:
-        return query_job(db, current_user, memory_job_id)
+        return await query_job(db, current_user, memory_job_id)
     except MemoryJobNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -165,13 +165,13 @@ def read_memory_job(
     response_model=MemoryJobSummaryList,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memory_job_summaries(
+async def read_memory_job_summaries(
     memory_group_id: Annotated[UUID, Query(alias="memoryGroupId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> MemoryJobSummaryList:
     try:
-        return query_job_summaries(db, current_user, memory_group_id)
+        return await query_job_summaries(db, current_user, memory_group_id)
     except MemoryGroupNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -181,13 +181,13 @@ def read_memory_job_summaries(
     response_model=MemoryJobSummarySnapshot,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memory_job_summary(
+async def read_memory_job_summary(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> MemoryJobSummarySnapshot:
     try:
-        return query_job_summary(db, current_user, memory_job_id)
+        return await query_job_summary(db, current_user, memory_job_id)
     except MemoryJobNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -197,15 +197,15 @@ def read_memory_job_summary(
     response_model=MemoryChapterTaskPage,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memory_tasks(
+async def read_memory_tasks(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ) -> MemoryChapterTaskPage:
     try:
-        return query_tasks(db, current_user, memory_job_id, skip, limit)
+        return await query_tasks(db, current_user, memory_job_id, skip, limit)
     except MemoryJobNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -215,15 +215,15 @@ def read_memory_tasks(
     response_model=MemoryChapterTask,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memory_task(
+async def read_memory_task(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
     chapter_id: Annotated[UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     stage_num: Annotated[int, Query(alias="stageNum")] = 0,
 ) -> MemoryChapterTask:
     try:
-        return query_task(db, current_user, memory_job_id, chapter_id, stage_num)
+        return await query_task(db, current_user, memory_job_id, chapter_id, stage_num)
     except MemoryChapterTaskNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -238,14 +238,14 @@ def read_memory_task(
         503: {"model": DetailHTTPErrorResponse},
     },
 )
-def start_memory_job(
+async def start_memory_job(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     dispatcher: Annotated[MemoryAgentDispatcher, Depends(get_dispatcher)],
 ) -> MemoryJob:
     try:
-        return start_job(db, current_user, dispatcher, memory_job_id)
+        return await start_job(db, current_user, dispatcher, memory_job_id)
     except MemoryJobNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except MemoryJobStateException as exc:
@@ -259,13 +259,13 @@ def start_memory_job(
     response_model=MemoryJob,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def abort_memory_job(
+async def abort_memory_job(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> MemoryJob:
     try:
-        return abort_job(db, current_user, memory_job_id)
+        return await abort_job(db, current_user, memory_job_id)
     except MemoryJobNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -280,16 +280,16 @@ def abort_memory_job(
         503: {"model": DetailHTTPErrorResponse},
     },
 )
-def start_memory_task(
+async def start_memory_task(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
     chapter_id: Annotated[UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     dispatcher: Annotated[MemoryAgentDispatcher, Depends(get_dispatcher)],
     stage_num: Annotated[int, Query(alias="stageNum")] = 0,
 ) -> MemoryChapterTask:
     try:
-        return start_task(db, current_user, dispatcher, memory_job_id, chapter_id, stage_num)
+        return await start_task(db, current_user, dispatcher, memory_job_id, chapter_id, stage_num)
     except MemoryChapterTaskNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except MemoryChapterTaskStateException as exc:
@@ -308,16 +308,16 @@ def start_memory_task(
         503: {"model": DetailHTTPErrorResponse},
     },
 )
-def retry_memory_task(
+async def retry_memory_task(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
     chapter_id: Annotated[UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     dispatcher: Annotated[MemoryAgentDispatcher, Depends(get_dispatcher)],
     stage_num: Annotated[int, Query(alias="stageNum")] = 0,
 ) -> MemoryChapterTask:
     try:
-        return retry_task(db, current_user, dispatcher, memory_job_id, chapter_id, stage_num)
+        return await retry_task(db, current_user, dispatcher, memory_job_id, chapter_id, stage_num)
     except MemoryChapterTaskNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except MemoryChapterTaskStateException as exc:
@@ -334,15 +334,15 @@ def retry_memory_task(
         409: {"model": DetailHTTPErrorResponse},
     },
 )
-def remove_memory_task(
+async def remove_memory_task(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
     chapter_id: Annotated[UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     stage_num: Annotated[int, Query(alias="stageNum")] = 0,
 ) -> Response:
     try:
-        delete_task(db, current_user, memory_job_id, chapter_id, stage_num)
+        await delete_task(db, current_user, memory_job_id, chapter_id, stage_num)
     except MemoryChapterTaskNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except MemoryChapterTaskStateException as exc:
@@ -358,13 +358,13 @@ def remove_memory_task(
         409: {"model": DetailHTTPErrorResponse},
     },
 )
-def remove_memory_job(
+async def remove_memory_job(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> Response:
     try:
-        delete_job(db, current_user, memory_job_id)
+        await delete_job(db, current_user, memory_job_id)
     except MemoryJobNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except MemoryJobStateException as exc:

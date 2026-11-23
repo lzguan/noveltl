@@ -2,7 +2,7 @@ import uuid
 from datetime import timedelta
 
 from sqlalchemy import func, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.languages.models import Language
 from src.memory.agent.config import JobParamsV1 as JobParams
@@ -24,8 +24,8 @@ from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, Novel, SourceWork
 
 
-def _complete_task(db: Session, memory_job_id: uuid.UUID, chapter_id: uuid.UUID, stage_num: int = 0) -> None:
-    completed = db.scalar(
+async def _complete_task(db: AsyncSession, memory_job_id: uuid.UUID, chapter_id: uuid.UUID, stage_num: int = 0) -> None:
+    completed = await db.scalar(
         update(MemoryChapterTask)
         .where(
             MemoryChapterTask.memory_job_id == memory_job_id,
@@ -37,14 +37,14 @@ def _complete_task(db: Session, memory_job_id: uuid.UUID, chapter_id: uuid.UUID,
         .returning(MemoryChapterTask.chapter_id)
     )
     assert completed is not None
-    db.commit()
+    await db.commit()
 
 
-def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Session) -> None:
+async def test_make_job_records_params_and_pending_tasks_for_chapter_range(async_test_db: AsyncSession) -> None:
     language = Language(language_name="Chinese", language_code="zh")
     source_work = SourceWork(source_work_title="Memory job source")
-    test_db.add_all([language, source_work])
-    test_db.flush()
+    async_test_db.add_all([language, source_work])
+    await async_test_db.flush()
 
     novel = Novel(
         novel_title="Memory job novel",
@@ -64,8 +64,8 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
         source_work_id=source_work.source_work_id,
         language_code=language.language_code,
     )
-    test_db.add_all([novel, other_novel])
-    test_db.flush()
+    async_test_db.add_all([novel, other_novel])
+    await async_test_db.flush()
 
     chapters = [
         Chapter(
@@ -87,8 +87,9 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
         novel_id=novel.novel_id,
         memory_language=language.language_code,
     )
-    test_db.add_all([*chapters, other_chapter, memory_group])
-    test_db.commit()
+    async_test_db.add_all([*chapters, other_chapter, memory_group])
+    await async_test_db.commit()
+    chapter_ids = [chapter.chapter_id for chapter in chapters]
 
     params = JobParams(
         model_name="deepseek:deepseek-v4-flash-low",
@@ -104,100 +105,102 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
             "glossary_events_write": {},
         },
     )
-    memory_job_id = make_job(test_db, memory_group.memory_group_id, 2, 4, params)
+    memory_job_id = await make_job(async_test_db, memory_group.memory_group_id, 2, 4, params)
 
-    job = test_db.get(MemoryJob, memory_job_id)
+    job = await async_test_db.get(MemoryJob, memory_job_id)
     assert job is not None
     assert job.memory_group_id == memory_group.memory_group_id
     assert job.job_params == params.model_dump(mode="json")
 
-    tasks = test_db.scalars(
-        select(MemoryChapterTask)
-        .join(Chapter, Chapter.chapter_id == MemoryChapterTask.chapter_id)
-        .where(MemoryChapterTask.memory_job_id == memory_job_id)
-        .order_by(Chapter.chapter_num)
+    tasks = (
+        await async_test_db.scalars(
+            select(MemoryChapterTask)
+            .join(Chapter, Chapter.chapter_id == MemoryChapterTask.chapter_id)
+            .where(MemoryChapterTask.memory_job_id == memory_job_id)
+            .order_by(Chapter.chapter_num)
+        )
     ).all()
-    assert [task.chapter_id for task in tasks] == [chapters[1].chapter_id, chapters[2].chapter_id]
+    assert [task.chapter_id for task in tasks] == [chapter_ids[1], chapter_ids[2]]
     assert all(task.task_status == JobStatus.PENDING for task in tasks)
     assert all(task.attempt_count == 0 for task in tasks)
 
     first_token = uuid.uuid4()
-    claimed_job = claim_job(test_db, memory_job_id, first_token, timedelta(minutes=5))
+    claimed_job = await claim_job(async_test_db, memory_job_id, first_token, timedelta(minutes=5))
     assert claimed_job is not None
     assert claimed_job.claim_token == first_token
     assert claimed_job.job_params == params.model_dump(mode="json")
 
     second_token = uuid.uuid4()
-    assert claim_job(test_db, memory_job_id, second_token, timedelta(minutes=5)) is None
+    assert await claim_job(async_test_db, memory_job_id, second_token, timedelta(minutes=5)) is None
 
-    test_db.execute(
+    await async_test_db.execute(
         update(MemoryJob)
         .where(MemoryJob.memory_job_id == memory_job_id)
         .values(claim_expires_at=func.now() - timedelta(seconds=1))
     )
-    test_db.commit()
-    reclaimed_job = claim_job(test_db, memory_job_id, second_token, timedelta(minutes=5))
+    await async_test_db.commit()
+    reclaimed_job = await claim_job(async_test_db, memory_job_id, second_token, timedelta(minutes=5))
     assert reclaimed_job is not None
     assert reclaimed_job.claim_token == second_token
 
-    assert release_job(test_db, memory_job_id, first_token) is False
-    test_db.refresh(reclaimed_job)
+    assert await release_job(async_test_db, memory_job_id, first_token) is False
+    await async_test_db.refresh(reclaimed_job)
     assert reclaimed_job.claim_token == second_token
 
-    assert release_job(test_db, memory_job_id, second_token) is True
-    test_db.refresh(reclaimed_job)
+    assert await release_job(async_test_db, memory_job_id, second_token) is True
+    await async_test_db.refresh(reclaimed_job)
     assert reclaimed_job.claim_token is None
     assert reclaimed_job.claim_expires_at is None
 
     third_token = uuid.uuid4()
-    claimed_again = claim_job(test_db, memory_job_id, third_token, timedelta(minutes=5))
+    claimed_again = await claim_job(async_test_db, memory_job_id, third_token, timedelta(minutes=5))
     assert claimed_again is not None
     assert claimed_again.claim_token == third_token
-    assert refresh_job(test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is False
-    assert refresh_job(test_db, memory_job_id, third_token, timedelta(minutes=5)) is True
+    assert await refresh_job(async_test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is False
+    assert await refresh_job(async_test_db, memory_job_id, third_token, timedelta(minutes=5)) is True
 
-    assert abort_job(test_db, uuid.uuid4()) is False
-    assert release_job(test_db, memory_job_id, third_token) is True
+    assert (await abort_job(async_test_db, uuid.uuid4())) is False
+    assert await release_job(async_test_db, memory_job_id, third_token) is True
 
     third_token = uuid.uuid4()
-    claimed_again = claim_job(test_db, memory_job_id, third_token, timedelta(minutes=5))
+    claimed_again = await claim_job(async_test_db, memory_job_id, third_token, timedelta(minutes=5))
     assert claimed_again is not None
 
-    assert claim_next_task(test_db, memory_job_id, uuid.uuid4(), StageBarrierSchedule()) is None
+    assert await claim_next_task(async_test_db, memory_job_id, uuid.uuid4(), StageBarrierSchedule()) is None
 
-    second_task = claim_task(test_db, memory_job_id, chapters[2].chapter_id, third_token, StageBarrierSchedule())
+    second_task = await claim_task(async_test_db, memory_job_id, chapter_ids[2], third_token, StageBarrierSchedule())
     assert second_task is not None
-    assert second_task.chapter_id == chapters[2].chapter_id
+    assert second_task.chapter_id == chapter_ids[2]
     assert second_task.task_status == JobStatus.PROCESSING
     assert second_task.attempt_count == 1
-    assert claim_task(test_db, memory_job_id, chapters[2].chapter_id, third_token, StageBarrierSchedule()) is None
+    assert await claim_task(async_test_db, memory_job_id, chapter_ids[2], third_token, StageBarrierSchedule()) is None
     assert (
-        fail_task(
-            test_db,
+        await fail_task(
+            async_test_db,
             memory_job_id,
             second_task.chapter_id,
             second_token,
         )
         is False
     )
-    test_db.refresh(second_task)
+    await async_test_db.refresh(second_task)
     assert second_task.task_status == JobStatus.PROCESSING
-    _complete_task(test_db, memory_job_id, second_task.chapter_id)
+    await _complete_task(async_test_db, memory_job_id, second_task.chapter_id)
 
-    first_task = claim_next_task(test_db, memory_job_id, third_token, StageBarrierSchedule())
+    first_task = await claim_next_task(async_test_db, memory_job_id, third_token, StageBarrierSchedule())
     assert first_task is not None
-    assert first_task.chapter_id == chapters[1].chapter_id
+    assert first_task.chapter_id == chapter_ids[1]
     assert first_task.task_status == JobStatus.PROCESSING
     assert first_task.attempt_count == 1
 
     # Processing work is recoverable from an expired lease, but an unclaimed
     # processing task is an invalid state and must not be silently adopted.
-    assert release_job(test_db, memory_job_id, third_token) is True
+    assert await release_job(async_test_db, memory_job_id, third_token) is True
     replacement_token = uuid.uuid4()
-    assert claim_job(test_db, memory_job_id, replacement_token, timedelta(minutes=5)) is None
+    assert await claim_job(async_test_db, memory_job_id, replacement_token, timedelta(minutes=5)) is None
 
     stale_token = uuid.uuid4()
-    test_db.execute(
+    await async_test_db.execute(
         update(MemoryJob)
         .where(MemoryJob.memory_job_id == memory_job_id)
         .values(
@@ -205,39 +208,39 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
             claim_expires_at=func.now() - timedelta(seconds=1),
         )
     )
-    test_db.commit()
+    await async_test_db.commit()
 
-    assert claim_job(test_db, memory_job_id, replacement_token, timedelta(minutes=5)) is not None
-    reclaimed_task = claim_next_task(test_db, memory_job_id, replacement_token, StageBarrierSchedule())
+    assert await claim_job(async_test_db, memory_job_id, replacement_token, timedelta(minutes=5)) is not None
+    reclaimed_task = await claim_next_task(async_test_db, memory_job_id, replacement_token, StageBarrierSchedule())
     assert reclaimed_task is not None
     assert reclaimed_task.chapter_id == first_task.chapter_id
     assert reclaimed_task.task_status == JobStatus.PROCESSING
     assert reclaimed_task.attempt_count == 2
 
-    assert abort_job(test_db, memory_job_id) is True
-    test_db.refresh(reclaimed_task)
-    test_db.refresh(claimed_again)
+    assert (await abort_job(async_test_db, memory_job_id)) is True
+    await async_test_db.refresh(reclaimed_task)
+    await async_test_db.refresh(claimed_again)
     assert reclaimed_task.task_status == JobStatus.FAILED
     assert claimed_again.claim_token is None
     assert claimed_again.claim_expires_at is None
     assert (
-        fail_task(
-            test_db,
+        await fail_task(
+            async_test_db,
             memory_job_id,
             reclaimed_task.chapter_id,
             replacement_token,
         )
         is False
     )
-    assert claim_job(test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is None
+    assert await claim_job(async_test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is None
 
 
-def test_stages_run_as_job_wide_barriers(test_db: Session) -> None:
+async def test_stages_run_as_job_wide_barriers(async_test_db: AsyncSession) -> None:
     """Naming relies on every chapter being recorded first, for whole-range context."""
     language = Language(language_name="Chinese", language_code="zh")
     source_work = SourceWork(source_work_title="Barrier source")
-    test_db.add_all([language, source_work])
-    test_db.flush()
+    async_test_db.add_all([language, source_work])
+    await async_test_db.flush()
     novel = Novel(
         novel_title="Barrier novel",
         novel_description=None,
@@ -247,8 +250,8 @@ def test_stages_run_as_job_wide_barriers(test_db: Session) -> None:
         source_work_id=source_work.source_work_id,
         language_code=language.language_code,
     )
-    test_db.add(novel)
-    test_db.flush()
+    async_test_db.add(novel)
+    await async_test_db.flush()
     chapters = [
         Chapter(chapter_num=number, chapter_title=f"Chapter {number}", chapter_is_public=False, novel_id=novel.novel_id)
         for number in (1, 2)
@@ -256,31 +259,31 @@ def test_stages_run_as_job_wide_barriers(test_db: Session) -> None:
     memory_group = MemoryGroup(
         memory_group_name="Barrier group", novel_id=novel.novel_id, memory_language=language.language_code
     )
-    test_db.add_all([*chapters, memory_group])
-    test_db.commit()
+    async_test_db.add_all([*chapters, memory_group])
+    await async_test_db.commit()
     params = JobParamsV2.model_validate(
         {
             "record_memories": {"model_name": "deepseek:deepseek-v4-flash-low", "toolsets": {}},
             "translate_terms": {"model_name": "deepseek:deepseek-v4-flash-low"},
         }
     )
-    memory_job_id = make_job(test_db, memory_group.memory_group_id, None, None, params)
+    memory_job_id = await make_job(async_test_db, memory_group.memory_group_id, None, None, params)
     token = uuid.uuid4()
-    assert claim_job(test_db, memory_job_id, token, timedelta(minutes=5)) is not None
+    assert await claim_job(async_test_db, memory_job_id, token, timedelta(minutes=5)) is not None
     first, second = (chapter.chapter_id for chapter in chapters)
 
     # A direct naming run waits for recording of every chapter, not just its own.
-    record_first = claim_task(test_db, memory_job_id, first, token, StageBarrierSchedule(), stage_num=0)
+    record_first = await claim_task(async_test_db, memory_job_id, first, token, StageBarrierSchedule(), stage_num=0)
     assert record_first is not None
-    _complete_task(test_db, memory_job_id, first, stage_num=0)
-    assert claim_task(test_db, memory_job_id, first, token, StageBarrierSchedule(), stage_num=1) is None
+    await _complete_task(async_test_db, memory_job_id, first, stage_num=0)
+    assert await claim_task(async_test_db, memory_job_id, first, token, StageBarrierSchedule(), stage_num=1) is None
 
     schedule = StageBarrierSchedule()
     claimed = []
-    while (task := claim_next_task(test_db, memory_job_id, token, schedule)) is not None:
+    while (task := await claim_next_task(async_test_db, memory_job_id, token, schedule)) is not None:
         claimed.append((task.chapter_id, task.stage_num))
         # Schedule invariant: the worker never claims a task that direct runs would refuse.
         prerequisites = schedule.unfinished_prerequisites(memory_job_id, task.chapter_id, task.stage_num)
-        assert not test_db.scalar(select(prerequisites))
-        _complete_task(test_db, memory_job_id, task.chapter_id, task.stage_num)
+        assert not await async_test_db.scalar(select(prerequisites))
+        await _complete_task(async_test_db, memory_job_id, task.chapter_id, task.stage_num)
     assert claimed == [(second, 0), (first, 1), (second, 1)]

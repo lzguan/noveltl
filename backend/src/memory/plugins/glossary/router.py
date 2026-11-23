@@ -3,11 +3,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from src.auth.dependencies import get_current_user, get_optional_user
 from src.auth.models import User
-from src.database import get_async_db, get_db
+from src.database import get_async_db
 from src.memory.exceptions import (
     GlossaryTermAlreadyExistsException,
     GlossaryTermNotFoundException,
@@ -51,10 +50,10 @@ router = APIRouter(prefix="/memory-groups/{memoryGroupId}/glossary")
     response_model=GlossaryMemoryPage,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_glossary_memories_at_chapter(
+async def read_glossary_memories_at_chapter(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     chapter_id: Annotated[UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
@@ -62,7 +61,7 @@ def read_glossary_memories_at_chapter(
     memory_types: Annotated[list[MemoryType] | None, Query(alias="memoryTypes")] = None,
 ):
     try:
-        return query_glossary_memories_at_chapter(
+        return await query_glossary_memories_at_chapter(
             db,
             current_user,
             memory_group_id,
@@ -77,15 +76,15 @@ def read_glossary_memories_at_chapter(
 
 
 @router.get("/memories", response_model=GlossaryMemoryPage)
-def read_glossary_memories(
+async def read_glossary_memories(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     memory_types: Annotated[list[MemoryType] | None, Query(alias="memoryTypes")] = None,
 ):
-    return query_glossary_memories(
+    return await query_glossary_memories(
         db,
         current_user,
         memory_group_id,
@@ -133,17 +132,17 @@ async def read_glossary_terms(
     response_model=GlossaryMemoryPage,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memories_for_term(
+async def read_memories_for_term(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     term_id: Annotated[UUID, Path(alias="termId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     chapter_id: Annotated[UUID | None, Query(alias="chapterId")] = None,
 ):
     try:
-        return query_memories_for_term(
+        return await query_memories_for_term(
             db,
             current_user,
             memory_group_id,
@@ -163,14 +162,14 @@ def read_memories_for_term(
     response_model=list[GlossaryTerm],
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_terms_for_memory(
+async def read_terms_for_memory(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     memory_id: Annotated[UUID, Path(alias="memoryId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     try:
-        return query_terms_for_memory(db, current_user, memory_group_id, memory_id)
+        return await query_terms_for_memory(db, current_user, memory_group_id, memory_id)
     except MemoryNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Glossary memory not found.") from e
 
@@ -183,14 +182,14 @@ def read_terms_for_memory(
         404: {"model": DetailHTTPErrorResponse},
     },
 )
-def add_glossary_memory(
+async def add_glossary_memory(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     request: CreateGlossaryMemory,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        return create_glossary_memory(
+        return await create_glossary_memory(
             db,
             current_user,
             memory_group_id,
@@ -225,14 +224,14 @@ def add_glossary_memory(
         409: {"model": DetailHTTPErrorResponse},
     },
 )
-def add_glossary_term(
+async def add_glossary_term(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     request: CreateGlossaryTerm,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        return create_glossary_term(db, current_user, memory_group_id, request.term, request.term_kind)
+        return await create_glossary_term(db, current_user, memory_group_id, request.term, request.term_kind)
     except MemoryGroupNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory group not found.") from e
     except GlossaryTermAlreadyExistsException as e:
@@ -247,15 +246,15 @@ def add_glossary_term(
         409: {"model": DetailHTTPErrorResponse},
     },
 )
-def edit_glossary_term(
+async def edit_glossary_term(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     term_id: Annotated[UUID, Path(alias="termId")],
     request: UpdateGlossaryTerm,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        return update_glossary_term(db, current_user, memory_group_id, term_id, request.term, request.term_kind)
+        return await update_glossary_term(db, current_user, memory_group_id, term_id, request.term, request.term_kind)
     except GlossaryTermNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Glossary term not found.") from e
     except GlossaryTermAlreadyExistsException as e:
@@ -267,15 +266,15 @@ def edit_glossary_term(
     response_model=GlossaryTerm,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def edit_glossary_term_review_status(
+async def edit_glossary_term_review_status(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     term_id: Annotated[UUID, Path(alias="termId")],
     request: UpdateReviewStatus,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        return change_glossary_term_review_status(
+        return await change_glossary_term_review_status(
             db,
             current_user,
             memory_group_id,
@@ -291,15 +290,15 @@ def edit_glossary_term_review_status(
     response_model=list[GlossaryTerm],
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def replace_glossary_memory_terms(
+async def replace_glossary_memory_terms(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     memory_id: Annotated[UUID, Path(alias="memoryId")],
     request: ReplaceGlossaryAssociations,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        return replace_memory_terms(db, current_user, memory_group_id, memory_id, request.term_ids)
+        return await replace_memory_terms(db, current_user, memory_group_id, memory_id, request.term_ids)
     except MemoryNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Glossary memory not found.") from e
     except GlossaryTermNotFoundException as e:
@@ -314,14 +313,14 @@ def replace_glossary_memory_terms(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def remove_glossary_term(
+async def remove_glossary_term(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     term_id: Annotated[UUID, Path(alias="termId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> Response:
     try:
-        delete_glossary_term(db, current_user, memory_group_id, term_id)
+        await delete_glossary_term(db, current_user, memory_group_id, term_id)
     except GlossaryTermNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Glossary term not found.") from e
     return Response(status_code=status.HTTP_204_NO_CONTENT)

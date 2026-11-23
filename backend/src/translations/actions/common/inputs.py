@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from src.files.access import fetch_file
 from src.files.storage import ObjectStore
 from src.memory.models import MemoryGroup
-from src.memory.plugins.conventions.access import read_conventions
+from src.memory.plugins.conventions.access import conventions_statement
 from src.memory.types import ReviewStatus
 from src.novels.models import Chapter, ChapterContent
 from src.translations.actions.actions import ActionTaskContext
@@ -92,8 +92,10 @@ def iter_initial_records(
                         rule=convention.rule,
                         rationale=convention.rationale,
                     )
-                    for convention in read_conventions(
-                        db, source.memory_group_id, review_statuses=[ReviewStatus.PENDING, ReviewStatus.APPROVED]
+                    for convention in db.scalars(
+                        conventions_statement(
+                            source.memory_group_id, review_statuses=[ReviewStatus.PENDING, ReviewStatus.APPROVED]
+                        )
                     )
                 ]
                 for chapter_id, _ in chapters:

@@ -2,7 +2,7 @@ import uuid
 from datetime import timedelta
 
 from sqlalchemy import Select, and_, func, insert, literal, or_, select, tuple_, union_all, update
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.agent.config import (
     JobParams,
@@ -30,8 +30,8 @@ def _owns_job_claim(memory_job_id: uuid.UUID, claim_token: uuid.UUID):
     )
 
 
-def claim_job(
-    db: Session,
+async def claim_job(
+    db: AsyncSession,
     memory_job_id: uuid.UUID,
     claim_token: uuid.UUID,
     claim_duration: timedelta,
@@ -73,11 +73,11 @@ def claim_job(
     )
 
     try:
-        job = db.execute(claim_stmt).scalar_one_or_none()
+        job = (await db.execute(claim_stmt)).scalar_one_or_none()
         if job is not None:
             # A successfully replaced lease is the ownership boundary. Any
             # processing task predates this token and is safe to retry.
-            db.execute(
+            await db.execute(
                 update(MemoryChapterTask)
                 .where(
                     MemoryChapterTask.memory_job_id == memory_job_id,
@@ -85,15 +85,15 @@ def claim_job(
                 )
                 .values(task_status=JobStatus.PENDING)
             )
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return job
 
 
-def release_job(
-    db: Session,
+async def release_job(
+    db: AsyncSession,
     memory_job_id: uuid.UUID,
     claim_token: uuid.UUID,
 ) -> bool:
@@ -109,18 +109,18 @@ def release_job(
     )
 
     try:
-        released_job_id = db.scalar(release_stmt)
+        released_job_id = await db.scalar(release_stmt)
         if released_job_id is None:
-            db.rollback()
+            await db.rollback()
             return False
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return True
 
 
-def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
+async def abort_job(db: AsyncSession, memory_job_id: uuid.UUID) -> bool:
     """Fail active tasks and clear the job claim, invalidating the current worker."""
     abort_stmt = (
         update(MemoryJob)
@@ -130,11 +130,11 @@ def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
     )
 
     try:
-        aborted_job_id = db.scalar(abort_stmt)
+        aborted_job_id = await db.scalar(abort_stmt)
         if aborted_job_id is None:
-            db.rollback()
+            await db.rollback()
             return False
-        db.execute(
+        await db.execute(
             update(MemoryChapterTask)
             .where(
                 MemoryChapterTask.memory_job_id == memory_job_id,
@@ -142,15 +142,15 @@ def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
             )
             .values(task_status=JobStatus.FAILED)
         )
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return True
 
 
-def refresh_job(
-    db: Session,
+async def refresh_job(
+    db: AsyncSession,
     memory_job_id: uuid.UUID,
     claim_token: uuid.UUID,
     claim_duration: timedelta,
@@ -171,13 +171,13 @@ def refresh_job(
     )
 
     try:
-        refreshed_job_id = db.scalar(refresh_stmt)
+        refreshed_job_id = await db.scalar(refresh_stmt)
         if refreshed_job_id is None:
-            db.rollback()
+            await db.rollback()
             return False
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return True
 
@@ -193,8 +193,8 @@ def stage_task_chapters(stage: StageConfig, chapters: Select[uuid.UUID]) -> Sele
             return chapters.order_by(Chapter.chapter_num.desc()).limit(1)
 
 
-def make_job(
-    db: Session,
+async def make_job(
+    db: AsyncSession,
     memory_group_id: uuid.UUID,
     start_chapter_num: int | None,
     end_chapter_num: int | None,
@@ -243,8 +243,8 @@ def make_job(
     tasks = union_all(*task_rows).subquery()
 
     try:
-        db.execute(job_stmt)
-        db.execute(
+        await db.execute(job_stmt)
+        await db.execute(
             insert(MemoryChapterTask).from_select(
                 [
                     MemoryChapterTask.memory_job_id,
@@ -254,16 +254,16 @@ def make_job(
                 select(tasks.c.memory_job_id, tasks.c.chapter_id, tasks.c.stage_num),
             )
         )
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
     return memory_job_id
 
 
-def claim_next_task(
-    db: Session,
+async def claim_next_task(
+    db: AsyncSession,
     memory_job_id: uuid.UUID,
     claim_token: uuid.UUID,
     schedule: TaskSchedule,
@@ -299,16 +299,16 @@ def claim_next_task(
     )
 
     try:
-        task = db.execute(claim_stmt).scalar_one_or_none()
-        db.commit()
+        task = (await db.execute(claim_stmt)).scalar_one_or_none()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return task
 
 
-def claim_task(
-    db: Session,
+async def claim_task(
+    db: AsyncSession,
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     claim_token: uuid.UUID,
@@ -334,16 +334,16 @@ def claim_task(
     )
 
     try:
-        task = db.execute(claim_stmt).scalar_one_or_none()
-        db.commit()
+        task = (await db.execute(claim_stmt)).scalar_one_or_none()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return task
 
 
-def fail_task(
-    db: Session,
+async def fail_task(
+    db: AsyncSession,
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     claim_token: uuid.UUID,
@@ -365,25 +365,25 @@ def fail_task(
     )
 
     try:
-        released_chapter_id = db.scalar(release_stmt)
+        released_chapter_id = await db.scalar(release_stmt)
         if released_chapter_id is None:
-            db.rollback()
+            await db.rollback()
             return False
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return True
 
 
-def reset_failed_task(
-    db: Session,
+async def reset_failed_task(
+    db: AsyncSession,
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     stage_num: int = 0,
 ) -> bool:
     """Return a failed task to pending so a worker can claim it again."""
-    reset_chapter_id = db.scalar(
+    reset_chapter_id = await db.scalar(
         update(MemoryChapterTask)
         .where(
             MemoryChapterTask.memory_job_id == memory_job_id,
@@ -395,7 +395,7 @@ def reset_failed_task(
         .returning(MemoryChapterTask.chapter_id)
     )
     if reset_chapter_id is None:
-        db.rollback()
+        await db.rollback()
         return False
-    db.commit()
+    await db.commit()
     return True

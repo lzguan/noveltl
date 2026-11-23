@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from src.auth.constants import UserType
 from src.auth.models import User
@@ -31,7 +30,7 @@ class GlossaryQueryScenario:
     alpha_term_id: UUID
 
 
-def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
+async def _seed_glossary_query_scenario(db: AsyncSession) -> GlossaryQueryScenario:
     admin = User(
         user_name="glossary-query-admin",
         user_hashed_password="not-used",
@@ -40,7 +39,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
     language = Language(language_name="Chinese", language_code="zh")
     source_work = SourceWork(source_work_title="Glossary query source")
     db.add_all([admin, language, source_work])
-    db.flush()
+    await db.flush()
 
     novel = Novel(
         novel_title="Glossary query novel",
@@ -52,7 +51,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
         language_code=language.language_code,
     )
     db.add(novel)
-    db.flush()
+    await db.flush()
 
     first_chapter = Chapter(
         chapter_num=1,
@@ -67,7 +66,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
         novel_id=novel.novel_id,
     )
     db.add_all([first_chapter, current_chapter])
-    db.flush()
+    await db.flush()
 
     first_content = ChapterContent(
         chapter_content_text="Alpha and Gamma",
@@ -90,10 +89,10 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
         memory_language=language.language_code,
     )
     db.add_all([first_content, outdated_current_content, latest_current_content, memory_group])
-    db.flush()
+    await db.flush()
 
     terms = {
-        term: create_term(
+        term: await create_term(
             db,
             memory_group.memory_group_id,
             term,
@@ -107,7 +106,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
         chapter_id=first_chapter.chapter_id,
         chapter_content_id=first_content.chapter_content_id,
     )
-    create_memory(
+    await create_memory(
         db,
         first_context,
         Creator.AGENT,
@@ -116,7 +115,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
         "Alpha has one persistent memory.",
         Scope.PERSIST,
     )
-    create_memory(
+    await create_memory(
         db,
         first_context,
         Creator.AGENT,
@@ -126,7 +125,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
         Scope.LOCAL,
     )
     for index in range(3):
-        create_memory(
+        await create_memory(
             db,
             first_context,
             Creator.AGENT,
@@ -136,7 +135,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
             Scope.PERSIST,
         )
 
-    other_plugin_memory = write_memory(
+    other_plugin_memory = await write_memory(
         db,
         first_context,
         MemoryType.FACT,
@@ -146,7 +145,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
         Scope.PERSIST,
     )
     db.add(GlossaryAssociation(term_id=terms["Alpha"].term_id, memory_id=other_plugin_memory.memory_id))
-    db.commit()
+    await db.commit()
     return GlossaryQueryScenario(
         admin=admin,
         chapter=current_chapter,
@@ -155,10 +154,8 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
     )
 
 
-async def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(
-    test_db: Session, async_test_db: AsyncSession
-) -> None:
-    scenario = _seed_glossary_query_scenario(test_db)
+async def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(async_test_db: AsyncSession) -> None:
+    scenario = await _seed_glossary_query_scenario(async_test_db)
 
     page = await query_glossary_terms(
         async_test_db,
@@ -184,10 +181,8 @@ async def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(
     }
 
 
-async def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(
-    test_db: Session, async_test_db: AsyncSession
-) -> None:
-    scenario = _seed_glossary_query_scenario(test_db)
+async def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(async_test_db: AsyncSession) -> None:
+    scenario = await _seed_glossary_query_scenario(async_test_db)
 
     page = await query_glossary_terms(
         async_test_db,
@@ -206,10 +201,8 @@ async def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(
     ]
 
 
-async def test_glossary_term_search_and_pagination_apply_after_count_ordering(
-    test_db: Session, async_test_db: AsyncSession
-) -> None:
-    scenario = _seed_glossary_query_scenario(test_db)
+async def test_glossary_term_search_and_pagination_apply_after_count_ordering(async_test_db: AsyncSession) -> None:
+    scenario = await _seed_glossary_query_scenario(async_test_db)
 
     page = await query_glossary_terms(
         async_test_db,
@@ -228,19 +221,19 @@ async def test_glossary_term_search_and_pagination_apply_after_count_ordering(
     ]
 
 
-def test_memories_for_term_can_be_scoped_to_active_memories_at_a_chapter(
-    test_db: Session,
+async def test_memories_for_term_can_be_scoped_to_active_memories_at_a_chapter(
+    async_test_db: AsyncSession,
 ) -> None:
-    scenario = _seed_glossary_query_scenario(test_db)
+    scenario = await _seed_glossary_query_scenario(async_test_db)
 
-    all_memories = query_memories_for_term(
-        test_db,
+    all_memories = await query_memories_for_term(
+        async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
         scenario.alpha_term_id,
     )
-    active_memories = query_memories_for_term(
-        test_db,
+    active_memories = await query_memories_for_term(
+        async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
         scenario.alpha_term_id,
@@ -252,11 +245,11 @@ def test_memories_for_term_can_be_scoped_to_active_memories_at_a_chapter(
     assert [row.memory.memory_content for row in active_memories.rows] == ["Alpha has one persistent memory."]
 
 
-def test_human_glossary_term_kind_can_be_set_and_cleared(test_db: Session) -> None:
-    scenario = _seed_glossary_query_scenario(test_db)
+async def test_human_glossary_term_kind_can_be_set_and_cleared(async_test_db: AsyncSession) -> None:
+    scenario = await _seed_glossary_query_scenario(async_test_db)
 
-    created = create_glossary_term(
-        test_db,
+    created = await create_glossary_term(
+        async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
         "Delta",
@@ -264,8 +257,8 @@ def test_human_glossary_term_kind_can_be_set_and_cleared(test_db: Session) -> No
     )
     assert created.term_kind == TermKind.CONCEPT
 
-    updated = update_glossary_term(
-        test_db,
+    updated = await update_glossary_term(
+        async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
         created.term_id,

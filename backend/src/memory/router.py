@@ -2,11 +2,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_user, get_optional_user
 from src.auth.models import User
-from src.database import get_db
+from src.database import get_async_db
 from src.languages.exceptions import LanguageNotFoundException
 from src.memory.exceptions import MemoryNotFoundException
 from src.memory.schemas import (
@@ -41,13 +41,13 @@ router = APIRouter()
     response_model=MemoryGroup,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def add_memory_group(
+async def add_memory_group(
     request: CreateMemoryGroup,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        return create_memory_group(
+        return await create_memory_group(
             db,
             current_user,
             request.memory_group_name,
@@ -61,12 +61,12 @@ def add_memory_group(
 
 
 @router.get("/memory-groups", response_model=list[MemoryGroup])
-def read_memory_groups(
+async def read_memory_groups(
     novel_id: Annotated[UUID, Query(alias="novelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
-    return query_memory_groups(db, current_user, novel_id)
+    return await query_memory_groups(db, current_user, novel_id)
 
 
 @router.get(
@@ -74,10 +74,10 @@ def read_memory_groups(
     response_model=MemoryPage,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memories_at_chapter(
+async def read_memories_at_chapter(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     chapter_id: Annotated[UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
@@ -86,7 +86,7 @@ def read_memories_at_chapter(
     memory_types: Annotated[list[MemoryType] | None, Query(alias="memoryTypes")] = None,
 ):
     try:
-        page = query_memories_at_chapter(
+        page = await query_memories_at_chapter(
             db,
             current_user,
             memory_group_id,
@@ -103,16 +103,16 @@ def read_memories_at_chapter(
 
 
 @router.get("/memory-groups/{memoryGroupId}/memories", response_model=MemoryPage)
-def read_memories(
+async def read_memories(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     plugin_names: Annotated[list[PluginName] | None, Query(alias="pluginNames")] = None,
     memory_types: Annotated[list[MemoryType] | None, Query(alias="memoryTypes")] = None,
 ):
-    page = query_memories(
+    page = await query_memories(
         db,
         current_user,
         memory_group_id,
@@ -129,13 +129,13 @@ def read_memories(
     response_model=Memory,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_memory(
+async def read_memory(
     memory_id: Annotated[UUID, Path(alias="memoryId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     try:
-        return query_one_memory(db, current_user, memory_id)
+        return await query_one_memory(db, current_user, memory_id)
     except MemoryNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -148,15 +148,15 @@ def read_memory(
     response_model=Memory,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def edit_memory_content(
+async def edit_memory_content(
     memory_id: Annotated[UUID, Path(alias="memoryId")],
     request: UpdateMemoryContent,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        update_memory(db, current_user, memory_id, request.memory_content, request.mark)
-        return query_one_memory(db, current_user, memory_id)
+        await update_memory(db, current_user, memory_id, request.memory_content, request.mark)
+        return await query_one_memory(db, current_user, memory_id)
     except MemoryNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -169,15 +169,15 @@ def edit_memory_content(
     response_model=Memory,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def edit_memory_review_status(
+async def edit_memory_review_status(
     memory_id: Annotated[UUID, Path(alias="memoryId")],
     request: UpdateReviewStatus,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        change_review_status(db, current_user, memory_id, request.review_status)
-        return query_one_memory(db, current_user, memory_id)
+        await change_review_status(db, current_user, memory_id, request.review_status)
+        return await query_one_memory(db, current_user, memory_id)
     except MemoryNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -190,15 +190,15 @@ def edit_memory_review_status(
     response_model=Memory,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def edit_memory_expiration(
+async def edit_memory_expiration(
     memory_id: Annotated[UUID, Path(alias="memoryId")],
     request: ExpireMemory,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        expire_memory(db, current_user, memory_id, request.chapter_id)
-        return query_one_memory(db, current_user, memory_id)
+        await expire_memory(db, current_user, memory_id, request.chapter_id)
+        return await query_one_memory(db, current_user, memory_id)
     except MemoryNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -213,13 +213,13 @@ def edit_memory_expiration(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def remove_memory(
+async def remove_memory(
     memory_id: Annotated[UUID, Path(alias="memoryId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> Response:
     try:
-        delete_memory(db, current_user, memory_id)
+        await delete_memory(db, current_user, memory_id)
     except MemoryNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

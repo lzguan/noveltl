@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.languages.exceptions import LanguageNotFoundException
@@ -29,15 +29,15 @@ class RowCount[T]:
     rows: list[T]
 
 
-def query_memory_groups(db: Session, user: User | None, novel_id: UUID):
+async def query_memory_groups(db: AsyncSession, user: User | None, novel_id: UUID):
     """Read all memory groups for a given novel."""
     query = select(MemoryGroup).where(MemoryGroup.novel_id == novel_id)
     query = memory_group_mod_access_select(query, user)
-    return db.execute(query).scalars().all()
+    return (await db.execute(query)).scalars().all()
 
 
-def create_memory_group(
-    db: Session,
+async def create_memory_group(
+    db: AsyncSession,
     user: User,
     memory_group_name: str,
     novel_id: UUID,
@@ -46,10 +46,10 @@ def create_memory_group(
     """Create a memory group for a novel the user may edit."""
     novel_query = select(Novel.novel_id).where(Novel.novel_id == novel_id)
     novel_query = novel_mod_access_select(novel_query, user, edit_only=True)
-    if db.execute(novel_query).scalar_one_or_none() is None:
+    if (await db.execute(novel_query)).scalar_one_or_none() is None:
         raise NovelNotFoundException
 
-    if db.get(Language, memory_language) is None:
+    if await db.get(Language, memory_language) is None:
         raise LanguageNotFoundException
 
     memory_group = MemoryGroup(
@@ -59,16 +59,16 @@ def create_memory_group(
     )
     try:
         db.add(memory_group)
-        db.commit()
-        db.refresh(memory_group)
+        await db.commit()
+        await db.refresh(memory_group)
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return memory_group
 
 
-def query_memories_at_chapter(
-    db: Session,
+async def query_memories_at_chapter(
+    db: AsyncSession,
     user: User | None,
     memory_group_id: UUID,
     chapter_id: UUID,
@@ -90,7 +90,7 @@ def query_memories_at_chapter(
             )
         )
         chapter_query = memory_group_mod_access_select(chapter_query, user)
-        chapter = db.execute(chapter_query).scalar_one()
+        chapter = (await db.execute(chapter_query)).scalar_one()
     except NoResultFound as e:
         raise ChapterNotFoundException from e
 
@@ -115,11 +115,11 @@ def query_memories_at_chapter(
     )
     q2 = build_query(select(func.count(Memory.memory_id)))
 
-    return RowCount(count=db.execute(q2).scalar_one(), rows=list(db.execute(q1).scalars().all()))
+    return RowCount(count=(await db.execute(q2)).scalar_one(), rows=list((await db.execute(q1)).scalars().all()))
 
 
-def query_memories(
-    db: Session,
+async def query_memories(
+    db: AsyncSession,
     user: User | None,
     memory_group_id: UUID,
     skip: int = 0,
@@ -140,13 +140,15 @@ def query_memories(
         return query
 
     return RowCount(
-        count=db.execute(build_query(select(func.count(Memory.memory_id)))).scalar_one(),
+        count=(await db.execute(build_query(select(func.count(Memory.memory_id))))).scalar_one(),
         rows=list(
-            db.execute(
-                build_query(select(Memory))
-                .offset(skip)
-                .limit(limit)
-                .order_by(Memory.memory_start_num.desc(), Memory.memory_id)
+            (
+                await db.execute(
+                    build_query(select(Memory))
+                    .offset(skip)
+                    .limit(limit)
+                    .order_by(Memory.memory_start_num.desc(), Memory.memory_id)
+                )
             )
             .scalars()
             .all()
@@ -154,8 +156,8 @@ def query_memories(
     )
 
 
-def query_one_memory(
-    db: Session,
+async def query_one_memory(
+    db: AsyncSession,
     user: User | None,
     memory_id: UUID,
 ):
@@ -163,13 +165,13 @@ def query_one_memory(
     query = select(Memory).where(Memory.memory_id == memory_id)
     query = memory_mod_access_select(query, user)
     try:
-        return db.execute(query).scalar_one()
+        return (await db.execute(query)).scalar_one()
     except NoResultFound as e:
         raise MemoryNotFoundException from e
 
 
-def change_review_status(
-    db: Session,
+async def change_review_status(
+    db: AsyncSession,
     user: User,
     memory_id: UUID,
     new_review_status: ReviewStatus,
@@ -183,19 +185,19 @@ def change_review_status(
     )
     query = memory_mod_access_update(query, user)
     try:
-        updated_memory_id = db.execute(query).scalar_one()
-        db.commit()
+        updated_memory_id = (await db.execute(query)).scalar_one()
+        await db.commit()
         return updated_memory_id
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise MemoryNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
 
-def update_memory(
-    db: Session,
+async def update_memory(
+    db: AsyncSession,
     user: User,
     memory_id: UUID,
     new_content: str,
@@ -210,19 +212,19 @@ def update_memory(
     )
     query = memory_mod_access_update(query, user)
     try:
-        updated_memory_id = db.execute(query).scalar_one()
-        db.commit()
+        updated_memory_id = (await db.execute(query)).scalar_one()
+        await db.commit()
         return updated_memory_id
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise MemoryNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
 
-def expire_memory(
-    db: Session,
+async def expire_memory(
+    db: AsyncSession,
     user: User,
     memory_id: UUID,
     chapter_id: UUID,
@@ -236,13 +238,15 @@ def expire_memory(
             .where(Memory.memory_id == memory_id)
         )
         memory_query = memory_mod_access_select(memory_query, user, edit_only=True)
-        novel_id = db.execute(memory_query).scalar_one()
+        novel_id = (await db.execute(memory_query)).scalar_one()
     except NoResultFound as e:
         raise MemoryNotFoundException from e
 
     try:
-        chapter_num = db.execute(
-            select(Chapter.chapter_num).where(Chapter.chapter_id == chapter_id, Chapter.novel_id == novel_id)
+        chapter_num = (
+            await db.execute(
+                select(Chapter.chapter_num).where(Chapter.chapter_id == chapter_id, Chapter.novel_id == novel_id)
+            )
         ).scalar_one()
     except NoResultFound as e:
         raise ChapterNotFoundException from e
@@ -259,28 +263,28 @@ def expire_memory(
     )
     query = memory_mod_access_update(query, user)
     try:
-        expired_memory_id = db.execute(query).scalar_one()
-        db.commit()
+        expired_memory_id = (await db.execute(query)).scalar_one()
+        await db.commit()
         return expired_memory_id
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise MemoryNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
 
-def delete_memory(db: Session, user: User, memory_id: UUID):
+async def delete_memory(db: AsyncSession, user: User, memory_id: UUID):
     """Delete one memory and rely on plugin association cascades for cleanup."""
     query = delete(Memory).where(Memory.memory_id == memory_id).returning(Memory.memory_id)
     query = memory_mod_access_delete(query, user)
     try:
-        deleted_memory_id = db.execute(query).scalar_one()
-        db.commit()
+        deleted_memory_id = (await db.execute(query)).scalar_one()
+        await db.commit()
         return deleted_memory_id
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise MemoryNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import func, inspect, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.exceptions import MemoryWorkspaceNotFoundException
 from src.memory.models import MemoryJob
@@ -11,7 +11,9 @@ from src.memory.shadow_models import MemoryWorkspace
 from src.model_base import Base
 
 
-def check_workspace(db: Session, workspace_id: UUID, memory_group_id: UUID, chapter_id: UUID | None = None) -> None:
+async def check_workspace(
+    db: AsyncSession, workspace_id: UUID, memory_group_id: UUID, chapter_id: UUID | None = None
+) -> None:
     query = (
         select(MemoryWorkspace.workspace_id)
         .join(MemoryJob, MemoryJob.memory_job_id == MemoryWorkspace.memory_job_id)
@@ -19,12 +21,12 @@ def check_workspace(db: Session, workspace_id: UUID, memory_group_id: UUID, chap
     )
     if chapter_id is not None:
         query = query.where(MemoryWorkspace.chapter_id == chapter_id)
-    if db.scalar(query) is None:
+    if await db.scalar(query) is None:
         raise MemoryWorkspaceNotFoundException("Workspace does not exist or belongs to a different group or chapter")
 
 
-def stage_record[T: Base](
-    db: Session, shadow: type[T], workspace_id: UUID, original: Base | None = None, **values: Any
+async def stage_record[T: Base](
+    db: AsyncSession, shadow: type[T], workspace_id: UUID, original: Base | None = None, **values: Any
 ) -> T:
     payload = (
         {column.name: getattr(original, column.name) for column in inspect(type(original)).columns}
@@ -39,4 +41,4 @@ def stage_record[T: Base](
         index_elements=[column.name for column in inspect(shadow).primary_key],
         set_={name: statement.excluded[name] for name in payload if name not in primary_key},
     ).returning(shadow)
-    return db.execute(statement.execution_options(populate_existing=True)).scalar_one()
+    return (await db.execute(statement.execution_options(populate_existing=True))).scalar_one()

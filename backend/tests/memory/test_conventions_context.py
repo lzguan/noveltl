@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.languages.models import Language
 from src.memory.access import MemAccessContext
@@ -26,11 +26,11 @@ CHAPTER_TEXTS = {
 }
 
 
-def _setup(db: Session) -> tuple[MemoryGroup, dict[int, MemAccessContext]]:
+async def _setup(db: AsyncSession) -> tuple[MemoryGroup, dict[int, MemAccessContext]]:
     language = Language(language_name="Chinese", language_code="zh")
     source_work = SourceWork(source_work_title="Context source")
     db.add_all([language, source_work])
-    db.flush()
+    await db.flush()
     novel = Novel(
         novel_title="Context novel",
         novel_description=None,
@@ -41,23 +41,23 @@ def _setup(db: Session) -> tuple[MemoryGroup, dict[int, MemAccessContext]]:
         language_code=language.language_code,
     )
     db.add(novel)
-    db.flush()
+    await db.flush()
     group = MemoryGroup(memory_group_name="Context", novel_id=novel.novel_id, memory_language="zh")
     db.add(group)
-    db.flush()
+    await db.flush()
     contexts: dict[int, MemAccessContext] = {}
     for chapter_num, versions in CHAPTER_TEXTS.items():
         chapter = Chapter(
             chapter_num=chapter_num, chapter_title=f"Ch{chapter_num}", chapter_is_public=False, novel_id=novel.novel_id
         )
         db.add(chapter)
-        db.flush()
+        await db.flush()
         for version, text in enumerate(versions, start=1):
             content = ChapterContent(
                 chapter_id=chapter.chapter_id, chapter_content_version=version, chapter_content_text=text
             )
             db.add(content)
-            db.flush()
+            await db.flush()
             contexts[chapter_num] = MemAccessContext(
                 group.memory_group_id, chapter.chapter_id, content.chapter_content_id
             )
@@ -69,26 +69,34 @@ def _setup(db: Session) -> tuple[MemoryGroup, dict[int, MemAccessContext]]:
         ("樱", TermKind.PERSON),
         ("弃名", TermKind.PERSON),
     ]:
-        created = access.create_term(db, group.memory_group_id, term, kind)
+        created = await access.create_term(db, group.memory_group_id, term, kind)
         if term == "弃名":
             created.review_status = ReviewStatus.REJECTED
-    db.commit()
+    await db.commit()
     return group, contexts
 
 
-def test_context_lists_range_terms_with_current_definitions_translations_and_conventions(test_db: Session) -> None:
-    group, contexts = _setup(test_db)
-    access.create_memory(test_db, contexts[1], Creator.AGENT, MemoryType.DEFINITION, ["白玫"], "Old definition.")
-    access.create_memory(test_db, contexts[3], Creator.AGENT, MemoryType.DEFINITION, ["白玫"], "Current definition.")
-    rejected, _ = access.create_memory(
-        test_db, contexts[3], Creator.AGENT, MemoryType.DEFINITION, ["方亭市"], "Rejected definition."
+async def test_context_lists_range_terms_with_current_definitions_translations_and_conventions(
+    async_test_db: AsyncSession,
+) -> None:
+    group, contexts = await _setup(async_test_db)
+    await access.create_memory(
+        async_test_db, contexts[1], Creator.AGENT, MemoryType.DEFINITION, ["白玫"], "Old definition."
+    )
+    await access.create_memory(
+        async_test_db, contexts[3], Creator.AGENT, MemoryType.DEFINITION, ["白玫"], "Current definition."
+    )
+    rejected, _ = await access.create_memory(
+        async_test_db, contexts[3], Creator.AGENT, MemoryType.DEFINITION, ["方亭市"], "Rejected definition."
     )
     rejected.memory_review_status = ReviewStatus.REJECTED
-    access.create_memory(test_db, contexts[3], Creator.AGENT, MemoryType.DEFINITION, ["种级"], "长" * 300)
-    terms = {term.term: term for term in test_db.scalars(select(GlossaryTerm))}
-    test_db.add(TermTranslation(term_id=terms["白玫"].term_id, translation="White Rose", creator_type=Creator.USER))
-    agent_draft = create_convention(
-        test_db,
+    await access.create_memory(async_test_db, contexts[3], Creator.AGENT, MemoryType.DEFINITION, ["种级"], "长" * 300)
+    terms = {term.term: term for term in await async_test_db.scalars(select(GlossaryTerm))}
+    async_test_db.add(
+        TermTranslation(term_id=terms["白玫"].term_id, translation="White Rose", creator_type=Creator.USER)
+    )
+    agent_draft = await create_convention(
+        async_test_db,
         group.memory_group_id,
         category=ConventionCategory.NAMING,
         title="Ranks",
@@ -96,8 +104,8 @@ def test_context_lists_range_terms_with_current_definitions_translations_and_con
         rationale=None,
         creator_type=Creator.AGENT,
     )
-    rejected_rule = create_convention(
-        test_db,
+    rejected_rule = await create_convention(
+        async_test_db,
         group.memory_group_id,
         category=ConventionCategory.NAMING,
         title="Pinyin",
@@ -106,8 +114,8 @@ def test_context_lists_range_terms_with_current_definitions_translations_and_con
         creator_type=Creator.USER,
     )
     rejected_rule.review_status = ReviewStatus.REJECTED
-    create_convention(
-        test_db,
+    await create_convention(
+        async_test_db,
         group.memory_group_id,
         category=ConventionCategory.STYLE,
         title="Tone",
@@ -115,10 +123,10 @@ def test_context_lists_range_terms_with_current_definitions_translations_and_con
         rationale=None,
         creator_type=Creator.USER,
     )
-    test_db.commit()
-    deps = MemAgentDeps(db=test_db, mem_access_context=contexts[3])
+    await async_test_db.commit()
+    deps = MemAgentDeps(db=async_test_db, mem_access_context=contexts[3])
 
-    context = conventions_context(deps, 2)
+    context = await conventions_context(deps, 2)
 
     assert not context.terms_truncated
     # Grouped by kind; 旧名 is only in an old version, 樱 is after the anchor, 弃名 is rejected.
@@ -141,24 +149,24 @@ def test_context_lists_range_terms_with_current_definitions_translations_and_con
     assert deps.convention_handles.get_uuid(shown["Ranks"].handle) == agent_draft.convention_id
 
 
-def test_range_terms_are_ordered_by_first_occurrence_and_capped(test_db: Session, monkeypatch) -> None:
-    _, contexts = _setup(test_db)
+async def test_range_terms_are_ordered_by_first_occurrence_and_capped(async_test_db: AsyncSession, monkeypatch) -> None:
+    _, contexts = await _setup(async_test_db)
 
-    rows, truncated = access.get_terms_in_chapter_range(test_db, contexts[3], 2, limit=2)
+    rows, truncated = await access.get_terms_in_chapter_range(async_test_db, contexts[3], 2, limit=2)
 
     # First occurrences in chapters 2-3: 种级 (2), then 方亭市 and 白玫 (3).
     assert [(row.term.term, row.first_chapter_num) for row in rows] == [("种级", 2), ("方亭市", 3)]
     assert truncated
 
     monkeypatch.setattr(context_module, "MAX_CONTEXT_TERMS", 2)
-    context = conventions_context(MemAgentDeps(db=test_db, mem_access_context=contexts[3]), 2)
+    context = await conventions_context(MemAgentDeps(db=async_test_db, mem_access_context=contexts[3]), 2)
     assert [term.term for term in context.terms] == ["方亭市", "种级"] and context.terms_truncated
 
 
-def test_context_shows_alias_relations_for_listed_terms(test_db: Session) -> None:
-    _, contexts = _setup(test_db)
-    access.create_memory(
-        test_db,
+async def test_context_shows_alias_relations_for_listed_terms(async_test_db: AsyncSession) -> None:
+    _, contexts = await _setup(async_test_db)
+    await access.create_memory(
+        async_test_db,
         contexts[3],
         Creator.AGENT,
         MemoryType.RELATION,
@@ -166,12 +174,12 @@ def test_context_shows_alias_relations_for_listed_terms(test_db: Session) -> Non
         "白玫 is the codename used in 方亭市.",
         mark=access.ALIAS_PERSONA_MARK,
     )
-    access.create_memory(
-        test_db, contexts[3], Creator.AGENT, MemoryType.RELATION, ["白玫", "种级"], "Not an alias.", mark="rank"
+    await access.create_memory(
+        async_test_db, contexts[3], Creator.AGENT, MemoryType.RELATION, ["白玫", "种级"], "Not an alias.", mark="rank"
     )
-    test_db.commit()
+    await async_test_db.commit()
 
-    context = conventions_context(MemAgentDeps(db=test_db, mem_access_context=contexts[3]), 2)
+    context = await conventions_context(MemAgentDeps(db=async_test_db, mem_access_context=contexts[3]), 2)
 
     by_term = {term.term: term.aliases for term in context.terms}
     assert by_term == {

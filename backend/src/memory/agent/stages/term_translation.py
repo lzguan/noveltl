@@ -15,11 +15,11 @@ async def run_term_translation_stage(
     language_name: str,
     config: TranslateTermsStageConfig,
 ) -> AgentRunResult[TermTranslationOutput] | None:
-    glossary_context = term_translation_context(
+    glossary_context = await term_translation_context(
         deps.db, deps.mem_access_context, include_conventions=config.include_conventions
     )
     if deps.mem_access_context.workspace_id is not None:
-        deps.db.commit()
+        await deps.db.commit()
     if glossary_context is None:
         return None
     agent = create_term_translation_agent(

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.access import MemAccessContext
 
@@ -43,7 +43,7 @@ class UUIDCache:
 
 @dataclass
 class MemAgentDeps:
-    db: Session
+    db: AsyncSession
     mem_access_context: MemAccessContext
     initial_plugin_contexts: dict[str, str] = field(default_factory=dict)
     memory_handles: UUIDCache = field(default_factory=UUIDCache)

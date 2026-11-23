@@ -12,7 +12,7 @@ from uuid import UUID
 from sqlalchemy import and_, delete, exists, func, inspect, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Dialect
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from sqlalchemy.sql import ClauseElement
 
 from src.memory.exceptions import MemoryJobClaimLostException
@@ -97,12 +97,12 @@ def _operations(workspace_id: UUID, dialect: Dialect) -> list[tuple[str, str]]:
     return operations
 
 
-def discard_workspace(db: Session, workspace_id: UUID) -> None:
-    db.execute(delete(MemoryWorkspace).where(MemoryWorkspace.workspace_id == workspace_id))
+async def discard_workspace(db: AsyncSession, workspace_id: UUID) -> None:
+    await db.execute(delete(MemoryWorkspace).where(MemoryWorkspace.workspace_id == workspace_id))
 
 
-def publish_workspace(
-    db: Session,
+async def publish_workspace(
+    db: AsyncSession,
     workspace_id: UUID,
     claim_token: UUID,
 ) -> None:
@@ -155,23 +155,27 @@ def publish_workspace(
     )
     # A dedicated DBAPI-autocommit connection lets the final server request
     # contain both completion and COMMIT without desynchronizing an ORM session.
-    with db.get_bind().engine.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
+    bind = db.bind
+    if not isinstance(bind, AsyncEngine):
+        raise TypeError("Workspace publication needs a session bound to an engine")
+    async with bind.connect() as session_connection:
+        connection = await session_connection.execution_options(isolation_level="AUTOCOMMIT")
         dialect = connection.dialect
         scope_sql = _render(scope, dialect)
         claim_guard_sql = _render(claim_guard, dialect) + ";" + _CLAIM_LOST
         completion_sql = _render(completion, dialect) + ";" + _CLAIM_LOST
         final_request = False
         try:
-            connection.execute(
+            await connection.execute(
                 text("/* workspace:begin */ BEGIN; DO $workspace_op$ BEGIN " + claim_guard_sql + " END $workspace_op$;")
             )
             for name, body in _operations(workspace_id, dialect):
-                connection.execute(text(f"/* workspace:{name} */ " + _block(body, scope_sql)))
+                await connection.execute(text(f"/* workspace:{name} */ " + _block(body, scope_sql)))
             final_request = True
-            connection.execute(text("/* workspace:complete */ " + _block(completion_sql, scope_sql) + " COMMIT;"))
+            await connection.execute(text("/* workspace:complete */ " + _block(completion_sql, scope_sql) + " COMMIT;"))
         except BaseException as error:
             try:
-                connection.exec_driver_sql("ROLLBACK")
+                await connection.exec_driver_sql("ROLLBACK")
             except Exception:
                 pass
             original = getattr(error, "orig", error)

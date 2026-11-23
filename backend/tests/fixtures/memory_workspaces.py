@@ -47,6 +47,8 @@ def reads(test_db: Session, sample_scenario: DatabaseScenario) -> ReadScenario:
     ]
     test_db.add_all(workspaces)
     test_db.flush()
+    # Tests run on a separate async session, which only sees committed setup.
+    test_db.commit()
     published = MemAccessContext(group.memory_group_id, chapter.chapter_id, content.chapter_content_id)
     return ReadScenario(
         published,

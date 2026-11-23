@@ -1,17 +1,12 @@
-"""Worker-side task registration; imports the agent implementation and its SDK."""
+"""Result logging shared by every memory-agent worker implementation."""
 
-import asyncio
 import json
 import logging
-from uuid import UUID
 
 from pydantic import BaseModel
 
 from src.config import log_settings
-from src.database import SessionLocal
-from src.memory.agent.celery_app import app
-from src.memory.agent.task_names import RUN_MEMORY_JOB, RUN_MEMORY_TASK
-from src.memory.agent.tasks.tasks import CompletedMemoryTask, run_all_tasks, run_one_task
+from src.memory.agent.tasks.tasks import CompletedMemoryTask
 
 logger = logging.getLogger(__name__)
 AGENT_RESULT_LOG_MARKER = "MEMORY_AGENT_RESULT "
@@ -75,7 +70,7 @@ def _append_agent_result_jsonl(payload: dict) -> None:
         )
 
 
-def _log_agent_result(completed_task: CompletedMemoryTask) -> None:
+def log_agent_result(completed_task: CompletedMemoryTask) -> None:
     payload = _build_agent_result_payload(completed_task)
     _append_agent_result_jsonl(payload)
     logger.info(
@@ -83,22 +78,3 @@ def _log_agent_result(completed_task: CompletedMemoryTask) -> None:
         AGENT_RESULT_LOG_MARKER,
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
     )
-
-
-@app.task(name=RUN_MEMORY_JOB)
-def run_memory_job(memory_job_id: str) -> None:
-    """Celery entry point for processing every pending task in a memory job."""
-
-    async def consume_job() -> None:
-        async for completed_task in run_all_tasks(SessionLocal, UUID(memory_job_id)):
-            _log_agent_result(completed_task)
-
-    asyncio.run(consume_job())
-
-
-@app.task(name=RUN_MEMORY_TASK)
-def run_memory_task(memory_job_id: str, chapter_id: str, stage_num: int = 0) -> None:
-    """Celery entry point for processing one pending chapter task."""
-    completed_task = asyncio.run(run_one_task(SessionLocal, UUID(memory_job_id), UUID(chapter_id), stage_num))
-    if completed_task is not None:
-        _log_agent_result(completed_task)

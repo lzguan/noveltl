@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from pydantic_ai import AgentRunResult
+from pydantic_ai.tool_manager import ToolManager
 from sqlalchemy import select
-from sqlalchemy.orm import Session, aliased, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import aliased
 
 from src.languages.models import Language
 from src.memory.access import MemAccessContext
@@ -72,17 +74,17 @@ class CompletedMemoryTask:
 
 
 async def aiterate_tasks(
-    db_factory: sessionmaker[Session],
+    db_factory: async_sessionmaker[AsyncSession],
     claim_token: uuid.UUID,
-    claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
+    claim_next_task: Callable[[AsyncSession, uuid.UUID], Awaitable[MemoryChapterTask | None]],
 ) -> AsyncGenerator[ClaimedTask]:
     """
     Iterate over tasks, claiming each one.
     Caller should release task.
     """
     while True:
-        with db_factory() as db:
-            task = claim_next_task(db, claim_token)
+        async with db_factory() as db:
+            task = await claim_next_task(db, claim_token)
             if task is None:
                 return
             claimed_task = ClaimedTask(task.memory_job_id, task.chapter_id, task.stage_num)
@@ -90,10 +92,10 @@ async def aiterate_tasks(
 
 
 async def arun_tasks[T: CompletedMemoryTask](
-    db_factory: sessionmaker[Session],
+    db_factory: async_sessionmaker[AsyncSession],
     claim_token: uuid.UUID,
-    claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
-    process_task: Callable[[Session, ClaimedTask], Awaitable[T]],
+    claim_next_task: Callable[[AsyncSession, uuid.UUID], Awaitable[MemoryChapterTask | None]],
+    process_task: Callable[[AsyncSession, ClaimedTask], Awaitable[T]],
 ) -> AsyncGenerator[T]:
     """
     Pseudocode:
@@ -105,9 +107,9 @@ async def arun_tasks[T: CompletedMemoryTask](
     """
     async for task in aiterate_tasks(db_factory, claim_token, claim_next_task):
         try:
-            with db_factory() as db:
+            async with db_factory() as db:
                 result = await process_task(db, task)
-                _complete_workspace_task(db, task, result, claim_token, db_factory)
+                await _complete_workspace_task(db, task, result, claim_token, db_factory)
         except MemoryJobClaimLostException:
             raise
         except Exception:
@@ -118,8 +120,8 @@ async def arun_tasks[T: CompletedMemoryTask](
                 task.stage_num,
             )
             try:
-                with db_factory() as db:
-                    released = fail_task(db, task.memory_job_id, task.chapter_id, claim_token, task.stage_num)
+                async with db_factory() as db:
+                    released = await fail_task(db, task.memory_job_id, task.chapter_id, claim_token, task.stage_num)
                 if not released:
                     logger.warning(
                         "Could not mark memory task failed after losing its claim job_id=%s chapter_id=%s stage_num=%s",
@@ -139,7 +141,7 @@ async def arun_tasks[T: CompletedMemoryTask](
 
 
 async def _run_single_task(
-    db: Session,
+    db: AsyncSession,
     stages: Mapping[int, StageConfig],
     memory_group_id: uuid.UUID,
     task: ClaimedTask,
@@ -161,24 +163,26 @@ async def _run_single_task(
             .scalar_subquery()
         )
     )
-    ccid, cctext, cnum = db.execute(q).one()
+    ccid, cctext, cnum = (await db.execute(q)).one()
     workspace = MemoryWorkspace(memory_job_id=task.memory_job_id, chapter_id=task.chapter_id, stage_num=task.stage_num)
     db.add(workspace)
-    db.flush()
+    await db.flush()
     workspace_id = workspace.workspace_id
-    db.commit()
+    await db.commit()
     context = MemAccessContext(memory_group_id, task.chapter_id, ccid, workspace_id)
     deps = MemAgentDeps(db, context)
     try:
         stage = stages[task.stage_num]
-        match stage:
-            case RecordMemoriesStageConfig():
-                result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
-            case SummarizeConventionsStageConfig():
-                result = await run_conventions_stage(deps, cnum, lang_name, stage)
-            case TranslateTermsStageConfig():
-                result = await run_term_translation_stage(deps, cctext, cnum, lang_name, stage)
-        db.commit()
+        # Every tool in a run shares deps.db, which cannot serve concurrent operations.
+        with ToolManager.parallel_execution_mode("sequential"):
+            match stage:
+                case RecordMemoriesStageConfig():
+                    result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
+                case SummarizeConventionsStageConfig():
+                    result = await run_conventions_stage(deps, cnum, lang_name, stage)
+                case TranslateTermsStageConfig():
+                    result = await run_term_translation_stage(deps, cctext, cnum, lang_name, stage)
+        await db.commit()
         return CompletedMemoryTask(
             memory_job_id=task.memory_job_id,
             memory_group_id=memory_group_id,
@@ -191,38 +195,38 @@ async def _run_single_task(
             workspace_id=workspace_id,
         )
     except BaseException:
-        db.rollback()
-        _cleanup_workspace(db, workspace_id)
+        await db.rollback()
+        await _cleanup_workspace(db, workspace_id)
         raise
 
 
-def _cleanup_workspace(db: Session, workspace_id: uuid.UUID) -> None:
+async def _cleanup_workspace(db: AsyncSession, workspace_id: uuid.UUID) -> None:
     try:
-        discard_workspace(db, workspace_id)
-        db.commit()
+        await discard_workspace(db, workspace_id)
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         logger.exception("Could not clean up memory workspace workspace_id=%s", workspace_id)
 
 
-def _complete_workspace_task(
-    db: Session,
+async def _complete_workspace_task(
+    db: AsyncSession,
     task: ClaimedTask,
     result: CompletedMemoryTask,
     claim_token: uuid.UUID,
-    db_factory: sessionmaker[Session],
+    db_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     workspace_id = result.workspace_id
     try:
-        publish_workspace(
+        await publish_workspace(
             db,
             workspace_id,
             claim_token,
         )
     except WorkspaceCommitUnknownError:
-        db.rollback()
-        with db_factory() as verification:
-            status = verification.scalar(
+        await db.rollback()
+        async with db_factory() as verification:
+            status = await verification.scalar(
                 select(MemoryChapterTask.task_status).where(
                     MemoryChapterTask.memory_job_id == task.memory_job_id,
                     MemoryChapterTask.chapter_id == task.chapter_id,
@@ -230,21 +234,21 @@ def _complete_workspace_task(
                 )
             )
         if status == JobStatus.COMPLETED:
-            _cleanup_workspace(db, workspace_id)
+            await _cleanup_workspace(db, workspace_id)
             return
-        _cleanup_workspace(db, workspace_id)
+        await _cleanup_workspace(db, workspace_id)
         raise
     except BaseException:
-        db.rollback()
-        _cleanup_workspace(db, workspace_id)
+        await db.rollback()
+        await _cleanup_workspace(db, workspace_id)
         raise
-    _cleanup_workspace(db, workspace_id)
+    await _cleanup_workspace(db, workspace_id)
 
 
 async def run_tasks(
-    db_factory: sessionmaker[Session],
+    db_factory: async_sessionmaker[AsyncSession],
     memory_job_id: uuid.UUID,
-    claim_next_task: Callable[[Session, uuid.UUID, TaskSchedule], MemoryChapterTask | None],
+    claim_next_task: Callable[[AsyncSession, uuid.UUID, TaskSchedule], Awaitable[MemoryChapterTask | None]],
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
 ) -> AsyncGenerator[CompletedMemoryTask]:
@@ -264,8 +268,8 @@ async def run_tasks(
     owns_claim = False
 
     try:
-        with db_factory() as db:
-            job = claim_job(db, memory_job_id, claim_token, claim_duration)
+        async with db_factory() as db:
+            job = await claim_job(db, memory_job_id, claim_token, claim_duration)
             if job is None:
                 return
             owns_claim = True
@@ -273,7 +277,7 @@ async def run_tasks(
             params = job_params_adapter.validate_python(job.job_params)
             stages = dict(enumerate(resolve_stages(params)))
             schedule = get_schedule(params)
-            lang_name = db.scalar(
+            lang_name = await db.scalar(
                 select(Language.language_name)
                 .select_from(MemoryGroup)
                 .join(Language, Language.language_code == MemoryGroup.memory_language)
@@ -288,14 +292,14 @@ async def run_tasks(
             lambda db, token: claim_next_task(db, token, schedule),
             lambda db, task: _run_single_task(db, stages, memory_group_id, task, lang_name),
         ):
-            with db_factory() as db:
-                if not refresh_job(db, memory_job_id, claim_token, claim_duration):
+            async with db_factory() as db:
+                if not await refresh_job(db, memory_job_id, claim_token, claim_duration):
                     raise MemoryJobClaimLostException(f"Lost claim while refreshing memory job {memory_job_id}")
             yield completed_task
     finally:
         if owns_claim:
-            with db_factory() as db:
-                if not release_job(db, memory_job_id, claim_token):
+            async with db_factory() as db:
+                if not await release_job(db, memory_job_id, claim_token):
                     logger.warning(
                         "Could not release memory job claim job_id=%s claim_token=%s",
                         memory_job_id,
@@ -304,7 +308,7 @@ async def run_tasks(
 
 
 async def run_one_task(
-    db_factory: sessionmaker[Session],
+    db_factory: async_sessionmaker[AsyncSession],
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     stage_num: int = 0,
@@ -326,7 +330,7 @@ async def run_one_task(
 
 
 async def run_all_tasks(
-    db_factory: sessionmaker[Session],
+    db_factory: async_sessionmaker[AsyncSession],
     memory_job_id: uuid.UUID,
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,

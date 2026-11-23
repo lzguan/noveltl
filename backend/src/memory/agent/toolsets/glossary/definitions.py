@@ -58,7 +58,7 @@ definition.
 
 
 @tool_transaction
-def definition_memories(
+async def definition_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     skip: Annotated[int, Field(ge=0)] = 0,
@@ -66,29 +66,29 @@ def definition_memories(
     term_search: Annotated[str | None, Field(min_length=1)] = None,
 ) -> Page[AgentGlossaryMemory[str]]:
     """Retrieve active definitions for one exact glossary term."""
-    return common.term_memories(ctx, term_name, MemoryType.DEFINITION, None, skip, limit, term_search)
+    return await common.term_memories(ctx, term_name, MemoryType.DEFINITION, None, skip, limit, term_search)
 
 
 @tool_transaction
-def new_definition_memory(
+async def new_definition_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=1, max_length=1)],
     scope: Scope | None = None,
 ) -> str:
     """Create an unmarked definition for one exact glossary term."""
-    return common.create_memory(ctx, content, term_names, MemoryType.DEFINITION, scope, "new_definition_memory")
+    return await common.create_memory(ctx, content, term_names, MemoryType.DEFINITION, scope, "new_definition_memory")
 
 
 @tool_transaction
-def supersede_definition_memory(
+async def supersede_definition_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
     scope: Scope | None = None,
 ) -> str:
     """Supersede an active definition from an earlier chapter."""
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         content,
@@ -99,9 +99,9 @@ def supersede_definition_memory(
 
 
 @tool_transaction
-def expire_definition_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_definition_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire an active definition that explicitly stopped being true."""
-    return common.expire_memory(ctx, memory_id, [MemoryType.DEFINITION], marks=[None])
+    return await common.expire_memory(ctx, memory_id, [MemoryType.DEFINITION], marks=[None])
 
 
 glossary_definitions_read_toolset = FunctionToolset(

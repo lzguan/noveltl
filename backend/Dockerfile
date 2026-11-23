@@ -55,7 +55,8 @@ FROM base AS memory-agent-worker
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group agent --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
-CMD ["uv", "run", "--no-sync", "celery", "-A", "src.memory.agent.celery_app", "worker", "--loglevel=info"]
+# One process: agent tasks are mostly waiting on the model, so one event loop runs many of them.
+CMD ["uv", "run", "--no-sync", "taskiq", "worker", "src.memory.agent.broker:broker", "src.memory.agent.dispatch.taskiq_worker", "--workers", "1", "--max-async-tasks", "64"]
 
 FROM base AS translations-worker
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group tagent --no-install-project

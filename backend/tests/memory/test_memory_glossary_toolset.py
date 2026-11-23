@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -7,7 +7,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext, RunUsage
 from pydantic_ai.capabilities import AbstractCapability, Toolset
 from pydantic_ai.messages import ToolReturnPart
 from pydantic_ai.models.test import TestModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.access import MemAccessContext
 from src.memory.agent.agents.recording import GLOSSARY_TOOLSET_NAMES, resolve_capabilities
@@ -73,7 +73,7 @@ from src.schemas import Page
 from test_support.test_data.scenarios import DatabaseScenario
 
 
-def _run_context(db: Session) -> RunContext[MemAgentDeps]:
+def _run_context(db: AsyncSession) -> RunContext[MemAgentDeps]:
     deps = MemAgentDeps(
         db=db,
         mem_access_context=MemAccessContext(
@@ -157,7 +157,7 @@ async def test_advanced_gender_event_write_config_is_applied_when_resolving_tool
     )
 
     write_toolset = _toolset(resolved[1])
-    instructions = await write_toolset.get_instructions(_run_context(MagicMock(spec=Session)))
+    instructions = await write_toolset.get_instructions(_run_context(MagicMock(spec=AsyncSession)))
     assert instructions is not None
     assert any(
         "keep the first 2 occurrence(s) and a FIFO window of the newest 4 occurrence(s)" in instruction.content
@@ -201,15 +201,15 @@ def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> No
         )
 
 
-def test_create_memory_diagnoses_missing_terms_only_after_write_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-    db = MagicMock(spec=Session)
-    create_memory = Mock(side_effect=GlossaryTermNotFoundException("Some terms do not exist."))
-    get_missing_term_names = Mock(return_value=["金虚宫"])
+async def test_create_memory_diagnoses_missing_terms_only_after_write_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=AsyncSession)
+    create_memory = AsyncMock(side_effect=GlossaryTermNotFoundException("Some terms do not exist."))
+    get_missing_term_names = AsyncMock(return_value=["金虚宫"])
     monkeypatch.setattr(glossary_common.access, "create_memory", create_memory)
     monkeypatch.setattr(glossary_common.access, "get_missing_term_names", get_missing_term_names)
 
     with pytest.raises(ModelRetry, match=r'Missing glossary terms: \["金虚宫"\]'):
-        glossary_common.create_memory(
+        await glossary_common.create_memory(
             _run_context(db),
             "A memory.",
             ["金虚宫", "炽焰山"],
@@ -221,16 +221,16 @@ def test_create_memory_diagnoses_missing_terms_only_after_write_failure(monkeypa
     get_missing_term_names.assert_called_once()
 
 
-def test_create_memory_skips_missing_term_query_after_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    db = MagicMock(spec=Session)
+async def test_create_memory_skips_missing_term_query_after_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=AsyncSession)
     memory_id = uuid4()
-    create_memory = Mock(return_value=(Mock(memory_id=memory_id), []))
-    get_missing_term_names = Mock()
+    create_memory = AsyncMock(return_value=(Mock(memory_id=memory_id), []))
+    get_missing_term_names = AsyncMock()
     monkeypatch.setattr(glossary_common.access, "create_memory", create_memory)
     monkeypatch.setattr(glossary_common.access, "get_missing_term_names", get_missing_term_names)
 
     ctx = _run_context(db)
-    handle = glossary_common.create_memory(
+    handle = await glossary_common.create_memory(
         ctx,
         "A memory.",
         ["金虚宫"],
@@ -429,32 +429,32 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
     ]
 
 
-def test_term_write_persists_categories_without_leaking_markers_into_content(
+async def test_term_write_persists_categories_without_leaking_markers_into_content(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    db = MagicMock(spec=Session)
-    create_memory = Mock(return_value=(Mock(memory_id=uuid4()), []))
+    db = MagicMock(spec=AsyncSession)
+    create_memory = AsyncMock(return_value=(Mock(memory_id=uuid4()), []))
     monkeypatch.setattr(glossary_common.access, "create_memory", create_memory)
     ctx = _run_context(db)
 
-    new_fact_memory(
+    await new_fact_memory(
         ctx,
         "[species] [species] Alpha is human.",
         ["Alpha"],
         "species",
     )
-    new_definition_memory(
+    await new_definition_memory(
         ctx,
         "A personal name.",
         ["Alpha"],
     )
-    new_relation_memory(
+    await new_relation_memory(
         ctx,
         "[friendship] [friendship] Alpha is friends with Beta.",
         ["Alpha", "Beta"],
         "friendship",
     )
-    new_gender_memory(ctx, "[gender] Alpha is a woman.", ["Alpha"])
+    await new_gender_memory(ctx, "[gender] Alpha is a woman.", ["Alpha"])
 
     assert create_memory.call_args_list[0].args[5] == "Alpha is human."
     assert create_memory.call_args_list[0].args[7] == "species"
@@ -522,8 +522,8 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
     }
 
 
-def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
-    test_db: Session,
+async def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
 ) -> None:
     group = MemoryGroup(
@@ -531,15 +531,15 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
         novel_id=sample_scenario.novels["novel_1"].novel_id,
         memory_language="en",
     )
-    test_db.add(group)
-    test_db.flush()
-    ctx = _run_context(test_db)
+    async_test_db.add(group)
+    await async_test_db.flush()
+    ctx = _run_context(async_test_db)
     ctx.deps.mem_access_context = MemAccessContext(
         memory_group_id=group.memory_group_id,
         chapter_id=sample_scenario.chapters["chapter_1"].chapter_id,
         chapter_content_id=sample_scenario.contents["chapter_1_v2"].chapter_content_id,
     )
-    glossary_common.access.create_term(test_db, group.memory_group_id, "Alpha")
+    await glossary_common.access.create_term(async_test_db, group.memory_group_id, "Alpha")
     for mark, content in (
         ("ability", "Alpha can channel magic through marked gates."),
         ("limitation", "Alpha is vulnerable to silver magic."),
@@ -547,8 +547,8 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
         ("species", "Alpha is a magical human."),
         ("trait", "Alpha has a legacy magic trait."),
     ):
-        glossary_common.access.create_memory(
-            test_db,
+        await glossary_common.access.create_memory(
+            async_test_db,
             ctx.deps.mem_access_context,
             Creator.AGENT,
             MemoryType.FACT,
@@ -556,25 +556,25 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
             content,
             mark=mark,
         )
-    test_db.flush()
+    await async_test_db.flush()
 
-    ability_page = fact_memories(ctx, "Alpha", "ability", term_search="MAGIC")
-    limitation_page = fact_memories(ctx, "Alpha", "limitation", term_search="MAGIC")
+    ability_page = await fact_memories(ctx, "Alpha", "ability", term_search="MAGIC")
+    limitation_page = await fact_memories(ctx, "Alpha", "limitation", term_search="MAGIC")
     assert ability_page == limitation_page
     assert ability_page.count == 2
     assert {row.memory.mark for row in ability_page.rows} == {"ability", "limitation"}
-    first = fact_memories(ctx, "Alpha", "ability", limit=1, term_search="MAGIC")
-    second = fact_memories(ctx, "Alpha", "limitation", skip=1, limit=1, term_search="MAGIC")
+    first = await fact_memories(ctx, "Alpha", "ability", limit=1, term_search="MAGIC")
+    second = await fact_memories(ctx, "Alpha", "limitation", skip=1, limit=1, term_search="MAGIC")
     assert first.count == second.count == 2
     assert first.rows + second.rows == ability_page.rows
-    species_page = fact_memories(ctx, "Alpha", "species")
+    species_page = await fact_memories(ctx, "Alpha", "species")
     assert species_page.count == 1
     assert species_page.rows[0].memory.mark == "species"
 
     # Shared reads find specialized state even though generic writers cannot own it.
     for mark in ("gender", "gender.body", "gender.identity", "gender.presentation", "gender.change_rule"):
-        glossary_common.access.create_memory(
-            test_db,
+        await glossary_common.access.create_memory(
+            async_test_db,
             ctx.deps.mem_access_context,
             Creator.AGENT,
             MemoryType.FACT,
@@ -582,8 +582,8 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
             f"Alpha has recorded state for {mark}.",
             mark=mark,
         )
-    glossary_common.access.create_memory(
-        test_db,
+    await glossary_common.access.create_memory(
+        async_test_db,
         ctx.deps.mem_access_context,
         Creator.AGENT,
         MemoryType.EVENT,
@@ -591,8 +591,8 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
         "Alpha changed during an event.",
         mark="gender.event.transformation",
     )
-    glossary_common.access.create_memory(
-        test_db,
+    await glossary_common.access.create_memory(
+        async_test_db,
         ctx.deps.mem_access_context,
         Creator.AGENT,
         MemoryType.RELATION,
@@ -600,7 +600,7 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
         "An observer perceives Alpha differently.",
         mark="gender.perception",
     )
-    shared = character_state_memories(ctx, "Alpha")
+    shared = await character_state_memories(ctx, "Alpha")
     assert shared.count == 9
     assert {row.memory.mark for row in shared.rows} == {
         "ability",
@@ -613,19 +613,19 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
         "gender.change_rule",
     }
     assert all(row.memory.memory_type == MemoryType.FACT for row in shared.rows)
-    shared_first = character_state_memories(ctx, "Alpha", limit=4)
-    shared_rest = character_state_memories(ctx, "Alpha", skip=4)
+    shared_first = await character_state_memories(ctx, "Alpha", limit=4)
+    shared_rest = await character_state_memories(ctx, "Alpha", skip=4)
     assert shared_first.count == shared_rest.count == 9
     assert shared_first.rows + shared_rest.rows == shared.rows
-    assert character_state_memories(ctx, "Alpha", term_search="recorded state").count == 5
+    assert (await character_state_memories(ctx, "Alpha", term_search="recorded state")).count == 5
 
 
-def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pytest.MonkeyPatch) -> None:
-    db = MagicMock(spec=Session)
-    inspect_terms = Mock(return_value=Page(count=0, rows=[]))
+async def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=AsyncSession)
+    inspect_terms = AsyncMock(return_value=Page(count=0, rows=[]))
     monkeypatch.setattr(glossary_common.access, "inspect_terms", inspect_terms)
 
-    result = fact_memories(
+    result = await fact_memories(
         _run_context(db),
         "Alpha",
         "species",
@@ -636,11 +636,11 @@ def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pyt
     assert inspect_terms.call_args.args[3] == [MemoryType.FACT]
     assert inspect_terms.call_args.kwargs == {"marks": ["species"], "term_search": "human"}
 
-    definition_memories(_run_context(db), "Alpha")
+    await definition_memories(_run_context(db), "Alpha")
     assert inspect_terms.call_args.kwargs == {"marks": [None], "term_search": None}
 
     inspect_terms.return_value = AgentGlossaryMemoryPage(count=0, rows=[])
-    relation_memories(_run_context(db), "Alpha", "friendship")
+    await relation_memories(_run_context(db), "Alpha", "friendship")
     assert inspect_terms.call_args.args[3] == [MemoryType.RELATION]
     assert inspect_terms.call_args.kwargs == {
         "marks": ["friendship"],
@@ -648,13 +648,13 @@ def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pyt
         "expand_aliases": True,
     }
 
-    gender_memories(_run_context(db), "Alpha")
+    await gender_memories(_run_context(db), "Alpha")
     assert inspect_terms.call_args.args[3] == [MemoryType.FACT]
     assert inspect_terms.call_args.kwargs == {"marks": ["gender"], "term_search": None}
 
 
-def test_advanced_gender_state_groups_namespaced_aspects(monkeypatch: pytest.MonkeyPatch) -> None:
-    db = MagicMock(spec=Session)
+async def test_advanced_gender_state_groups_namespaced_aspects(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=AsyncSession)
     body = AgentGlossaryMemory(
         memory=AgentMemory(
             memory_id=uuid4(),
@@ -706,10 +706,10 @@ def test_advanced_gender_state_groups_namespaced_aspects(monkeypatch: pytest.Mon
     monkeypatch.setattr(
         glossary_common.access,
         "inspect_terms",
-        Mock(return_value=Page(count=4, rows=[body, identity, presentation, change_rule])),
+        AsyncMock(return_value=Page(count=4, rows=[body, identity, presentation, change_rule])),
     )
 
-    state = gender_state(_run_context(db), "Alpha")
+    state = await gender_state(_run_context(db), "Alpha")
 
     assert [row.memory.memory_content for row in state.body] == ["Alpha's current body is female."]
     assert [row.memory.memory_content for row in state.identity] == ["Alpha self-identifies as male."]
@@ -717,12 +717,12 @@ def test_advanced_gender_state_groups_namespaced_aspects(monkeypatch: pytest.Mon
     assert [row.memory.memory_content for row in state.change_rule] == ["Alpha changes body under moonlight."]
 
 
-def test_advanced_gender_create_rejects_second_active_aspect(monkeypatch: pytest.MonkeyPatch) -> None:
-    db = MagicMock(spec=Session)
-    monkeypatch.setattr(glossary_common.access, "inspect_terms", Mock(return_value=Page(count=1, rows=[])))
+async def test_advanced_gender_create_rejects_second_active_aspect(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=AsyncSession)
+    monkeypatch.setattr(glossary_common.access, "inspect_terms", AsyncMock(return_value=Page(count=1, rows=[])))
 
     with pytest.raises(ModelRetry, match="already has an active body memory"):
-        new_gender_fact_memory(
+        await new_gender_fact_memory(
             _run_context(db),
             "Alpha",
             "body",
@@ -730,14 +730,14 @@ def test_advanced_gender_create_rejects_second_active_aspect(monkeypatch: pytest
         )
 
 
-def test_advanced_gender_create_allows_multiple_change_rules(monkeypatch: pytest.MonkeyPatch) -> None:
-    db = MagicMock(spec=Session)
-    inspect_terms = Mock(return_value=Page(count=1, rows=[]))
-    create_memory = Mock(return_value="m1")
+async def test_advanced_gender_create_allows_multiple_change_rules(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=AsyncSession)
+    inspect_terms = AsyncMock(return_value=Page(count=1, rows=[]))
+    create_memory = AsyncMock(return_value="m1")
     monkeypatch.setattr(glossary_common.access, "inspect_terms", inspect_terms)
     monkeypatch.setattr(glossary_common, "create_memory", create_memory)
 
-    result = new_gender_fact_memory(
+    result = await new_gender_fact_memory(
         _run_context(db),
         "Alpha",
         "change_rule",
@@ -749,16 +749,16 @@ def test_advanced_gender_create_allows_multiple_change_rules(monkeypatch: pytest
     assert create_memory.call_args.args[6] == "gender.change_rule"
 
 
-def test_gender_perception_tools_preserve_direction_and_namespaced_mark(
+async def test_gender_perception_tools_preserve_direction_and_namespaced_mark(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    db = MagicMock(spec=Session)
-    inspect_terms = Mock(return_value=Page(count=0, rows=[]))
-    create_memory = Mock(return_value="m1")
+    db = MagicMock(spec=AsyncSession)
+    inspect_terms = AsyncMock(return_value=Page(count=0, rows=[]))
+    create_memory = AsyncMock(return_value="m1")
     monkeypatch.setattr(glossary_common.access, "inspect_terms", inspect_terms)
     monkeypatch.setattr(glossary_common, "create_memory", create_memory)
 
-    result = gender_perception_memories(_run_context(db), "Observer", "Subject")
+    result = await gender_perception_memories(_run_context(db), "Observer", "Subject")
     assert result == Page(count=0, rows=[])
     assert inspect_terms.call_args.args[2] == ["Observer"]
     assert inspect_terms.call_args.kwargs == {
@@ -766,7 +766,7 @@ def test_gender_perception_tools_preserve_direction_and_namespaced_mark(
         "term_search": "Subject",
     }
 
-    handle = new_gender_perception_memory(
+    handle = await new_gender_perception_memory(
         _run_context(db),
         "Observer",
         "Subject",

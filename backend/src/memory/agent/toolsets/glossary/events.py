@@ -49,7 +49,7 @@ and a clearly standalone new event does not require speculative retrieval.
 
 
 @tool_transaction
-def term_event_memories(
+async def term_event_memories(
     ctx: RunContext[MemAgentDeps],
     term_names: Annotated[list[str], Field(min_length=1)],
     skip: Annotated[int, Field(ge=0)] = 0,
@@ -57,7 +57,7 @@ def term_event_memories(
     active_only: bool = True,
 ) -> Page[AgentGlossaryMemory[str]]:
     """See a page of events associated with exact glossary terms."""
-    page = access.inspect_terms(
+    page = await access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         term_names,
@@ -70,14 +70,14 @@ def term_event_memories(
 
 
 @tool_transaction
-def new_term_event_memory(
+async def new_term_event_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=1)],
     scope: Scope | None = None,
 ) -> str:
     """Create an event associated with existing exact glossary terms."""
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         content,
         term_names,
@@ -88,14 +88,14 @@ def new_term_event_memory(
 
 
 @tool_transaction
-def supersede_term_event_memory(
+async def supersede_term_event_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
     scope: Scope | None = None,
 ) -> str:
     """Supersede an active event from an earlier chapter."""
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         content,

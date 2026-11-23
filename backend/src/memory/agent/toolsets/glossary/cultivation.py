@@ -25,14 +25,14 @@ Read visibility never grants permission to change other categories.
 
 
 @tool_transaction
-def new_cultivation_memory(
+async def new_cultivation_memory(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
     content: str,
     scope: Scope | None = None,
 ) -> str:
     """Record a character's completed level on one named cultivation track."""
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         content,
         [term_name],
@@ -44,7 +44,7 @@ def new_cultivation_memory(
 
 
 @tool_transaction
-def supersede_cultivation_memory(
+async def supersede_cultivation_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     term_name: Annotated[str, Field(min_length=1)],
@@ -52,7 +52,7 @@ def supersede_cultivation_memory(
     scope: Scope | None = None,
 ) -> str:
     """Replace the previous level of the same cultivation track."""
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         content,
@@ -65,9 +65,9 @@ def supersede_cultivation_memory(
 
 
 @tool_transaction
-def expire_cultivation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_cultivation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """End only a cultivation-level fact."""
-    return common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=[CULTIVATION_MARK])
+    return await common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=[CULTIVATION_MARK])
 
 
 glossary_cultivation_write_toolset = FunctionToolset(

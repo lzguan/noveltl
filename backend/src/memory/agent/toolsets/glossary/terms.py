@@ -44,15 +44,15 @@ def normalize_agent_term_name(term_name: str) -> str:
 
 
 @tool_transaction
-def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind) -> str:
+async def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind) -> str:
     """Add and classify one new exact source-language glossary term."""
     term_name = normalize_agent_term_name(term_name)
     if not term_name:
         raise ModelRetry("The term name is empty once surrounding quotes and brackets are removed.")
     db = ctx.deps.db
     try:
-        with db.begin_nested():
-            new_term = access.create_term(
+        async with db.begin_nested():
+            new_term = await access.create_term(
                 db,
                 ctx.deps.mem_access_context.memory_group_id,
                 term_name,

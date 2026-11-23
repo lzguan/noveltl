@@ -55,35 +55,49 @@ Successful full-job execution follows this flow. The task loop includes stage
 execution, publication, cleanup, and renewal before moving to the next task.
 
 ```text
-run_memory_job()                         # Celery entry
-└─ asyncio.run(consume_job())
-   └─ run_all_tasks()
-      └─ run_tasks()
-         ├─ claim_job()
-         ├─ arun_tasks()                 # repeated per task
-         │  ├─ aiterate_tasks()
-         │  │  └─ claim_next_task()
-         │  ├─ _run_single_task()
-         │  │  ├─ create workspace + commit
-         │  │  └─ run_*_stage()
-         │  │     ├─ prepare context / decide whether to skip
-         │  │     └─ agent.run()
-         │  │        └─ tools and output hooks
-         │  │           └─ accessors → shadow writes → commit
-         │  └─ _complete_workspace_task()
-         │     ├─ publish_workspace()   # publish + complete task + commit
-         │     └─ _cleanup_workspace()  # delete workspace + commit
-         ├─ refresh_job()               # after each completed task
-         └─ release_job()               # finally
+run_memory_job()                         # taskiq entry (async)
+└─ run_all_tasks(WorkerSessionLocal)     # async_sessionmaker
+   └─ run_tasks()
+      ├─ claim_job()
+      ├─ arun_tasks()                 # repeated per task
+      │  ├─ aiterate_tasks()
+      │  │  └─ claim_next_task()
+      │  ├─ _run_single_task()
+      │  │  ├─ create workspace + commit
+      │  │  └─ run_*_stage()
+      │  │     ├─ prepare context / decide whether to skip
+      │  │     └─ agent.run()
+      │  │        └─ tools and output hooks
+      │  │           └─ accessors → shadow writes → commit
+      │  └─ _complete_workspace_task()
+      │     ├─ publish_workspace()   # publish + complete task + commit
+      │     └─ _cleanup_workspace()  # delete workspace + commit
+      ├─ refresh_job()               # after each completed task
+      └─ release_job()               # finally
 ```
 
 The single-task entry is `run_memory_task() → run_one_task() → run_tasks()`,
-using `claim_task()` instead of `claim_next_task()`. The Celery entry points
-log each result after it is yielded. Skipped stages still publish/complete their
+using `claim_task()` instead of `claim_next_task()`. The worker entry points
+log each result after it is yielded (on a thread; see
+[log_results.py](../../backend/src/memory/agent/dispatch/log_results.py)).
+
+Everything below the entry points is async on `AsyncSession`: the task layer
+takes an `async_sessionmaker`, one session per chapter task backs
+`MemAgentDeps.db`, tools commit through the async `tool_transaction`, and
+`publish_workspace` uses an autocommit connection from the session's
+`AsyncEngine` (`db.bind`). Each stage runs under
+`ToolManager.parallel_execution_mode("sequential")` in `_run_single_task`,
+because every tool in a run shares that one session. The selectable Celery entry
+points in [celery_worker.py](../../backend/src/memory/agent/dispatch/celery_worker.py)
+wrap the same calls in `asyncio.run` with a `NullPool` async engine (a fresh event
+loop per task). Concurrency guard:
+[test_memory_agent_worker.py](../../backend/tests/memory/test_memory_agent_worker.py)
+checks that no connection is checked out during model requests and runs 48 tasks
+on one loop. Skipped stages still publish/complete their
 workspace and clean it up. Read tools also commit their read transactions; the
 arrow through shadow writes describes write operations.
 
-See [worker entries](../../backend/src/memory/agent/dispatch/celery.py),
+See [worker entries](../../backend/src/memory/agent/dispatch/taskiq_worker.py),
 [orchestration](../../backend/src/memory/agent/tasks/tasks.py), and
 [publication](../../backend/src/memory/workspaces.py). Failure and claim-loss paths
 are described below.

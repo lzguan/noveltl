@@ -51,7 +51,7 @@ absence is not evidence. Different observers' beliefs remain separate.
 
 
 @tool_transaction
-def gender_perception_memories(
+async def gender_perception_memories(
     ctx: RunContext[MemAgentDeps],
     observer_term_name: Annotated[str, Field(min_length=1)],
     subject_name_search: Annotated[str | None, Field(min_length=1)] = None,
@@ -59,7 +59,7 @@ def gender_perception_memories(
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
 ) -> Page[AgentGlossaryMemory[str]]:
     """Retrieve active gender perceptions held by one exact observer term."""
-    page = access.inspect_terms(
+    page = await access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [observer_term_name],
@@ -81,7 +81,7 @@ def _validate_participants(observer_term_name: str, subject_term_name: str) -> N
 
 
 @tool_transaction
-def new_gender_perception_memory(
+async def new_gender_perception_memory(
     ctx: RunContext[MemAgentDeps],
     observer_term_name: Annotated[str, Field(min_length=1)],
     subject_term_name: Annotated[str, Field(min_length=1)],
@@ -90,7 +90,7 @@ def new_gender_perception_memory(
 ) -> str:
     """Create one observer-to-subject gender perception relation."""
     _validate_participants(observer_term_name, subject_term_name)
-    return common.create_memory(
+    return await common.create_memory(
         ctx,
         common.strip_marker(content, GENDER_PERCEPTION_MARK),
         [observer_term_name, subject_term_name],
@@ -102,7 +102,7 @@ def new_gender_perception_memory(
 
 
 @tool_transaction
-def supersede_gender_perception_memory(
+async def supersede_gender_perception_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     observer_term_name: Annotated[str, Field(min_length=1)],
@@ -112,7 +112,7 @@ def supersede_gender_perception_memory(
 ) -> str:
     """Replace one observer's perception of one subject."""
     _validate_participants(observer_term_name, subject_term_name)
-    return common.supersede_memory(
+    return await common.supersede_memory(
         ctx,
         memory_id,
         common.strip_marker(content, GENDER_PERCEPTION_MARK),
@@ -125,9 +125,9 @@ def supersede_gender_perception_memory(
 
 
 @tool_transaction
-def expire_gender_perception_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+async def expire_gender_perception_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire one gender perception that explicitly stopped being held."""
-    return common.expire_memory(
+    return await common.expire_memory(
         ctx,
         memory_id,
         [MemoryType.RELATION],

@@ -17,13 +17,47 @@ hashing via `asyncio.to_thread`; the auth dependencies use the async session, so
 unconverted services briefly use two connections per request), `novels` with
 `editing` and the glossary `GET /terms` query, and `labels`.
 
-Remaining: `filters`, `autolabels`, then `memory` and `translations` together
-with the Celery-to-taskiq move.
+Done on `feature/taskiq-agent-workers`: the whole memory module (routes, services,
+access layer, agent tools, task bookkeeping, workers) is on async sessions, and the
+memory agent worker runs on taskiq. Remaining: `autolabels` (4 routes) and the
+`translations` routes plus slice 2 (translations worker).
 
-- Open decision for `filters`: its job state machine (`src/filters/lifecycle.py`)
-  is shared by the HTTP service and the Celery runners. Proposed: keep it sync
-  and call it from async code with `await db.run_sync(...)` (same connection and
-  transaction) until the workers move; use `dispatcher.aenqueue`.
+- Deferred (user decision, 2026-11-23): `filters` stays sync; the user does not
+  use it. Sync routes run in the threadpool, so the only costs are a second
+  connection per request and keeping sync paths in shared helpers (notably
+  `src/filters/permissions.py` during the label permission refactor). When it is
+  converted, prefer converting `src/filters/lifecycle.py` together with its
+  worker; until then the fallback is `await db.run_sync(...)` from async code.
+- Memory agent worker on taskiq (branch `feature/taskiq-agent-workers`): the Celery
+  implementation stays alongside (`celery_app.py`, `dispatch/celery_worker.py`); pick one in
+  `dispatch/dependencies.py` and the Dockerfile. Profiled 48 concurrent fake-model tasks with
+  Tachyon: ~80% of the event loop's busy time is sync psycopg waits, two-thirds of it in
+  `publish_workspace`; pydantic-ai runs sync tools in anyio worker threads (pool sized 40 to
+  match). Next: convert memory services, toolsets, transaction helpers and task bookkeeping to
+  `AsyncSession` (one commit per layer). Known pre-existing bug: read toolsets are not
+  `sequential=True`, so parallel read calls share one session across threads.
+- Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
+  `de11687` (async `ActionCallbacks` protocol, sync callers): `translations/service.py:283`,
+  `translations/actions/celery_actions.py:112,157`, `translations/clients/sync_client.py:46`.
+  Open question for slice 2: an async taskiq worker already runs many translation jobs in
+  one process; decide whether the in-process `AsyncActionCallbacks` path stays (then a
+  shared translation kernel is needed) or the worker becomes the only runner.
+- When the translations worker moves to async sessions (slice 2), fold
+  `conventions_statement` back into `read_conventions`
+  (`src/memory/plugins/conventions/access.py`) and have
+  `src/translations/actions/common/inputs.py` await `read_conventions` directly. The
+  helper exists only because that worker is still sync (user request, 2026-11-23).
+- Future option (discussed 2026-11-23, not needed now): per-tool sessions. Replace the
+  shared `MemAgentDeps.db` with a session factory; `tool_transaction` opens one session
+  per call. Removes shared-session hazards and would allow parallel tool calls, but needs
+  write-race handling (read-modify-write on shadow rows, unique constraints), takes more
+  connections, and touches all ~76 tools. Order between dependent calls in one response
+  still needs sequential mode. Today each stage runs under
+  `ToolManager.parallel_execution_mode("sequential")` with one shared session.
+- Future options for publication cost, only if profiling still shows it after the async move:
+  cache `_operations` SQL rendered once with sentinel UUIDs (~6.5 ms per publish), or a
+  `publish_workspace(uuid, uuid)` plpgsql function (one round trip, shorter lock hold; per-table
+  SQL then lives in a migration).
 - Rejected: `asyncio.run` from sync code into async functions (needs a new
   session and transaction, breaks pooled async connections across loops, fails
   inside a running loop); sync duplicates of shared readers.

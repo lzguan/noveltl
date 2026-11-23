@@ -2,7 +2,7 @@
 
 Work is published by task name through `send_task`, so an API process never
 imports the task functions or the provider SDK behind them. The worker registers
-the matching names in `src.memory.agent.dispatch.celery`.
+the matching names in `src.memory.agent.dispatch.celery_worker`.
 """
 
 import asyncio

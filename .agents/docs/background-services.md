@@ -5,12 +5,21 @@ debugging; the request-result cache is a different subsystem.
 
 ## Worker map
 
-| Work | Celery app | Broker database setting (default) | Registration |
+| Work | Queue | Broker database setting (default) | Registration |
 | --- | --- | --- | --- |
-| Autolabel inference | [autolabels](../../backend/src/autolabels/inference/celery_app.py) | `AUTOLABELS_DATABASE` (1) | [dispatch/celery.py](../../backend/src/autolabels/inference/dispatch/celery.py) |
-| Filter runners | [filters](../../backend/src/filters/celery_app.py) | `FILTERS_DATABASE` (0) | [dispatch/celery.py](../../backend/src/filters/dispatch/celery.py) |
-| Memory recording/naming | [memory agent](../../backend/src/memory/agent/celery_app.py) | `AGENT_DATABASE` (3) | [dispatch/celery.py](../../backend/src/memory/agent/dispatch/celery.py) |
-| Chapter translation | [translations](../../backend/src/translations/celery_app.py) | `TRANSLATIONS_DATABASE` (4) | [actions package](../../backend/src/translations/actions/__init__.py) |
+| Autolabel inference | Celery [autolabels](../../backend/src/autolabels/inference/celery_app.py) | `AUTOLABELS_DATABASE` (1) | [dispatch/celery.py](../../backend/src/autolabels/inference/dispatch/celery.py) |
+| Filter runners | Celery [filters](../../backend/src/filters/celery_app.py) | `FILTERS_DATABASE` (0) | [dispatch/celery.py](../../backend/src/filters/dispatch/celery.py) |
+| Memory recording/naming | taskiq [memory-agent broker](../../backend/src/memory/agent/broker.py) | `AGENT_DATABASE` (3) | [dispatch/taskiq_worker.py](../../backend/src/memory/agent/dispatch/taskiq_worker.py) |
+| Label promotion | taskiq [jobs broker](../../backend/src/jobs/broker.py) | `JOBS_DATABASE` (5) | [promotions/tasks.py](../../backend/src/autolabels/promotions/tasks.py) |
+| Chapter translation | Celery [translations](../../backend/src/translations/celery_app.py) | `TRANSLATIONS_DATABASE` (4) | [actions package](../../backend/src/translations/actions/__init__.py) |
+
+Both taskiq brokers come from `make_jobs_broker` (Redis streams, consumer group
+starting at `0-0` so work enqueued before the first worker start is delivered).
+The memory agent keeps a selectable Celery implementation
+([celery_app.py](../../backend/src/memory/agent/celery_app.py),
+[dispatch/celery_worker.py](../../backend/src/memory/agent/dispatch/celery_worker.py));
+`get_dispatcher` in [dispatch/dependencies.py](../../backend/src/memory/agent/dispatch/dependencies.py)
+and the Dockerfile `memory-agent-worker` CMD choose which one runs.
 
 Defaults come from [config.py](../../backend/src/config.py); inspect actual
 deployment settings when diagnosing a connection. Request-result caching uses
@@ -19,15 +28,17 @@ These apps do not configure a Celery result backend. Do not assume a
 `celery-task-meta-*` key exists or use queue delivery as evidence of completion.
 Use service persistence and worker logs for progress and failure analysis.
 
-Autolabels, filters, and translations currently configure prefork workers with
-concurrency 2; memory uses threads with concurrency 8. Each has its own
-`celeryconfig.py`; a worker's concurrency is not a guarantee of concurrent
-execution inside a single memory job, which is [claimed sequentially](memory-jobs.md).
+Autolabels, filters, and translations currently configure Celery prefork workers
+with concurrency 2, each in its own `celeryconfig.py`. The memory agent runs one
+taskiq process with `--max-async-tasks 64` on a single event loop; this relies on
+the memory module being fully async (no sync database calls on the loop; see
+[memory-jobs.md](memory-jobs.md)). Worker concurrency is not concurrency inside a
+single memory job, which is [claimed sequentially](memory-jobs.md).
 
-The autolabel, filter, and memory publishing dispatchers use named `send_task`
-calls. Their worker registration modules import the implementation. Preserve
-that split when changing task contracts so API-side dispatch does not pull in
-inference/runner SDKs. Chapter translation instead registers action callbacks;
+Celery dispatchers use named `send_task` calls; taskiq dispatchers kick tasks by
+name with `AsyncKicker`. Either way, worker registration modules import the
+implementation and API-side dispatch must not, so the API does not pull in
+inference/runner/agent SDKs. Chapter translation instead registers action callbacks;
 its [wrapper contract](chapter-translation.md) owns lifecycle transitions.
 
 Worker services are behind the `manual` profile in [compose.yaml](../../compose.yaml).

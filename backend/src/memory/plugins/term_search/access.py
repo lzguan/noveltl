@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import Integer, Text, cast, column, func, select, values
 from sqlalchemy.dialects.postgresql import distinct_on
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.access import MemAccessContext, check_mem_access_ctx
 from src.novels.models import Chapter, ChapterContent
@@ -17,13 +17,15 @@ class TextOccurrences:
     match_count: int
 
 
-def count_text_occurrences(db: Session, ctx: MemAccessContext, texts: Sequence[str]) -> list[TextOccurrences]:
+async def count_text_occurrences(
+    db: AsyncSession, ctx: MemAccessContext, texts: Sequence[str]
+) -> list[TextOccurrences]:
     distinct_texts = list(dict.fromkeys(texts))
     if "" in distinct_texts:
         raise ValueError("Search texts must be non-empty.")
     if not distinct_texts:
         return []
-    end_chapter_num, novel_id = check_mem_access_ctx(db, ctx)
+    end_chapter_num, novel_id = await check_mem_access_ctx(db, ctx)
     contents = (
         select(Chapter.chapter_num, ChapterContent.chapter_content_text)
         .join(ChapterContent, ChapterContent.chapter_id == Chapter.chapter_id)
@@ -38,11 +40,13 @@ def count_text_occurrences(db: Session, ctx: MemAccessContext, texts: Sequence[s
         (func.length(content) - func.length(func.replace(content, searched.c.text, ""))) / func.length(searched.c.text),
         Integer,
     )
-    rows = db.execute(
-        select(searched.c.text, func.min(contents.c.chapter_num), func.count(), func.sum(match_count))
-        .select_from(searched)
-        .join(contents, func.strpos(content, searched.c.text) > 0)
-        .group_by(searched.c.text)
+    rows = (
+        await db.execute(
+            select(searched.c.text, func.min(contents.c.chapter_num), func.count(), func.sum(match_count))
+            .select_from(searched)
+            .join(contents, func.strpos(content, searched.c.text) > 0)
+            .group_by(searched.c.text)
+        )
     ).all()
     found = {text: (first, chapters, matches) for text, first, chapters, matches in rows}
     return [

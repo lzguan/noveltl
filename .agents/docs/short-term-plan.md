@@ -35,6 +35,11 @@ worker, only when that worker needs changes anyway.
   match). Next: convert memory services, toolsets, transaction helpers and task bookkeeping to
   `AsyncSession` (one commit per layer). Known pre-existing bug: read toolsets are not
   `sequential=True`, so parallel read calls share one session across threads.
+- When the translations worker moves to async sessions (slice 2), fold
+  `conventions_statement` back into `read_conventions`
+  (`src/memory/plugins/conventions/access.py`) and have
+  `src/translations/actions/common/inputs.py` await `read_conventions` directly. The
+  helper exists only because that worker is still sync (user request, 2026-11-23).
 - Future options for publication cost, only if profiling still shows it after the async move:
   cache `_operations` SQL rendered once with sentinel UUIDs (~6.5 ms per publish), or a
   `publish_workspace(uuid, uuid)` plpgsql function (one round trip, shorter lock hold; per-table

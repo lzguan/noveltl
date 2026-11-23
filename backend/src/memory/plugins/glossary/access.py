@@ -6,7 +6,8 @@ from uuid import UUID
 from sqlalchemy import SQLColumnExpression, func, insert, literal, or_, select, update
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from src.memory.access import MemAccessContext, check_mem_access_ctx, write_memory
 from src.memory.exceptions import (
@@ -60,8 +61,8 @@ def contains_query(chapter: SQLColumnExpression[str], term: SQLColumnExpression[
     return func.strpos(chapter, term) > 0
 
 
-def get_terms_in_chapter(
-    db: Session,
+async def get_terms_in_chapter(
+    db: AsyncSession,
     ctx: MemAccessContext,
     contains_query: ContainsQuery,
     *,
@@ -69,7 +70,7 @@ def get_terms_in_chapter(
 ) -> list[GlossaryTerm]:
     """Get glossary terms occurring in the exact chapter content pinned by the context."""
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
-    check_mem_access_ctx(db, ctx)
+    await check_mem_access_ctx(db, ctx)
     query = (
         select(term_rows)
         .select_from(ChapterContent)
@@ -86,7 +87,7 @@ def get_terms_in_chapter(
     )
     if not include_rejected:
         query = query.where(term_rows.review_status != ReviewStatus.REJECTED)
-    return list(db.scalars(workspace_read(query, ctx.workspace_id)).all())
+    return list((await db.scalars(workspace_read(query, ctx.workspace_id))).all())
 
 
 @dataclass(frozen=True)
@@ -95,8 +96,8 @@ class RangeTerm:
     first_chapter_num: int
 
 
-def get_terms_in_chapter_range(
-    db: Session,
+async def get_terms_in_chapter_range(
+    db: AsyncSession,
     ctx: MemAccessContext,
     start_chapter_num: int | None,
     *,
@@ -104,7 +105,7 @@ def get_terms_in_chapter_range(
     include_rejected: bool = False,
 ) -> tuple[list[RangeTerm], bool]:
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
-    end_chapter_num, novel_id = check_mem_access_ctx(db, ctx)
+    end_chapter_num, novel_id = await check_mem_access_ctx(db, ctx)
     latest = (
         select(Chapter.chapter_num, ChapterContent.chapter_content_text)
         .join(ChapterContent, ChapterContent.chapter_id == Chapter.chapter_id)
@@ -131,13 +132,13 @@ def get_terms_in_chapter_range(
         statement = statement.where(term_rows.review_status != ReviewStatus.REJECTED)
     rows = [
         RangeTerm(term, first)
-        for term, first in db.execute(workspace_read(statement.limit(limit + 1), ctx.workspace_id))
+        for term, first in await db.execute(workspace_read(statement.limit(limit + 1), ctx.workspace_id))
     ]
     return rows[:limit], len(rows) > limit
 
 
-def inspect_terms(
-    db: Session,
+async def inspect_terms(
+    db: AsyncSession,
     ctx: MemAccessContext,
     term_names: list[str],
     memory_types: Sequence[MemoryType] | None,
@@ -153,11 +154,11 @@ def inspect_terms(
     memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
     association_rows = visible_rows(GlossaryAssociation, ShadowGlossaryAssociation, ctx.workspace_id)
-    chap_num, _ = check_mem_access_ctx(db, ctx)
+    chap_num, _ = await check_mem_access_ctx(db, ctx)
     alias_memories: list[Memory] = []
     aliases_truncated = False
     if expand_aliases:
-        term_names, alias_memories, aliases_truncated = _expand_alias_terms(db, ctx, chap_num, term_names)
+        term_names, alias_memories, aliases_truncated = await _expand_alias_terms(db, ctx, chap_num, term_names)
 
     matching_association = aliased(association_rows)
     matching_term = aliased(term_rows)
@@ -199,17 +200,21 @@ def inspect_terms(
         return query
 
     count = (
-        db.scalar(workspace_read(select(func.count()).select_from(build_memory_query().subquery()), ctx.workspace_id))
+        await db.scalar(
+            workspace_read(select(func.count()).select_from(build_memory_query().subquery()), ctx.workspace_id)
+        )
         or 0
     )
     memories = list(
-        db.scalars(
-            workspace_read(
-                build_memory_query()
-                .order_by(memory_rows.memory_start_num.desc(), memory_rows.memory_id)
-                .offset(skip)
-                .limit(limit),
-                ctx.workspace_id,
+        (
+            await db.scalars(
+                workspace_read(
+                    build_memory_query()
+                    .order_by(memory_rows.memory_start_num.desc(), memory_rows.memory_id)
+                    .offset(skip)
+                    .limit(limit),
+                    ctx.workspace_id,
+                )
             )
         ).all()
     )
@@ -228,7 +233,7 @@ def inspect_terms(
         terms_query = terms_query.where(term_rows.review_status != ReviewStatus.REJECTED)
 
     terms_by_memory: dict[UUID, list[AgentGlossaryTerm]] = {memory_id: [] for memory_id in memory_ids}
-    for memory_id, term in db.execute(workspace_read(terms_query, ctx.workspace_id)):
+    for memory_id, term in await db.execute(workspace_read(terms_query, ctx.workspace_id)):
         terms_by_memory[memory_id].append(AgentGlossaryTerm.model_validate(term))
     rows = [
         AgentGlossaryMemory[UUID](
@@ -241,7 +246,7 @@ def inspect_terms(
         return AgentGlossaryMemoryPage[UUID](
             count=count,
             rows=rows,
-            aliases=_agent_glossary_memories(
+            aliases=await _agent_glossary_memories(
                 db, ctx.memory_group_id, alias_memories, include_rejected, ctx.workspace_id
             ),
             aliases_truncated=aliases_truncated,
@@ -249,8 +254,8 @@ def inspect_terms(
     return Page[AgentGlossaryMemory[UUID]](count=count, rows=rows)
 
 
-def _agent_glossary_memories(
-    db: Session,
+async def _agent_glossary_memories(
+    db: AsyncSession,
     memory_group_id: UUID,
     memories: Sequence[Memory],
     include_rejected: bool,
@@ -272,7 +277,7 @@ def _agent_glossary_memories(
     if not include_rejected:
         query = query.where(term_rows.review_status != ReviewStatus.REJECTED)
     terms_by_memory: dict[UUID, list[AgentGlossaryTerm]] = {memory_id: [] for memory_id in memory_ids}
-    for memory_id, term in db.execute(workspace_read(query, workspace_id)):
+    for memory_id, term in await db.execute(workspace_read(query, workspace_id)):
         terms_by_memory[memory_id].append(AgentGlossaryTerm.model_validate(term))
     return [
         AgentGlossaryMemory[UUID](memory=AgentMemory.model_validate(memory), terms=terms_by_memory[memory.memory_id])
@@ -280,8 +285,8 @@ def _agent_glossary_memories(
     ]
 
 
-def _expand_alias_terms(
-    db: Session,
+async def _expand_alias_terms(
+    db: AsyncSession,
     ctx: MemAccessContext,
     chapter_num: int,
     term_names: Sequence[str],
@@ -296,16 +301,18 @@ def _expand_alias_terms(
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
     association_rows = visible_rows(GlossaryAssociation, ShadowGlossaryAssociation, ctx.workspace_id)
     initial_terms = list(
-        db.scalars(
-            workspace_read(
-                select(term_rows.term)
-                .where(
-                    term_rows.memory_group_id == ctx.memory_group_id,
-                    term_rows.term.in_(term_names),
-                    term_rows.review_status != ReviewStatus.REJECTED,
+        (
+            await db.scalars(
+                workspace_read(
+                    select(term_rows.term)
+                    .where(
+                        term_rows.memory_group_id == ctx.memory_group_id,
+                        term_rows.term.in_(term_names),
+                        term_rows.review_status != ReviewStatus.REJECTED,
+                    )
+                    .order_by(term_rows.term, term_rows.term_id),
+                    ctx.workspace_id,
                 )
-                .order_by(term_rows.term, term_rows.term_id),
-                ctx.workspace_id,
             )
         ).all()
     )
@@ -313,7 +320,7 @@ def _expand_alias_terms(
         return list(term_names), [], False
 
     alias_rows = list(
-        db.execute(
+        await db.execute(
             workspace_read(
                 select(memory_rows, term_rows)
                 .select_from(memory_rows)
@@ -380,8 +387,8 @@ def _expand_alias_terms(
 
 
 @overload
-def create_term(
-    db: Session,
+async def create_term(
+    db: AsyncSession,
     memory_group_id: UUID,
     term_name: str,
     term_kind: TermKind | None = None,
@@ -392,8 +399,8 @@ def create_term(
 
 
 @overload
-def create_term(
-    db: Session,
+async def create_term(
+    db: AsyncSession,
     memory_group_id: UUID,
     term_name: str,
     term_kind: TermKind | None = None,
@@ -403,8 +410,8 @@ def create_term(
 ) -> ShadowTerm: ...
 
 
-def create_term(
-    db: Session,
+async def create_term(
+    db: AsyncSession,
     memory_group_id: UUID,
     term_name: str,
     term_kind: TermKind | None = None,
@@ -413,10 +420,10 @@ def create_term(
     recorded_on: UUID | None = None,
 ) -> GlossaryTerm | ShadowTerm:
     if workspace_id is not None:
-        check_workspace(db, workspace_id, memory_group_id)
+        await check_workspace(db, workspace_id, memory_group_id)
         term_rows = visible_rows(GlossaryTerm, ShadowTerm, workspace_id)
         if (
-            db.scalar(
+            await db.scalar(
                 select(term_rows.term_id).where(
                     term_rows.memory_group_id == memory_group_id, term_rows.term == term_name
                 )
@@ -424,7 +431,7 @@ def create_term(
             is not None
         ):
             raise GlossaryTermAlreadyExistsException(f"Glossary term {term_name!r} already exists")
-        return stage_record(
+        return await stage_record(
             db,
             ShadowTerm,
             workspace_id,
@@ -433,44 +440,48 @@ def create_term(
             term_kind=term_kind,
             recorded_on=recorded_on,
         )
-    return db.execute(
-        insert(GlossaryTerm)
-        .values(memory_group_id=memory_group_id, term=term_name, term_kind=term_kind, recorded_on=recorded_on)
-        .returning(GlossaryTerm)
+    return (
+        await db.execute(
+            insert(GlossaryTerm)
+            .values(memory_group_id=memory_group_id, term=term_name, term_kind=term_kind, recorded_on=recorded_on)
+            .returning(GlossaryTerm)
+        )
     ).scalar_one()
 
 
-def _set_term_review_status(
-    db: Session,
+async def _set_term_review_status(
+    db: AsyncSession,
     memory_group_id: UUID,
     term_id: UUID,
     review_status: ReviewStatus,
 ) -> GlossaryTerm:
     try:
-        return db.execute(
-            update(GlossaryTerm)
-            .where(GlossaryTerm.term_id == term_id, GlossaryTerm.memory_group_id == memory_group_id)
-            .values(review_status=review_status)
-            .returning(GlossaryTerm)
+        return (
+            await db.execute(
+                update(GlossaryTerm)
+                .where(GlossaryTerm.term_id == term_id, GlossaryTerm.memory_group_id == memory_group_id)
+                .values(review_status=review_status)
+                .returning(GlossaryTerm)
+            )
         ).scalar_one()
     except NoResultFound as e:
         raise GlossaryTermNotFoundException(f"Glossary term with id {term_id} not found") from e
 
 
-def approve_term(db: Session, memory_group_id: UUID, term_id: UUID) -> GlossaryTerm:
-    return _set_term_review_status(db, memory_group_id, term_id, ReviewStatus.APPROVED)
+async def approve_term(db: AsyncSession, memory_group_id: UUID, term_id: UUID) -> GlossaryTerm:
+    return await _set_term_review_status(db, memory_group_id, term_id, ReviewStatus.APPROVED)
 
 
-def reject_term(db: Session, memory_group_id: UUID, term_id: UUID) -> GlossaryTerm:
-    return _set_term_review_status(db, memory_group_id, term_id, ReviewStatus.REJECTED)
+async def reject_term(db: AsyncSession, memory_group_id: UUID, term_id: UUID) -> GlossaryTerm:
+    return await _set_term_review_status(db, memory_group_id, term_id, ReviewStatus.REJECTED)
 
 
-def mark_term_pending(db: Session, memory_group_id: UUID, term_id: UUID) -> GlossaryTerm:
-    return _set_term_review_status(db, memory_group_id, term_id, ReviewStatus.PENDING)
+async def mark_term_pending(db: AsyncSession, memory_group_id: UUID, term_id: UUID) -> GlossaryTerm:
+    return await _set_term_review_status(db, memory_group_id, term_id, ReviewStatus.PENDING)
 
 
-def search_terms(
-    db: Session,
+async def search_terms(
+    db: AsyncSession,
     memory_group_id: UUID,
     query: str,
     *,
@@ -486,35 +497,39 @@ def search_terms(
     )
     if not include_rejected:
         statement = statement.where(term_rows.review_status != ReviewStatus.REJECTED)
-    count = db.scalar(workspace_read(select(func.count()).select_from(statement.subquery()), workspace_id)) or 0
+    count = await db.scalar(workspace_read(select(func.count()).select_from(statement.subquery()), workspace_id)) or 0
     terms = list(
-        db.scalars(workspace_read(statement.order_by(term_rows.term, term_rows.term_id).limit(limit), workspace_id))
+        await db.scalars(
+            workspace_read(statement.order_by(term_rows.term, term_rows.term_id).limit(limit), workspace_id)
+        )
     )
     return count, terms
 
 
-def get_missing_term_names(
-    db: Session, memory_group_id: UUID, term_names: list[str], *, workspace_id: UUID | None = None
+async def get_missing_term_names(
+    db: AsyncSession, memory_group_id: UUID, term_names: list[str], *, workspace_id: UUID | None = None
 ) -> list[str]:
     """Return requested glossary terms that do not exist in the memory group."""
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, workspace_id)
     unique_term_names = list(dict.fromkeys(term_names))
     existing_term_names = set(
-        db.scalars(
-            workspace_read(
-                select(term_rows.term).where(
-                    term_rows.memory_group_id == memory_group_id,
-                    term_rows.term.in_(unique_term_names),
-                ),
-                workspace_id,
+        (
+            await db.scalars(
+                workspace_read(
+                    select(term_rows.term).where(
+                        term_rows.memory_group_id == memory_group_id,
+                        term_rows.term.in_(unique_term_names),
+                    ),
+                    workspace_id,
+                )
             )
         ).all()
     )
     return [term_name for term_name in unique_term_names if term_name not in existing_term_names]
 
 
-def _associate_terms(
-    db: Session,
+async def _associate_terms(
+    db: AsyncSession,
     memory_group_id: UUID,
     memory_id: UUID,
     term_names: list[str],
@@ -527,7 +542,7 @@ def _associate_terms(
     if workspace_id is not None:
         term_rows = visible_rows(GlossaryTerm, ShadowTerm, workspace_id)
         term_ids = list(
-            db.scalars(
+            await db.scalars(
                 select(term_rows.term_id).where(
                     term_rows.term.in_(unique_term_names), term_rows.memory_group_id == memory_group_id
                 )
@@ -536,7 +551,7 @@ def _associate_terms(
         if len(term_ids) != len(unique_term_names):
             raise GlossaryTermNotFoundException("Some terms do not exist in the memory group.")
         return [
-            stage_record(db, ShadowGlossaryAssociation, workspace_id, term_id=term_id, memory_id=memory_id)
+            await stage_record(db, ShadowGlossaryAssociation, workspace_id, term_id=term_id, memory_id=memory_id)
             for term_id in term_ids
         ]
     association_source = select(
@@ -547,13 +562,15 @@ def _associate_terms(
         GlossaryTerm.memory_group_id == memory_group_id,
     )
     associations = (
-        db.execute(
-            insert(GlossaryAssociation)
-            .from_select(
-                [GlossaryAssociation.term_id, GlossaryAssociation.memory_id],
-                association_source,
+        (
+            await db.execute(
+                insert(GlossaryAssociation)
+                .from_select(
+                    [GlossaryAssociation.term_id, GlossaryAssociation.memory_id],
+                    association_source,
+                )
+                .returning(GlossaryAssociation)
             )
-            .returning(GlossaryAssociation)
         )
         .scalars()
         .all()
@@ -563,8 +580,8 @@ def _associate_terms(
     return list(associations)
 
 
-def create_memory(
-    db: Session,
+async def create_memory(
+    db: AsyncSession,
     ctx: MemAccessContext,
     creator: Creator,
     mem_type: MemoryType,
@@ -573,7 +590,7 @@ def create_memory(
     scope: Scope | None = None,
     mark: str | None = None,
 ) -> tuple[Memory | ShadowMemory, list[GlossaryAssociation | ShadowGlossaryAssociation]]:
-    new_memory = write_memory(
+    new_memory = await write_memory(
         db,
         ctx,
         mem_type,
@@ -583,14 +600,14 @@ def create_memory(
         scope,
         mark=mark,
     )
-    glossary_associations = _associate_terms(
+    glossary_associations = await _associate_terms(
         db, ctx.memory_group_id, new_memory.memory_id, term_names, workspace_id=ctx.workspace_id
     )
     return new_memory, list(glossary_associations)
 
 
-def supersede_memory(
-    db: Session,
+async def supersede_memory(
+    db: AsyncSession,
     ctx: MemAccessContext,
     memory_id: UUID,
     creator: Creator,
@@ -602,7 +619,7 @@ def supersede_memory(
     expected_marks: Sequence[str | None] | None = None,
 ) -> tuple[Memory | ShadowMemory, list[GlossaryAssociation | ShadowGlossaryAssociation]]:
     if ctx.workspace_id is not None:
-        check_mem_access_ctx(db, ctx)
+        await check_mem_access_ctx(db, ctx)
     memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
     association_rows = visible_rows(GlossaryAssociation, ShadowGlossaryAssociation, ctx.workspace_id)
@@ -620,24 +637,26 @@ def supersede_memory(
         if None in expected_marks:
             mark_filters.append(memory_rows.mark.is_(None))
         target_query = target_query.where(or_(*mark_filters) if mark_filters else memory_rows.mark.in_([]))
-    if db.scalar(target_query) is None:
+    if await db.scalar(target_query) is None:
         raise MemoryNotFoundException(f"Glossary memory with id {memory_id} is outside this toolset")
 
     if replacement_term_names is None:
         replacement_term_names = list(
-            db.execute(
-                select(term_rows.term)
-                .select_from(association_rows)
-                .where(association_rows.memory_id == memory_id)
-                .join(term_rows, term_rows.term_id == association_rows.term_id)
-                .where(
-                    term_rows.memory_group_id == ctx.memory_group_id,
+            (
+                await db.execute(
+                    select(term_rows.term)
+                    .select_from(association_rows)
+                    .where(association_rows.memory_id == memory_id)
+                    .join(term_rows, term_rows.term_id == association_rows.term_id)
+                    .where(
+                        term_rows.memory_group_id == ctx.memory_group_id,
+                    )
                 )
             )
             .scalars()
             .all()
         )
-    new_memory = write_memory(
+    new_memory = await write_memory(
         db,
         ctx,
         mem_type,
@@ -648,14 +667,14 @@ def supersede_memory(
         supersedes_id=memory_id,
         mark=mark,
     )
-    new_assocs = _associate_terms(
+    new_assocs = await _associate_terms(
         db, ctx.memory_group_id, new_memory.memory_id, replacement_term_names, workspace_id=ctx.workspace_id
     )
     return new_memory, new_assocs
 
 
-def expire_memory(
-    db: Session,
+async def expire_memory(
+    db: AsyncSession,
     ctx: MemAccessContext,
     memory_id: UUID,
     memory_types: Sequence[MemoryType],
@@ -664,7 +683,7 @@ def expire_memory(
     end_offset: int = 0,
 ) -> None:
     """End an active glossary memory at the context chapter plus an internal offset."""
-    chapter_num, _ = check_mem_access_ctx(db, ctx)
+    chapter_num, _ = await check_mem_access_ctx(db, ctx)
     end_num = chapter_num + end_offset
     memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
     try:
@@ -685,18 +704,22 @@ def expire_memory(
                 mark_filters.append(memory_rows.mark.is_(None))
             conditions.append(or_(*mark_filters) if mark_filters else memory_rows.mark.in_([]))
         if ctx.workspace_id is not None:
-            original = db.scalars(workspace_read(select(memory_rows).where(*conditions), ctx.workspace_id)).one()
-            stage_record(db, ShadowMemory, ctx.workspace_id, original, memory_end_num=end_num)
+            original = (
+                await db.scalars(workspace_read(select(memory_rows).where(*conditions), ctx.workspace_id))
+            ).one()
+            await stage_record(db, ShadowMemory, ctx.workspace_id, original, memory_end_num=end_num)
         else:
-            db.execute(
-                update(Memory).where(*conditions).values(memory_end_num=end_num).returning(Memory.memory_id)
+            (
+                await db.execute(
+                    update(Memory).where(*conditions).values(memory_end_num=end_num).returning(Memory.memory_id)
+                )
             ).scalar_one()
     except NoResultFound as exc:
         raise MemoryNotFoundException(f"Glossary memory with id {memory_id} not found or already ended") from exc
 
 
-def read_agent_event_history(
-    db: Session,
+async def read_agent_event_history(
+    db: AsyncSession,
     ctx: MemAccessContext,
     subject_term_name: str,
     mark: str,
@@ -704,34 +727,36 @@ def read_agent_event_history(
     memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
     association_rows = visible_rows(GlossaryAssociation, ShadowGlossaryAssociation, ctx.workspace_id)
-    chapter_num, _ = check_mem_access_ctx(db, ctx)
+    chapter_num, _ = await check_mem_access_ctx(db, ctx)
     memories = list(
-        db.scalars(
-            workspace_read(
-                select(memory_rows)
-                .join(association_rows, association_rows.memory_id == memory_rows.memory_id)
-                .join(term_rows, term_rows.term_id == association_rows.term_id)
-                .where(
-                    term_rows.memory_group_id == ctx.memory_group_id,
-                    term_rows.term == subject_term_name,
-                    memory_rows.memory_group_id == ctx.memory_group_id,
-                    memory_rows.plugin_name == GLOSSARY_PLUGIN_NAME,
-                    memory_rows.memory_type == MemoryType.EVENT,
-                    memory_rows.mark == mark,
-                    memory_rows.creator_type == Creator.AGENT,
-                    memory_rows.memory_review_status != ReviewStatus.REJECTED,
-                    memory_rows.memory_start_num <= chapter_num,
+        (
+            await db.scalars(
+                workspace_read(
+                    select(memory_rows)
+                    .join(association_rows, association_rows.memory_id == memory_rows.memory_id)
+                    .join(term_rows, term_rows.term_id == association_rows.term_id)
+                    .where(
+                        term_rows.memory_group_id == ctx.memory_group_id,
+                        term_rows.term == subject_term_name,
+                        memory_rows.memory_group_id == ctx.memory_group_id,
+                        memory_rows.plugin_name == GLOSSARY_PLUGIN_NAME,
+                        memory_rows.memory_type == MemoryType.EVENT,
+                        memory_rows.mark == mark,
+                        memory_rows.creator_type == Creator.AGENT,
+                        memory_rows.memory_review_status != ReviewStatus.REJECTED,
+                        memory_rows.memory_start_num <= chapter_num,
+                    )
+                    .order_by(memory_rows.memory_start_num, memory_rows.memory_id),
+                    ctx.workspace_id,
                 )
-                .order_by(memory_rows.memory_start_num, memory_rows.memory_id),
-                ctx.workspace_id,
             )
         ).all()
     )
     return chapter_num, memories
 
 
-def can_supersede_agent_event(
-    db: Session,
+async def can_supersede_agent_event(
+    db: AsyncSession,
     ctx: MemAccessContext,
     memory_id: UUID,
     subject_term_name: str,
@@ -740,8 +765,8 @@ def can_supersede_agent_event(
     memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
     association_rows = visible_rows(GlossaryAssociation, ShadowGlossaryAssociation, ctx.workspace_id)
-    chapter_num, _ = check_mem_access_ctx(db, ctx)
-    target_exists = db.scalar(
+    chapter_num, _ = await check_mem_access_ctx(db, ctx)
+    target_exists = await db.scalar(
         workspace_read(
             select(memory_rows.memory_id)
             .join(association_rows, association_rows.memory_id == memory_rows.memory_id)

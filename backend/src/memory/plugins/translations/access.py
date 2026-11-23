@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.access import MemAccessContext, check_mem_access_ctx
 from src.memory.exceptions import GlossaryTermNotFoundException
@@ -17,11 +17,13 @@ from src.memory.staging import stage_record
 from src.memory.types import Creator, ReviewStatus
 
 
-def read_term_translations(db: Session, ctx: MemAccessContext, term_names: Sequence[str]) -> list[TermTranslation]:
+async def read_term_translations(
+    db: AsyncSession, ctx: MemAccessContext, term_names: Sequence[str]
+) -> list[TermTranslation]:
     """Read usable exact-form mappings; the term key guarantees uniqueness."""
     if not term_names:
         return []
-    check_mem_access_ctx(db, ctx)
+    await check_mem_access_ctx(db, ctx)
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
     translation_rows = visible_rows(TermTranslationRow, ShadowTermTranslation, ctx.workspace_id)
     statement = (
@@ -37,16 +39,16 @@ def read_term_translations(db: Session, ctx: MemAccessContext, term_names: Seque
     )
     return [
         TermTranslation.model_validate(row)
-        for row in db.execute(workspace_read(statement, ctx.workspace_id)).mappings()
+        for row in (await db.execute(workspace_read(statement, ctx.workspace_id))).mappings()
     ]
 
 
-def missing_term_translations(db: Session, ctx: MemAccessContext, term_names: Sequence[str]) -> list[str]:
-    existing = {mapping.term for mapping in read_term_translations(db, ctx, term_names)}
+async def missing_term_translations(db: AsyncSession, ctx: MemAccessContext, term_names: Sequence[str]) -> list[str]:
+    existing = {mapping.term for mapping in await read_term_translations(db, ctx, term_names)}
     return list(dict.fromkeys(term for term in term_names if term not in existing))
 
 
-def create_term_translation(db: Session, ctx: MemAccessContext, term: str, translation: str) -> None:
+async def create_term_translation(db: AsyncSession, ctx: MemAccessContext, term: str, translation: str) -> None:
     """Fill a missing/rejected mapping atomically, preserving every usable choice.
 
     A rejected mapping becomes a new pending agent suggestion. The caller owns
@@ -54,9 +56,9 @@ def create_term_translation(db: Session, ctx: MemAccessContext, term: str, trans
     """
     if not translation.strip():
         raise ValueError("A term translation must not be blank")
-    check_mem_access_ctx(db, ctx)
+    await check_mem_access_ctx(db, ctx)
     term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
-    term_id = db.scalar(
+    term_id = await db.scalar(
         select(term_rows.term_id).where(
             term_rows.memory_group_id == ctx.memory_group_id,
             term_rows.term == term,
@@ -67,11 +69,11 @@ def create_term_translation(db: Session, ctx: MemAccessContext, term: str, trans
         raise GlossaryTermNotFoundException(f"No usable glossary term {term!r} in this memory group")
     if ctx.workspace_id is not None:
         translation_rows = visible_rows(TermTranslationRow, ShadowTermTranslation, ctx.workspace_id)
-        original = db.scalar(
+        original = await db.scalar(
             workspace_read(select(translation_rows).where(translation_rows.term_id == term_id), ctx.workspace_id)
         )
         if original is None or original.review_status == ReviewStatus.REJECTED:
-            stage_record(
+            await stage_record(
                 db,
                 ShadowTermTranslation,
                 ctx.workspace_id,
@@ -90,7 +92,7 @@ def create_term_translation(db: Session, ctx: MemAccessContext, term: str, trans
         creator_type=Creator.AGENT,
         recorded_on=ctx.chapter_content_id,
     )
-    db.execute(
+    await db.execute(
         statement.on_conflict_do_update(
             index_elements=[TermTranslationRow.term_id],
             set_={

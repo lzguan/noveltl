@@ -27,6 +27,18 @@ worker, only when that worker needs changes anyway.
   `src/filters/permissions.py` during the label permission refactor). When it is
   converted, prefer converting `src/filters/lifecycle.py` together with its
   worker; until then the fallback is `await db.run_sync(...)` from async code.
+- Memory agent worker on taskiq (branch `feature/taskiq-agent-workers`): the Celery
+  implementation stays alongside (`celery_app.py`, `dispatch/celery_worker.py`); pick one in
+  `dispatch/dependencies.py` and the Dockerfile. Profiled 48 concurrent fake-model tasks with
+  Tachyon: ~80% of the event loop's busy time is sync psycopg waits, two-thirds of it in
+  `publish_workspace`; pydantic-ai runs sync tools in anyio worker threads (pool sized 40 to
+  match). Next: convert memory services, toolsets, transaction helpers and task bookkeeping to
+  `AsyncSession` (one commit per layer). Known pre-existing bug: read toolsets are not
+  `sequential=True`, so parallel read calls share one session across threads.
+- Future options for publication cost, only if profiling still shows it after the async move:
+  cache `_operations` SQL rendered once with sentinel UUIDs (~6.5 ms per publish), or a
+  `publish_workspace(uuid, uuid)` plpgsql function (one round trip, shorter lock hold; per-table
+  SQL then lives in a migration).
 - Rejected: `asyncio.run` from sync code into async functions (needs a new
   session and transaction, breaks pooled async connections across loops, fails
   inside a running loop); sync duplicates of shared readers.

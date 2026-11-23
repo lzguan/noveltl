@@ -1,6 +1,6 @@
-from src.memory.agent.dispatch.celery_dispatcher import CeleryMemoryAgentDispatcher
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
+from src.memory.agent.dispatch.taskiq_dispatcher import TaskiqMemoryAgentDispatcher
 
 
 def get_dispatcher() -> MemoryAgentDispatcher:
-    return CeleryMemoryAgentDispatcher()
+    return TaskiqMemoryAgentDispatcher()

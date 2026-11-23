@@ -20,6 +20,7 @@ they describe changes.
 | Choose checks or regenerate API contracts | [Verification](verification.md) |
 | Change the analytics store, translation-job export, or loader | [Analytics store](analytics.md) |
 | Plan eval framework work or the translation calibration loop | [Evaluation plans](evaluation-plans.md) |
+| Review early memory-agent design decisions and evaluations | [Memory-agent design history](memory-agent-design-history.md) |
 | Plan the reader app or translation publishing | [Reader plans](reader-plans.md) |
 | Pick up the current short-term work list (async backend, promotion jobs, permissions, feedback) | [Short-term plan](short-term-plan.md) |
 

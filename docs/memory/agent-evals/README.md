@@ -3,7 +3,7 @@
 > Historical evaluation notes: this directory predates the current harness and
 > may contain outdated operational instructions. Use the
 > [eval README](../../../agent-evals/README.md) for current commands and the
-> [design history](../../../agent-evals/docs/design-history.md) for an abstract
+> [design history](../../../.agents/docs/memory-agent-design-history.md) for an abstract
 > record of design decisions. Older reports are retained here for now.
 
 This directory records behavioral evaluations of the memory agent. Its purpose

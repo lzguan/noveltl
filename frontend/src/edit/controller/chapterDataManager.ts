@@ -178,6 +178,7 @@ export const buildChapterDataManager = (
 		const orphanedLabelIds = new Set<LProvId>();
 		let pendingTextRequestCount = 0;
 		let textRequestGeneration = 0;
+		const reloadsRequestedWhileLoading = new Set<LGProvId>();
 
 		let destroyed = false;
 
@@ -1393,7 +1394,10 @@ export const buildChapterDataManager = (
 						: yield* labelDataIndex
 								.get(labelGroupId)
 								.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
-				if (slot.status === "loading") return [];
+				if (slot.status === "loading") {
+					reloadsRequestedWhileLoading.add(labelGroupId);
+					return [];
+				}
 				yield* raiseTriggerEvent({
 					eventType: "labelDataReloading",
 					chapterId,
@@ -1446,6 +1450,7 @@ export const buildChapterDataManager = (
 
 				const onError = () =>
 					Effect.gen(function* () {
+						reloadsRequestedWhileLoading.delete(labelGroupId);
 						yield* labelDataIndex.setData(labelGroupId, { status: "error" }).pipe(
 							Effect.catch((err) => {
 								Effect.logError(
@@ -1574,7 +1579,10 @@ export const buildChapterDataManager = (
 											servId: newLabelDataServId,
 										})
 							).pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+							const reloadRequestedWhileLoading =
+								reloadsRequestedWhileLoading.delete(labelGroupId);
 							const reloadIsOutdated =
+								reloadRequestedWhileLoading ||
 								textWasPendingAtSend ||
 								textRequestGenerationAtSend !== textRequestGeneration ||
 								opQueue.tag === "text" ||
@@ -1609,6 +1617,9 @@ export const buildChapterDataManager = (
 								wait = false;
 								yield* raiseTriggerEvent({
 									eventType: "labelDataOutdated",
+									reason: reloadRequestedWhileLoading
+										? "reloadRequested"
+										: "textChanged",
 									labelGroupId,
 									chapterId,
 								});

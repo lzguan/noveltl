@@ -1149,6 +1149,7 @@ describe("buildChapterDataManager", () => {
 
 			expect(triggerEvents).toContainEqual({
 				eventType: "labelDataOutdated",
+				reason: "textChanged",
 				chapterId: expect.any(String),
 				labelGroupId,
 			});
@@ -1160,6 +1161,40 @@ describe("buildChapterDataManager", () => {
 				expect.objectContaining({ desiredState: "detaching" }),
 			]);
 			expect(cleanupReload.reservationRequest.reserveList().labelData).toEqual([]);
+			Effect.runSync(releaseAllOnSuccess(idRepo, primaryReserveList));
+		});
+
+		it("discards a reload response when another reload was requested while it was in flight", async () => {
+			const reloadMock = vi.mocked(
+				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+			);
+			reloadMock.mockClear();
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID4, [UUID5, UUID6]));
+
+			const { chapterDM, labelGroupId, idRepo, triggerEvents } =
+				Effect.runSync(buildTestChapterDM());
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			const primaryReload = reloadEvents[0];
+			const primaryReserveList = primaryReload.reservationRequest.reserveList();
+
+			Effect.runSync(reserveAll(idRepo, primaryReserveList));
+			Effect.runSync(primaryReload.preSend());
+			const responseData = await Effect.runPromise(
+				primaryReload.send(RequestKey("reload-key")),
+			);
+
+			expect(Effect.runSync(chapterDM.reloadGroup(labelGroupId, true))).toEqual([]);
+			await Effect.runPromise(primaryReload.postSend(responseData));
+
+			expect(triggerEvents).toContainEqual({
+				eventType: "labelDataOutdated",
+				reason: "reloadRequested",
+				chapterId: expect.any(String),
+				labelGroupId,
+			});
+			expect(Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId)).status).toBe(
+				"idle",
+			);
 			Effect.runSync(releaseAllOnSuccess(idRepo, primaryReserveList));
 		});
 

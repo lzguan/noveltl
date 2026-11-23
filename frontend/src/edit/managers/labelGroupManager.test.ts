@@ -37,45 +37,64 @@ const getters: NovelGetters = {
 };
 
 describe("createLabelGroupManager", () => {
-	it("requeues label data when the controller marks it outdated", () => {
-		const editor = renderHook(() => useEditorState());
-		const trackedLabelGroups = renderHook(() => useTrackedLabelGroups());
-		const controllerEvents: NovelUserEvent[] = [];
+	it.each([
+		{ reason: "textChanged", current: true, closed: false, retry: true },
+		{ reason: "textChanged", current: false, closed: false, retry: false },
+		{ reason: "reloadRequested", current: false, closed: false, retry: true },
+		{ reason: "reloadRequested", current: false, closed: true, retry: false },
+	] as const)(
+		"handles $reason for current chapter=$current, closed=$closed",
+		({ reason, current, closed, retry }) => {
+			const editor = renderHook(() => useEditorState());
+			const trackedLabelGroups = renderHook(() => useTrackedLabelGroups());
+			const controllerEvents: NovelUserEvent[] = [];
 
-		act(() => {
-			editor.result.current.setLoading({
-				empty: false,
-				loading: false,
-				chapterId: CHAPTER_ID,
-				chapterContentId: CHAPTER_CONTENT_ID,
-				segmentManager: makeBasicSegmentManager("Alice", []),
+			act(() => {
+				editor.result.current.setLoading({
+					empty: false,
+					loading: false,
+					chapterId: current ? CHAPTER_ID : CProvId("chapter-b"),
+					chapterContentId: CHAPTER_CONTENT_ID,
+					segmentManager: makeBasicSegmentManager("Alice", []),
+				});
 			});
-		});
 
-		const manager = createLabelGroupManager({
-			controllerUserEvent: (event) => {
-				controllerEvents.push(event);
-			},
-			controllerGetters: getters,
-			trackedLabelGroups: trackedLabelGroups.result.current,
-			dataRef: editor.result.current.dataRef,
-		});
-		const event: TriggerEvent = {
-			eventType: "labelDataOutdated",
-			chapterId: CHAPTER_ID,
-			labelGroupId: LABEL_GROUP_ID,
-		};
-
-		Effect.runSync(manager.handleControllerEvent(getters, event));
-
-		expect(controllerEvents).toEqual([
-			{
-				eventType: "loadLabelData",
+			const manager = createLabelGroupManager({
+				controllerUserEvent: (event) => {
+					controllerEvents.push(event);
+				},
+				controllerGetters: {
+					...getters,
+					chapterGetterSlot: (chapterId) =>
+						chapterId === CHAPTER_ID && !closed
+							? Effect.succeed(chapterSlot(CHAPTER_ID, { hasGroup: true }))
+							: Effect.fail(new NotFoundException()),
+				},
+				trackedLabelGroups: trackedLabelGroups.result.current,
+				dataRef: editor.result.current.dataRef,
+			});
+			const event: TriggerEvent = {
+				eventType: "labelDataOutdated",
+				reason,
 				chapterId: CHAPTER_ID,
 				labelGroupId: LABEL_GROUP_ID,
-			},
-		]);
-	});
+			};
+
+			Effect.runSync(manager.handleControllerEvent(getters, event));
+
+			expect(controllerEvents).toEqual(
+				retry
+					? [
+							{
+								eventType: "loadLabelData",
+								chapterId: CHAPTER_ID,
+								labelGroupId: LABEL_GROUP_ID,
+							},
+						]
+					: [],
+			);
+		},
+	);
 });
 
 function labelDataSlot(): LabelDataSlot {

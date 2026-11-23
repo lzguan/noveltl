@@ -379,14 +379,25 @@ export function createLabelGroupManager({
 					if (event.chapterId !== readChapterId()) break;
 					yield* updateLabelGroupStatus(event.labelGroupId, "startLoading");
 					break;
-				case "labelDataOutdated":
-					if (event.chapterId !== readChapterId()) break;
+				case "labelDataOutdated": {
+					if (event.reason === "textChanged" && event.chapterId !== readChapterId())
+						break;
+					const chapterSlot = yield* Effect.result(
+						controllerGetters.chapterGetterSlot(event.chapterId),
+					);
+					if (
+						chapterSlot._tag === "Failure" ||
+						chapterSlot.success.status !== "ready" ||
+						chapterSlot.success.data.chapterGetters.isDestroyed()
+					)
+						break;
 					controllerUserEvent({
 						eventType: "loadLabelData",
 						labelGroupId: event.labelGroupId,
 						chapterId: event.chapterId,
 					});
 					break;
+				}
 				case "chapterOpened":
 					if (!event.flags.forEditor) break;
 					yield* updateAllLabelGroupsStatus();

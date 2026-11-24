@@ -36,7 +36,7 @@ export function LoginPage() {
 	const redirectTarget = useMemo(() => {
 		const redirect = searchParams.get("redirect");
 		if (!redirect || !redirect.startsWith("/")) {
-			return AppRoutes.DASHBOARD;
+			return AppRoutes.EDIT.DASHBOARD;
 		}
 		return redirect;
 	}, [searchParams]);

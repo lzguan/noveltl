@@ -13,13 +13,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { routeTo } from "@/routes";
-import {
-	ChevronDownIcon,
-	LogInIcon,
-	LogOutIcon,
-	PencilLineIcon,
-	UserIcon,
-} from "lucide-react";
+import { ChevronDownIcon, LogInIcon, LogOutIcon, PencilLineIcon, UserIcon } from "lucide-react";
 
 function useAuth() {
 	const [user, setUser] = useState<User | null>(null);

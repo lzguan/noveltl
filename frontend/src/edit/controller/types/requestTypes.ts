@@ -20,11 +20,7 @@ export type RequestVariant =
 	| "addLabelData"
 	| "reloadGroup"
 	| "openChapter"
-	| "closeChapter"
-	| "createAutoLabelRun"
-	| "refreshAutoLabelRuns"
-	| "reloadAutoLabelRun"
-	| "loadAutoLabelData";
+	| "closeChapter";
 
 /**
  * Type representing a desired reservation of a state transition for a given id and kind.

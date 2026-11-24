@@ -159,7 +159,6 @@ function makeNovelDataWithoutLabelGroups(): NovelData {
 		],
 		labelGroups: [],
 		novelRole: mockRole,
-		autoLabelRuns: [],
 	};
 }
 

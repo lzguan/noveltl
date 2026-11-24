@@ -33,7 +33,6 @@ function makeNovelData(): NovelData {
 		],
 		labelGroups: [],
 		novelRole: "owner",
-		autoLabelRuns: [],
 	};
 }
 

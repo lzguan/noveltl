@@ -18,11 +18,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { ChapterFilter } from "../../controller/types/controllerTypes";
+import type { AutoLabelRun } from "@/api/models";
+import { formatRunLabel, type ChapterFilter } from "@/autolabels/runs/autoLabelRunsState";
 import type { LGProvId } from "../../controller/types/idTypes";
-import type { AutoLabelRunView } from "../../hooks/useAutoLabelState";
 import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
-import { formatRunLabel } from "./runLabels";
 
 function parseChapterNum(value: string): number | undefined {
 	const trimmed = value.trim();
@@ -39,7 +38,7 @@ export function PromoteAutoLabelDialog({
 	onPromote,
 	onClose,
 }: {
-	run: AutoLabelRunView;
+	run: AutoLabelRun;
 	labelGroups: [LGProvId, LabelGroupView][];
 	defaultLabelGroupId: LGProvId | null;
 	submitting: boolean;

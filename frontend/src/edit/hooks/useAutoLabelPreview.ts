@@ -8,6 +8,8 @@ export function useAutoLabelPreview() {
 	const [enabled, enabledRef, commitEnabled] = useSyncState(false);
 	const [loading, loadingRef, commitLoading] = useSyncState(false);
 	const [preview, previewRef, commitPreview] = useSyncState<AutoLabelPreview | null>(null);
+	const [openChapterContentIds, openChapterContentIdsRef, commitOpenChapterContentIds] =
+		useSyncState<ReadonlyMap<string, string | null>>(new Map());
 
 	const setEnabled = useCallback(
 		(next: boolean) => {
@@ -51,6 +53,33 @@ export function useAutoLabelPreview() {
 		[previewRef, commitPreview, enabledRef, loadingRef, commitLoading],
 	);
 
+	const setOpenChapterContentId = useCallback(
+		(chapterServId: string, chapterContentServId: string | null) => {
+			if (
+				openChapterContentIdsRef.current.has(chapterServId) &&
+				openChapterContentIdsRef.current.get(chapterServId) === chapterContentServId
+			) {
+				return;
+			}
+			const next = new Map(openChapterContentIdsRef.current);
+			next.set(chapterServId, chapterContentServId);
+			openChapterContentIdsRef.current = next;
+			commitOpenChapterContentIds();
+		},
+		[openChapterContentIdsRef, commitOpenChapterContentIds],
+	);
+
+	const removeOpenChapterContentId = useCallback(
+		(chapterServId: string) => {
+			if (!openChapterContentIdsRef.current.has(chapterServId)) return;
+			const next = new Map(openChapterContentIdsRef.current);
+			next.delete(chapterServId);
+			openChapterContentIdsRef.current = next;
+			commitOpenChapterContentIds();
+		},
+		[openChapterContentIdsRef, commitOpenChapterContentIds],
+	);
+
 	return {
 		enabled,
 		enabledRef,
@@ -58,8 +87,11 @@ export function useAutoLabelPreview() {
 		loadingRef,
 		preview,
 		previewRef,
+		openChapterContentIds,
 		setEnabled,
 		setLoading,
 		setPreview,
+		setOpenChapterContentId,
+		removeOpenChapterContentId,
 	};
 }

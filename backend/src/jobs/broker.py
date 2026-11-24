@@ -1,3 +1,5 @@
+from taskiq import TaskiqScheduler
+from taskiq.schedule_sources import LabelScheduleSource
 from taskiq_redis import RedisStreamBroker
 
 from src.config import redis_settings
@@ -17,3 +19,4 @@ def make_jobs_broker(url: str, queue_name: str = "jobs") -> RedisStreamBroker:
 broker = make_jobs_broker(
     f"redis://{redis_settings.REDIS_HOST}:{redis_settings.REDIS_PORT}/{redis_settings.JOBS_DATABASE}"
 )
+scheduler = TaskiqScheduler(broker, sources=[LabelScheduleSource(broker)])

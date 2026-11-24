@@ -123,6 +123,21 @@ services:
       - /home/newuser/backend/.venv
       - ./logs:/home/newuser/backend/logs
 
+  # Sends periodic maintenance tasks to the jobs queue when due. Run exactly one.
+  jobs-scheduler:
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-jobs-worker:${IMAGE_TAG:-latest}
+    pull_policy: always
+    command: ["uv", "run", "--no-sync", "taskiq", "scheduler", "src.jobs.broker:scheduler", "src.autolabels.promotions.tasks"]
+    depends_on:
+      - redis
+    environment:
+      <<: [*db-env, *redis-env]
+      UV_COMPILE_BYTECODE: "0"
+      SECRET_KEY: ${SECRET_KEY} # shared config validates this on startup
+    volumes:
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+
   memory-agent-worker:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-memory-agent-worker:${IMAGE_TAG:-latest}
     pull_policy: always

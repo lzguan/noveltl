@@ -17,7 +17,6 @@ import {
 import { TimeoutError, UnknownError } from "effect/Cause";
 import type { NovelGetters, TriggerEvent } from "./types/controllerTypes";
 import {
-	ALRProvId,
 	CCServId,
 	CProvId,
 	CServId,
@@ -28,7 +27,7 @@ import {
 	type ProvLabelGroup,
 } from "./types/idTypes";
 import { makeReservationRequest, Prov } from "./types/helperTypes";
-import type { AutoLabelRun, Chapter, LabelGroup, LabelRole, Novel } from "@/api/models";
+import type { Chapter, LabelGroup, LabelRole, Novel } from "@/api/models";
 import type { RequestEvent } from "./types/requestTypes";
 import {
 	CreateChapterNovelsNovelIdChaptersPost200Response,
@@ -43,14 +42,12 @@ import {
 import type { Role } from "@/api/models/role";
 import type { ChapterDataManager, NovelDataManager } from "./types/dataTypes";
 import { buildChapterDataManager } from "./chapterDataManager";
-import { buildAutolabelDataManager } from "./autolabelDataManager";
 
 export type NovelData = {
 	novel: Novel;
 	chapters: Chapter[];
 	labelGroups: { labelGroup: LabelGroup; role: LabelRole }[];
 	novelRole: Role;
-	autoLabelRuns: AutoLabelRun[];
 };
 
 export const buildNovelDataManager = (
@@ -170,8 +167,6 @@ export const buildNovelDataManager = (
 					return { ...slot, data: { chapterGetters, status: slot.status } };
 				}),
 			labelGroupSlot: (labelGroupId: LGProvId) => labelGroupsIndex.get(labelGroupId),
-			autoLabelRunIds: () => autolabelDM.getters.autoLabelRunIds(),
-			autoLabelRunSlot: (runId: ALRProvId) => autolabelDM.getters.autoLabelRunSlot(runId),
 		};
 
 		const _addLabelGroup = (
@@ -711,35 +706,6 @@ export const buildNovelDataManager = (
 				return events;
 			});
 
-		const autolabelDM = yield* buildAutolabelDataManager(
-			novelData.novel.novelId,
-			(event) => raiseTriggerEvent(getters, event),
-			idRepo,
-			{
-				chapterIds: () => chaptersIndex.getIds(),
-				chapter: (chId) =>
-					chaptersIndex.get(chId).pipe(
-						Effect.andThen((slot) =>
-							Effect.gen(function* () {
-								return {
-									chapterNum: slot.meta.chapter.chapterNum,
-									chapterIsPublic: slot.meta.chapter.chapterIsPublic,
-									cc:
-										slot.status === "ready"
-											? {
-													status: "ready" as const,
-													chapterContentId:
-														yield* slot.data.chapterData.getters.chapterContentId(),
-												}
-											: { status: slot.status },
-								};
-							}),
-						),
-					),
-			},
-			novelData.autoLabelRuns,
-		);
-
 		return {
 			addLabelGroup,
 			addChapter,
@@ -747,10 +713,6 @@ export const buildNovelDataManager = (
 			closeChapter,
 			flush,
 			getChapterDM,
-			createAutoLabelRun: autolabelDM.createAutoLabelRun,
-			refreshAutoLabelRuns: autolabelDM.refreshAutoLabelRuns,
-			reloadAutoLabelRun: autolabelDM.reloadAutoLabelRun,
-			loadAutoLabelData: autolabelDM.loadAutoLabelData,
 			getters,
 		};
 	});

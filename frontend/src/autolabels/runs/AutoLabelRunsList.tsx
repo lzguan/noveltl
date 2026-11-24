@@ -1,3 +1,6 @@
+import { ChevronRight, EllipsisIcon, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import type { AutoLabelProgress, AutoLabelRun } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -8,31 +11,25 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ChevronRight, EllipsisIcon, RefreshCw } from "lucide-react";
-import { useMemo, useState } from "react";
-import type { ChapterFilter } from "../../controller/types/controllerTypes";
-import type { CProvId, LGProvId, ProvChapter } from "../../controller/types/idTypes";
-import type { AutoLabelManager } from "../../managers/autolabelManager";
-import type {
-	AutoLabelRunView,
-	AutoLabelView,
-	ChapterMatchStatus,
-	useAutoLabelState,
-} from "../../hooks/useAutoLabelState";
-import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
-import { PromoteAutoLabelDialog } from "./PromoteAutoLabelDialog";
-import { formatRunLabel } from "./runLabels";
+import {
+	formatRunLabel,
+	getChapterMatchStatus,
+	type AutoLabelRunEntry,
+	type ChapterMatchStatus,
+} from "./autoLabelRunsState";
 
-function statusVariant(status: AutoLabelView["autoLabelStatus"]) {
+function statusVariant(status: AutoLabelProgress) {
 	if (status === "failed") return "destructive";
 	if (status === "done") return "secondary";
 	return "outline";
 }
 
-function countDone(run: AutoLabelRunView): string {
-	if (run.status !== "ready") return "-";
-	const done = run.autolabels.filter((al) => al.autoLabelStatus === "done").length;
-	return `${done}/${run.autolabels.length}`;
+function countDone(entry: AutoLabelRunEntry): string {
+	if (entry.status !== "ready") return "-";
+	const done = entry.autolabels.filter(
+		(al) => al.autoLabelMeta.autoLabelStatus === "done",
+	).length;
+	return `${done}/${entry.autolabels.length}`;
 }
 
 function formatCreatedAt(value: string): string {
@@ -44,11 +41,6 @@ function formatCreatedAt(value: string): string {
 		hour: "numeric",
 		minute: "2-digit",
 	});
-}
-
-function createdAtMs(run: AutoLabelRunView): number {
-	const time = new Date(run.run.createdAt).getTime();
-	return Number.isNaN(time) ? 0 : time;
 }
 
 function MatchDot({ status }: { status: ChapterMatchStatus | undefined }) {
@@ -65,15 +57,29 @@ function MatchDot({ status }: { status: ChapterMatchStatus | undefined }) {
 }
 
 function RunRows({
-	run,
-	matchMap,
+	entry,
+	openChapterContentIds,
 	chapterNumById,
 }: {
-	run: AutoLabelRunView;
-	matchMap: Map<CProvId, ChapterMatchStatus> | undefined;
-	chapterNumById: Map<CProvId, number>;
+	entry: AutoLabelRunEntry;
+	openChapterContentIds: ReadonlyMap<string, string | null>;
+	chapterNumById: ReadonlyMap<string, number>;
 }) {
-	if (run.status !== "ready") {
+	if (entry.status === "loading") {
+		return (
+			<div className="px-2 pb-2 text-xs text-muted-foreground">
+				Loading chapter statuses...
+			</div>
+		);
+	}
+	if (entry.status === "error") {
+		return (
+			<div className="px-2 pb-2 text-xs text-destructive">
+				Failed to load chapter statuses. Reload to retry.
+			</div>
+		);
+	}
+	if (entry.status !== "ready") {
 		return (
 			<div className="px-2 pb-2 text-xs text-muted-foreground">
 				Reload this run to load chapter statuses.
@@ -81,7 +87,7 @@ function RunRows({
 		);
 	}
 
-	const rows = [...run.autolabels].sort((a, b) => {
+	const rows = [...entry.autolabels].sort((a, b) => {
 		const aNum = chapterNumById.get(a.chapterId) ?? Number.MAX_SAFE_INTEGER;
 		const bNum = chapterNumById.get(b.chapterId) ?? Number.MAX_SAFE_INTEGER;
 		return aNum - bNum;
@@ -90,18 +96,26 @@ function RunRows({
 	return (
 		<div className="flex flex-col gap-1 px-2 pb-2">
 			{rows.map((al) => (
-				<div key={al.autoLabelId} className="flex items-center gap-1 text-xs">
-					<MatchDot status={matchMap?.get(al.chapterId)} />
+				<div key={al.autoLabelMeta.autoLabelId} className="flex items-center gap-1 text-xs">
+					<MatchDot
+						status={getChapterMatchStatus(
+							al.chapterId,
+							al.autoLabelMeta.chapterContentId,
+							openChapterContentIds,
+						)}
+					/>
 					<span className="min-w-10 text-muted-foreground">
 						Ch. {chapterNumById.get(al.chapterId) ?? "?"}
 					</span>
-					<Badge variant={statusVariant(al.autoLabelStatus)}>{al.autoLabelStatus}</Badge>
-					{al.autoLabelStatus === "done" && (
+					<Badge variant={statusVariant(al.autoLabelMeta.autoLabelStatus)}>
+						{al.autoLabelMeta.autoLabelStatus}
+					</Badge>
+					{al.autoLabelMeta.autoLabelStatus === "done" && (
 						<span className="text-muted-foreground">OK</span>
 					)}
-					{al.autoLabelMessage && (
+					{al.autoLabelMeta.autoLabelMessage && (
 						<span className="min-w-0 flex-1 truncate text-muted-foreground">
-							{al.autoLabelMessage}
+							{al.autoLabelMeta.autoLabelMessage}
 						</span>
 					)}
 				</div>
@@ -111,10 +125,10 @@ function RunRows({
 }
 
 function AutoLabelRunItem({
-	run,
+	entry,
 	selected,
-	matchMap,
 	currentStatus,
+	openChapterContentIds,
 	chapterNumById,
 	onSelectRun,
 	onDeselectRun,
@@ -122,19 +136,19 @@ function AutoLabelRunItem({
 	promoteDisabled,
 	onPromote,
 }: {
-	run: AutoLabelRunView;
+	entry: AutoLabelRunEntry;
 	selected: boolean;
-	matchMap: Map<CProvId, ChapterMatchStatus> | undefined;
 	currentStatus: ChapterMatchStatus | undefined;
-	chapterNumById: Map<CProvId, number>;
-	onSelectRun: AutoLabelManager["selectRun"];
-	onDeselectRun: AutoLabelManager["deselectRun"];
-	onReloadRun: AutoLabelManager["reloadRun"];
+	openChapterContentIds: ReadonlyMap<string, string | null>;
+	chapterNumById: ReadonlyMap<string, number>;
+	onSelectRun: (runId: string) => void;
+	onDeselectRun: () => void;
+	onReloadRun: (runId: string) => void;
 	promoteDisabled: boolean;
 	onPromote: () => void;
 }) {
 	const [expanded, setExpanded] = useState(false);
-	const runLabel = formatRunLabel(run);
+	const runLabel = formatRunLabel(entry.run);
 
 	return (
 		<Collapsible open={expanded} onOpenChange={setExpanded}>
@@ -165,7 +179,7 @@ function AutoLabelRunItem({
 							if (selected) {
 								onDeselectRun();
 							} else {
-								onSelectRun(run.run.runId);
+								onSelectRun(entry.run.runId);
 							}
 						}}
 					>
@@ -173,19 +187,19 @@ function AutoLabelRunItem({
 						<span className="min-w-0 flex-1 truncate">{runLabel}</span>
 						<Badge
 							variant={
-								run.status === "ready"
-									? statusVariant(run.overallStatus)
+								entry.status === "ready"
+									? statusVariant(entry.overallStatus)
 									: "outline"
 							}
 						>
-							{run.status === "ready" ? run.overallStatus : run.status}
+							{entry.status === "ready" ? entry.overallStatus : entry.status}
 						</Badge>
 					</button>
 					<Button
 						type="button"
 						size="icon-xs"
 						variant="ghost"
-						onClick={() => onReloadRun(run.run.runId)}
+						onClick={() => onReloadRun(entry.run.runId)}
 						aria-label={`Reload ${runLabel}`}
 					>
 						<RefreshCw />
@@ -209,58 +223,48 @@ function AutoLabelRunItem({
 					</DropdownMenu>
 				</div>
 				<div className="px-7 pb-1 text-xs text-muted-foreground">
-					{run.run.modelName} · {countDone(run)} done ·{" "}
-					{formatCreatedAt(run.run.createdAt)}
+					{entry.run.modelName} · {countDone(entry)} done ·{" "}
+					{formatCreatedAt(entry.run.createdAt)}
 				</div>
 				<CollapsibleContent>
-					<RunRows run={run} matchMap={matchMap} chapterNumById={chapterNumById} />
+					<RunRows
+						entry={entry}
+						openChapterContentIds={openChapterContentIds}
+						chapterNumById={chapterNumById}
+					/>
 				</CollapsibleContent>
 			</div>
 		</Collapsible>
 	);
 }
 
-export function AutoLabelRunsPanel({
-	autoLabels,
-	chapters,
+export function AutoLabelRunsList({
+	runs,
+	selectedRunId,
+	refreshing,
+	chapterNumById,
+	openChapterContentIds,
 	currentChapterId,
 	onSelectRun,
 	onDeselectRun,
 	onRefreshAllRuns,
 	onReloadRun,
-	labelGroups,
-	activeId,
-	setActive,
-	promotionSubmitting,
-	onPromote,
+	canPromote,
+	onPromoteRun,
 }: {
-	autoLabels: ReturnType<typeof useAutoLabelState>;
-	chapters: ProvChapter[];
-	currentChapterId: CProvId | null;
-	onSelectRun: AutoLabelManager["selectRun"];
-	onDeselectRun: AutoLabelManager["deselectRun"];
-	onRefreshAllRuns: AutoLabelManager["refreshAllRuns"];
-	onReloadRun: AutoLabelManager["reloadRun"];
-	labelGroups: [LGProvId, LabelGroupView][];
-	activeId: LGProvId | null;
-	setActive: (id: LGProvId | null) => void;
-	promotionSubmitting: boolean;
-	onPromote: (
-		run: AutoLabelRunView,
-		labelGroupId: LGProvId,
-		filter: ChapterFilter,
-	) => Promise<string | null>;
+	runs: readonly AutoLabelRunEntry[];
+	selectedRunId: string | null;
+	refreshing: boolean;
+	chapterNumById: ReadonlyMap<string, number>;
+	openChapterContentIds: ReadonlyMap<string, string | null>;
+	currentChapterId: string | null;
+	onSelectRun: (runId: string) => void;
+	onDeselectRun: () => void;
+	onRefreshAllRuns: () => void;
+	onReloadRun: (runId: string) => void;
+	canPromote: boolean;
+	onPromoteRun: (run: AutoLabelRun) => void;
 }) {
-	const [promotingRun, setPromotingRun] = useState<AutoLabelRunView | null>(null);
-	const chapterNumById = useMemo(
-		() => new Map(chapters.map((chapter) => [chapter.chapterId, chapter.chapterNum])),
-		[chapters],
-	);
-	const sortedRuns = useMemo(
-		() => [...autoLabels.runs].sort((a, b) => createdAtMs(b) - createdAtMs(a)),
-		[autoLabels.runs],
-	);
-
 	return (
 		<section className="flex flex-col gap-1 p-2">
 			<div className="flex items-center gap-2 px-1">
@@ -270,61 +274,49 @@ export function AutoLabelRunsPanel({
 					size="xs"
 					variant="ghost"
 					onClick={onRefreshAllRuns}
-					disabled={autoLabels.refreshing}
+					disabled={refreshing}
 				>
 					<RefreshCw data-icon="inline-start" />
-					{autoLabels.refreshing ? "Reloading" : "Reload All"}
+					{refreshing ? "Reloading" : "Reload All"}
 				</Button>
 			</div>
 			<div className="flex flex-col gap-1">
-				{sortedRuns.length === 0 ? (
+				{runs.length === 0 ? (
 					<div className="px-1 py-2 text-xs text-muted-foreground">
 						No autolabel runs yet.
 					</div>
 				) : (
-					sortedRuns.map((run) => {
-						const selected = autoLabels.selectedRunId === run.run.runId;
-						const matchMap = autoLabels.chapterMatchMap.get(run.run.runId);
-						const currentStatus = currentChapterId
-							? matchMap?.get(currentChapterId)
+					runs.map((entry) => {
+						const selected = selectedRunId === entry.run.runId;
+						const currentAutoLabel =
+							currentChapterId !== null && entry.status === "ready"
+								? entry.autolabels.find((al) => al.chapterId === currentChapterId)
+								: undefined;
+						const currentStatus = currentAutoLabel
+							? getChapterMatchStatus(
+									currentAutoLabel.chapterId,
+									currentAutoLabel.autoLabelMeta.chapterContentId,
+									openChapterContentIds,
+								)
 							: undefined;
 						return (
 							<AutoLabelRunItem
-								key={run.run.runId}
-								run={run}
+								key={entry.run.runId}
+								entry={entry}
 								selected={selected}
-								matchMap={matchMap}
 								currentStatus={currentStatus}
+								openChapterContentIds={openChapterContentIds}
 								chapterNumById={chapterNumById}
 								onSelectRun={onSelectRun}
 								onDeselectRun={onDeselectRun}
 								onReloadRun={onReloadRun}
-								promoteDisabled={
-									labelGroups.length === 0 || run.run.servId === null
-								}
-								onPromote={() => setPromotingRun(run)}
+								promoteDisabled={!canPromote}
+								onPromote={() => onPromoteRun(entry.run)}
 							/>
 						);
 					})
 				)}
 			</div>
-			{promotingRun !== null && (
-				<PromoteAutoLabelDialog
-					run={promotingRun}
-					labelGroups={labelGroups}
-					defaultLabelGroupId={activeId}
-					submitting={promotionSubmitting}
-					onPromote={async (labelGroupId, filter) => {
-						const error = await onPromote(promotingRun, labelGroupId, filter);
-						if (error !== null) return error;
-						// The chosen group becomes active so its promoted labels are shown.
-						setActive(labelGroupId);
-						setPromotingRun(null);
-						return null;
-					}}
-					onClose={() => setPromotingRun(null)}
-				/>
-			)}
 		</section>
 	);
 }

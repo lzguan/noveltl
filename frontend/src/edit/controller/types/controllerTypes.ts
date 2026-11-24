@@ -1,7 +1,5 @@
 import type { IDLabelOp, ULabelOp } from "./dataTypes";
 import type {
-	ALRProvId,
-	AProvId,
 	CCProvId,
 	CCServId,
 	CProvId,
@@ -10,21 +8,14 @@ import type {
 	LGServId,
 	LProvId,
 	LServId,
-	ProvAutoLabel,
-	ProvAutoLabelRun,
 	ProvChapter,
 	ProvLabelGroup,
 } from "./idTypes";
-import type { CluenerParams, DoNothingParams, Novel, TextOp } from "@/api/models";
+import type { Novel, TextOp } from "@/api/models";
 import { Effect } from "effect";
 import type { KeyedRequestEvent } from "./requestTypes";
 import type { NotFoundException } from "./errors";
-import type {
-	ChapterGetterSlot,
-	LabelDataSlot,
-	LabelGroupSlot,
-	AutoLabelRunGetterSlot,
-} from "./helperTypes";
+import type { ChapterGetterSlot, LabelDataSlot, LabelGroupSlot } from "./helperTypes";
 import type { Role } from "@/api/models/role";
 import type { UnknownError } from "effect/Cause";
 
@@ -79,17 +70,7 @@ export interface NovelGetters {
 	labelGroupServerId: (labelGroupId: LGProvId) => Effect.Effect<LGServId | null>;
 	chapterGetterSlot: (chapterId: CProvId) => Effect.Effect<ChapterGetterSlot, NotFoundException>;
 	labelGroupSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelGroupSlot, NotFoundException>;
-	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;
-	autoLabelRunSlot: (
-		runId: ALRProvId,
-	) => Effect.Effect<AutoLabelRunGetterSlot, NotFoundException>;
 }
-
-export type ChapterFilter = {
-	readonly start?: number;
-	readonly end?: number;
-	readonly isPublic?: boolean;
-};
 
 /**
  * Type for any event triggered by the user which requires state updates. Will be updated.
@@ -128,18 +109,6 @@ export type NovelUserEvent =
 			chapterNum: number;
 			chapterTitle: string;
 			chapterIsPublic: boolean;
-	  }
-	| {
-			eventType: "createAutoLabelRun";
-			params: CluenerParams | DoNothingParams;
-			chapterFilter: ChapterFilter;
-	  }
-	| { eventType: "refreshAutoLabelRuns"; flags?: { now: boolean } }
-	| { eventType: "reloadAutoLabelRun"; runId: ALRProvId; flags?: { now: boolean } }
-	| {
-			eventType: "loadAutoLabelData";
-			autoLabelId: AProvId;
-			flags?: { now: boolean; forPreview: boolean };
 	  };
 
 /**
@@ -160,6 +129,7 @@ export type NovelUserEvent =
  */
 export type TriggerEvent =
 	| { eventType: "textChanged"; op: TextOp; chapterId: CProvId }
+	| { eventType: "textSynced"; chapterId: CProvId }
 	| { eventType: "labelChanged"; op: IDLabelOp }
 	| { eventType: "labelGroupAdded"; labelGroup: ProvLabelGroup }
 	| { eventType: "chapterAdded"; chapter: ProvChapter }
@@ -190,18 +160,6 @@ export type TriggerEvent =
 			chapterId: CProvId;
 			labelGroupId: LGProvId;
 			wasDeleted: boolean;
-	  }
-	| {
-			eventType: "autoLabelRunCreated";
-			run: ProvAutoLabelRun;
-			autoLabels: Omit<ProvAutoLabel, "autoLabelData">[];
-	  }
-	| { eventType: "autoLabelRunsRefreshed" }
-	| { eventType: "autoLabelRunReloaded"; runId: ALRProvId }
-	| {
-			eventType: "autoLabelDataLoaded";
-			autoLabelId: AProvId;
-			flags: { forPreview: boolean };
 	  };
 
 /**

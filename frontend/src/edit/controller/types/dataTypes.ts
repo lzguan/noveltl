@@ -1,4 +1,4 @@
-import type { CProvId, LGProvId, LProvId, ALRProvId, AProvId, CCServId } from "./idTypes";
+import type { CProvId, LGProvId, LProvId, CCServId } from "./idTypes";
 import type { RequestEvent } from "./requestTypes";
 import type { AddLabelOp, DeleteLabelOp, UpdateLabelOp } from "@/api/models";
 import type { Effect } from "effect";
@@ -6,14 +6,10 @@ import type { UnknownError } from "effect/Cause";
 import type {
 	AlreadyOpenException,
 	DuplicateChapterNumException,
-	FatalException,
 	LoadingException,
 	NotFoundException,
 } from "./errors";
-import type { ChapterGetters, ChapterFilter } from "./controllerTypes";
-import type { NovelGetters } from "./controllerTypes";
-import type { AutoLabelRunGetterSlot } from "./helperTypes";
-import type { CluenerParams, DoNothingParams } from "@/api/models";
+import type { ChapterGetters, NovelGetters } from "./controllerTypes";
 
 type ProvDeleteLabelOp = Omit<DeleteLabelOp, "labelId"> & { labelId: LProvId };
 type ProvUpdateLabelOp = Omit<UpdateLabelOp, "labelId"> & { labelId: LProvId };
@@ -100,79 +96,8 @@ export type NovelDataManager = DataManager<
 		 * @param chapterId - Returns null if chapter is not open or still loading.
 		 */
 		getChapterDM: (chapterId: CProvId) => ChapterDataManager | null;
-		/**
-		 * Creates an autolabel run and dispatches workers.
-		 */
-		createAutoLabelRun: (
-			params: CluenerParams | DoNothingParams,
-			chapterFilter: ChapterFilter,
-		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-		/**
-		 * Reloads the autolabel run list from the server and replaces the local index.
-		 */
-		refreshAutoLabelRuns: (flags?: {
-			now: boolean;
-		}) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-		/**
-		 * Reloads autolabel metadata for a single run from the server.
-		 */
-		reloadAutoLabelRun: (
-			runId: ALRProvId,
-			flags?: {
-				now: boolean;
-			},
-		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-		/**
-		 * Loads autolabel data (the label payload) for a single autolabel.
-		 */
-		loadAutoLabelData: (
-			autoLabelId: AProvId,
-			flags?: {
-				now: boolean;
-				forPreview: boolean;
-			},
-		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 	},
 	NovelGetters
->;
-
-/**
- * Getters exposed by the autolabel data manager.
- */
-export interface AutolabelGetters {
-	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;
-	autoLabelRunSlot: (
-		runId: ALRProvId,
-	) => Effect.Effect<AutoLabelRunGetterSlot, NotFoundException>;
-}
-
-/**
- * Manages autolabel runs and their child autolabels.
- */
-export type AutolabelDataManager = DataManager<
-	{
-		createAutoLabelRun: (
-			params: CluenerParams | DoNothingParams,
-			chapterFilter: ChapterFilter,
-		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-		refreshAutoLabelRuns: (flags?: {
-			now: boolean;
-		}) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-		reloadAutoLabelRun: (
-			runId: ALRProvId,
-			flags?: {
-				now: boolean;
-			},
-		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-		loadAutoLabelData: (
-			autoLabelId: AProvId,
-			flags?: {
-				now: boolean;
-				forPreview: boolean;
-			},
-		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-	},
-	AutolabelGetters
 >;
 
 /**

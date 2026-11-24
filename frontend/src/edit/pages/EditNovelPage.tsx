@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Effect } from "effect";
 import {
-	readAutoLabelRunsAutoLabelRunsGet,
 	readChaptersByNovelChaptersGet,
 	readLabelGroupsWithRoleLabelGroupsWithRoleGet,
 	readNovelWithContributorsNovelsNovelIdWithContributorsGet,
 } from "@/api/endpoints/default/default";
 import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
+import type { SelectedAutoLabelRun } from "@/autolabels/runs/autoLabelRunsState";
 import { buildController } from "../controller/controller";
 import type { NovelData } from "../controller/novelDataManager";
 import { Prov } from "../controller/types/helperTypes";
@@ -15,13 +15,16 @@ import { generateRandomColor } from "@/edit/lib/text-model/builtin/colors";
 import { useEditorState } from "../hooks/useEditorState";
 import { useChapters } from "../hooks/useChapters";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
-import { useAutoLabelState } from "../hooks/useAutoLabelState";
-import { useAutoLabelPreview } from "../hooks/useAutoLabelPreview";
+import { useAutoLabelPreview } from "@/autolabels/preview/useAutoLabelPreview";
+import {
+	createOpenChapterContentsSubscriber,
+	deriveAutoLabelPreviewTarget,
+	useOpenChapterContents,
+} from "../hooks/useOpenChapterContents";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
 import { createErrorManager } from "../managers/errorManager";
-import { createAutoLabelManager } from "../managers/autolabelManager";
 import { makeActiveGroupLabelSource } from "../labeling/activeGroupLabelSource";
 import type { LabelEditing, LabelSink } from "../labeling/types";
 import { AutoLabelPanel } from "../panels/autoLabels/AutoLabelPanel";
@@ -54,22 +57,46 @@ export function EditNovelPage() {
 	const [novelId, setNovelId] = useState<string | null>(null);
 	const [chapters, setChapters] = useState<Chapter[] | null>(null);
 	const [labelGroups, setLabelGroups] = useState<LabelGroupWithRole[] | null>(null);
-	const [autoLabelRuns, setAutoLabelRuns] = useState<NovelData["autoLabelRuns"] | null>(null);
 	const [error, setError] = useState<unknown>(null);
 
 	const editorState = useEditorState();
 	const chapterState = useChapters();
+	const openChapterContents = useOpenChapterContents();
 	const trackedLabelGroups = useTrackedLabelGroups();
-	const autoLabels = useAutoLabelState();
-	const autoLabelPreview = useAutoLabelPreview();
+	const [selectedAutoLabelRun, setSelectedAutoLabelRun] = useState<SelectedAutoLabelRun>({
+		runId: null,
+	});
 
 	const [managers, setManagers] = useState<{
 		chapterMgr: ReturnType<typeof createChapterManager>;
 		labelGroupMgr: ReturnType<typeof createLabelGroupManager>;
 		editorMgr: ReturnType<typeof createEditorManager>;
-		autoLabelMgr: ReturnType<typeof createAutoLabelManager>;
 		controllerGetters: NovelGetters;
 	} | null>(null);
+
+	const previewTarget = useMemo(
+		() =>
+			deriveAutoLabelPreviewTarget(
+				editorState.data,
+				managers?.controllerGetters ?? null,
+				openChapterContents.openChapterContentIds,
+			),
+		[managers, editorState.data, openChapterContents.openChapterContentIds],
+	);
+
+	const chapterNumByServerId = useMemo(() => {
+		if (!managers) return new Map<string, number>();
+		return new Map(
+			chapterState.chapterList.flatMap((chapter) => {
+				const servId = Effect.runSync(
+					managers.controllerGetters.chapterServerId(chapter.chapterId),
+				);
+				return servId === null ? [] : [[servId, chapter.chapterNum] as const];
+			}),
+		);
+	}, [managers, chapterState.chapterList]);
+
+	const autoLabelPreview = useAutoLabelPreview(selectedAutoLabelRun, previewTarget);
 
 	const labeling = useMemo<LabelEditing>(() => {
 		const source = makeActiveGroupLabelSource({
@@ -126,26 +153,18 @@ export function EditNovelPage() {
 					throw new Error(`Failed to load label groups: ${resp.status}`);
 				setLabelGroups(resp.data);
 			})
-			.then(() => readAutoLabelRunsAutoLabelRunsGet({ novelId }))
-			.then((resp) => {
-				if (resp.status !== 200)
-					throw new Error(`Failed to load auto label runs: ${resp.status}`);
-				setAutoLabelRuns(resp.data);
-			})
 			.catch(setError);
 	}, [novelId]);
 
 	// Build controller + managers + seed hooks
 	useEffect(() => {
-		if (novel === null || chapters === null || labelGroups === null || autoLabelRuns === null)
-			return;
+		if (novel === null || chapters === null || labelGroups === null) return;
 
 		const novelData: NovelData = {
 			novel: novel.novel,
 			novelRole: novel.role,
 			labelGroups: labelGroups,
 			chapters: chapters,
-			autoLabelRuns: autoLabelRuns,
 		};
 		const ctrl = Effect.runSync(buildController(novelData));
 		const errorMgr = createErrorManager();
@@ -179,25 +198,11 @@ export function EditNovelPage() {
 			activeChapterIdRef: chapterState.activeChapterIdRef,
 			activeGroupIdRef: trackedLabelGroups.activeLabelGroupIdRef,
 		});
-		const autoLabelMgr = createAutoLabelManager({
-			controllerUserEvent,
-			controllerGetters: ctrl.getters,
-			autoLabels,
-			autoLabelPreview,
-			dataRef: editorState.dataRef,
-		});
-
 		ctrl.subscribe(chapterMgr.handleControllerEvent);
 		ctrl.subscribe(labelGroupMgr.handleControllerEvent);
 		ctrl.subscribe(editorMgr.handleControllerEvent, 0);
-		ctrl.subscribe(autoLabelMgr.handleControllerEvent);
+		ctrl.subscribe(createOpenChapterContentsSubscriber(openChapterContents));
 		ctrl.subscribe(errorMgr.handleTriggerEvent);
-
-		Effect.runSync(
-			autoLabelMgr.handleControllerEvent(ctrl.getters, {
-				eventType: "autoLabelRunsRefreshed",
-			}),
-		);
 
 		// Seed chapters from controller
 		Effect.runSync(
@@ -236,11 +241,10 @@ export function EditNovelPage() {
 			chapterMgr,
 			labelGroupMgr,
 			editorMgr,
-			autoLabelMgr,
 			controllerGetters: ctrl.getters,
 		});
 		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, [novel, chapters, labelGroups, autoLabelRuns]);
+	}, [novel, chapters, labelGroups]);
 
 	// Extract novelId from URL
 	useEffect(() => {
@@ -352,6 +356,7 @@ export function EditNovelPage() {
 										keepMounted: true,
 										content: (
 											<AutoLabelPanel
+												key={novel.novel.novelId}
 												novelId={novel.novel.novelId}
 												labelGroupServerId={
 													managers.labelGroupMgr.labelGroupServerId
@@ -359,17 +364,17 @@ export function EditNovelPage() {
 												onLabelGroupPromoted={
 													managers.labelGroupMgr.reloadPromotedLabelGroup
 												}
-												autoLabels={autoLabels}
-												autoLabelManager={managers.autoLabelMgr}
-												chapters={chapterState.chapterList}
-												currentChapterId={currentChapterId}
+												chapterNumByServerId={chapterNumByServerId}
+												currentChapterId={activeChapterServerId}
+												openChapterContentIds={
+													openChapterContents.openChapterContentIds
+												}
 												labelGroups={trackedLabelGroups.labelGroups}
 												setActive={managers.labelGroupMgr.setActive}
 												previewEnabled={autoLabelPreview.enabled}
 												previewLoading={autoLabelPreview.loading}
-												onSetPreviewEnabled={
-													managers.autoLabelMgr.setPreviewEnabled
-												}
+												onSetPreviewEnabled={autoLabelPreview.setEnabled}
+												onSelectedRunChange={setSelectedAutoLabelRun}
 												activeId={trackedLabelGroups.activeLabelGroupId}
 											/>
 										),

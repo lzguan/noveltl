@@ -4,7 +4,7 @@ import type { EditorMode } from "../managers/editorManager";
 import type { EditorData } from "../hooks/useEditorState";
 import type { TextOp } from "@/api/models";
 import type { LabelEditing } from "../labeling/types";
-import type { AutoLabelPreview } from "../hooks/useAutoLabelPreview";
+import type { AutoLabelPreview } from "@/autolabels/preview/useAutoLabelPreview";
 
 export function EditorPanel({
 	data,

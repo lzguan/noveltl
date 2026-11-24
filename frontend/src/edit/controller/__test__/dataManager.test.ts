@@ -159,7 +159,6 @@ function makeNovelDataWithoutLabelGroups(): NovelData {
 		],
 		labelGroups: [],
 		novelRole: mockRole,
-		autoLabelRuns: [],
 	};
 }
 
@@ -395,6 +394,66 @@ describe("buildChapterDataManager", () => {
 				"😀😀𠮷Xlice met Bob at the park.",
 			);
 			expect(chapterDM.getters.isTextSynced()).toBe(false);
+		});
+
+		it("emits textSynced only when text finishes syncing with no further edits queued", async () => {
+			const { chapterDM, triggerEvents, chapterId, idRepo } =
+				Effect.runSync(buildTestChapterDM());
+			const send = vi.mocked(updateChapterContentChaptersChapterIdContentPatch);
+			send.mockClear();
+			send.mockResolvedValueOnce({
+				status: 200,
+				data: {
+					chapterContentId: UUID7,
+					chapterContentVersion: 2,
+					labelDataIdMap: { [UUID4]: UUID8 },
+				},
+				headers: new Headers(),
+			});
+
+			Effect.runSync(chapterDM.insertTextAt(0, "X"));
+			const firstEvents = Effect.runSync(chapterDM.flush());
+			const firstTextEvent = firstEvents.find((entry) => entry.variant === "textOp");
+			if (!firstTextEvent) throw new Error("No text request was queued");
+
+			// Queue another edit before the first request completes -> no textSynced yet.
+			Effect.runSync(chapterDM.insertTextAt(1, "Y"));
+			const firstReservations = firstTextEvent.reservationRequest.reserveList();
+			Effect.runSync(reserveAll(idRepo, firstReservations));
+			const firstResponse = await Effect.runPromise(
+				firstTextEvent.send(RequestKey("sync-1")),
+			);
+			await Effect.runPromise(firstTextEvent.postSend(firstResponse));
+			Effect.runSync(releaseAllOnSuccess(idRepo, firstReservations));
+			expect(chapterDM.getters.isTextSynced()).toBe(false);
+			expect(triggerEvents.some((event) => event.eventType === "textSynced")).toBe(false);
+
+			// Flushing and completing the remaining edit emits textSynced.
+			const secondContentId = "00000000-0000-0000-0000-0000000000a9";
+			const secondLabelDataId = "00000000-0000-0000-0000-0000000000aa";
+			send.mockResolvedValueOnce({
+				status: 200,
+				data: {
+					chapterContentId: secondContentId,
+					chapterContentVersion: 3,
+					labelDataIdMap: { [UUID8]: secondLabelDataId },
+				},
+				headers: new Headers(),
+			});
+			const secondEvents = Effect.runSync(chapterDM.flush());
+			const secondTextEvent = secondEvents.find((entry) => entry.variant === "textOp");
+			if (!secondTextEvent) throw new Error("No second text request was queued");
+			const secondReservations = secondTextEvent.reservationRequest.reserveList();
+			Effect.runSync(reserveAll(idRepo, secondReservations));
+			const secondResponse = await Effect.runPromise(
+				secondTextEvent.send(RequestKey("sync-2")),
+			);
+			await Effect.runPromise(secondTextEvent.postSend(secondResponse));
+			Effect.runSync(releaseAllOnSuccess(idRepo, secondReservations));
+			expect(chapterDM.getters.isTextSynced()).toBe(true);
+			expect(triggerEvents.filter((event) => event.eventType === "textSynced")).toEqual([
+				{ eventType: "textSynced", chapterId },
+			]);
 		});
 
 		it("converts label writes while retaining UTF-16 local ranges", async () => {

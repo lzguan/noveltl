@@ -28,8 +28,6 @@ const getters: NovelGetters = {
 	labelGroupServerId: unusedGetter,
 	chapterGetterSlot: unusedGetter,
 	labelGroupSlot: unusedGetter,
-	autoLabelRunIds: unusedGetter,
-	autoLabelRunSlot: unusedGetter,
 };
 
 function setup() {

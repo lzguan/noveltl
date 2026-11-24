@@ -170,24 +170,6 @@ export const buildController = (
 						yield* dispatch(chapterDM.reloadGroup(event.labelGroupId, true));
 						break;
 					}
-					case "createAutoLabelRun": {
-						yield* dispatch(
-							novelDM.createAutoLabelRun(event.params, event.chapterFilter),
-						);
-						break;
-					}
-					case "refreshAutoLabelRuns": {
-						yield* dispatch(novelDM.refreshAutoLabelRuns(event.flags));
-						break;
-					}
-					case "reloadAutoLabelRun": {
-						yield* dispatch(novelDM.reloadAutoLabelRun(event.runId, event.flags));
-						break;
-					}
-					case "loadAutoLabelData": {
-						yield* dispatch(novelDM.loadAutoLabelData(event.autoLabelId, event.flags));
-						break;
-					}
 				}
 
 				yield* requestManager.debounce();

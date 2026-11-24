@@ -6,7 +6,6 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from httpx2 import Response
@@ -240,15 +239,11 @@ class TestCreateChaptersByUpload:
         errors = response.json()["detail"]
         assert all("input" not in err and "url" not in err for err in errors)
 
-    def test_chunked_upload_commits_and_rolls_back_atomically(
+    def test_bulk_upload_commits_and_rolls_back_atomically_on_existing_duplicate(
         self,
         client: TestClient,
-        monkeypatch: pytest.MonkeyPatch,
         novel_access_scenario: DatabaseScenario,
     ) -> None:
-        from src.novels import imports as novel_imports
-
-        monkeypatch.setattr(novel_imports, "UPLOAD_BATCH_SIZE", 2)
         novel_id = novel_access_scenario.novels["prt"].novel_id
         owner = novel_access_scenario.users["owner"]
 
@@ -261,16 +256,16 @@ class TestCreateChaptersByUpload:
         assert ok_response.status_code == status.HTTP_200_OK
         assert [chapter["chapterNum"] for chapter in ok_response.json()] == [600, 601, 602, 603, 604]
 
-        # A duplicate in the second batch rolls back the first batch too.
+        # A duplicate against an existing chapter rolls back the entire COPY transaction.
         conflict_response = _post_chapter_upload(
             client,
             owner,
             novel_id,
             _chapter_upload(
                 [
-                    {"chapterNum": 700, "chapterContentText": "First batch"},
-                    {"chapterNum": 701, "chapterContentText": "First batch 2"},
-                    {"chapterNum": 600, "chapterContentText": "Duplicate in second batch"},
+                    {"chapterNum": 700, "chapterContentText": "New chapter 1"},
+                    {"chapterNum": 701, "chapterContentText": "New chapter 2"},
+                    {"chapterNum": 600, "chapterContentText": "Existing duplicate"},
                 ]
             ),
         )

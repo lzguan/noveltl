@@ -1,6 +1,5 @@
 from collections.abc import AsyncIterable
 from tempfile import TemporaryFile
-from time import monotonic
 from uuid import UUID
 
 from src.files.access import create_file
@@ -9,18 +8,11 @@ from src.files.config import file_store_settings
 from src.translations.actions.actions import ActionTaskContext
 
 
-async def store_lines(
-    context: ActionTaskContext, store: AsyncObjectStore, lines: AsyncIterable[bytes], *, renew_seconds: float
-) -> UUID:
-    renew_at = monotonic() + renew_seconds
+async def store_lines(context: ActionTaskContext, store: AsyncObjectStore, lines: AsyncIterable[bytes]) -> UUID:
     with TemporaryFile(mode="w+b") as content:
         async for line in lines:
             content.write(line)
-            if monotonic() >= renew_at:
-                await context.renew_lease()
-                renew_at = monotonic() + renew_seconds
-        # The upload is one awaited operation, so it starts with a fresh lease.
-        await context.renew_lease()
+        await context.db.commit()
         content.seek(0)
         stored_file = await create_file(
             context.db,
@@ -31,5 +23,4 @@ async def store_lines(
             namespace="translations",
             content_type="application/jsonl",
         )
-        await context.db.flush()
         return stored_file.file_id

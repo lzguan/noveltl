@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.files.access import fetch_file
+from src.files.access import fetch_file, get_file
 from src.files.async_storage import AsyncObjectStore
 from src.memory.models import MemoryGroup
 from src.memory.plugins.conventions.access import read_conventions
@@ -36,6 +36,7 @@ async def batch_chapter_ids(context: ActionTaskContext, stage: TranslationStage)
             )
         )
     )
+    await context.db.commit()
     if not chapter_ids:
         raise ValueError("Translation batch has no chapters")
     return chapter_ids
@@ -121,6 +122,7 @@ async def stage_types(db: AsyncSession, stage: TranslationStage) -> StageTypes:
             .order_by(TranslationStage.stage_num)
         )
     ).all()
+    await db.commit()
     signatures = [stage_config(earlier.action, earlier.config).signature() for earlier in stages]
     states = infer_pipeline(signatures)
     return StageTypes(states[-2] if len(states) > 1 else {}, signatures[-1], states[-1])
@@ -148,8 +150,10 @@ async def resolve_inputs(
         or previous.output_file_id is None
     ):
         raise ValueError("Previous translation task must have a completed output artifact")
+    stored_file = await get_file(context.db, previous.output_file_id)
+    await context.db.commit()
     records = validate_output_records(
-        aiter_translation_records(fetch_file(context.db, store, previous.output_file_id)),
+        aiter_translation_records(fetch_file(store, stored_file)),
         chapter_ids=await batch_chapter_ids(context, stage),
         output_type=available,
     )

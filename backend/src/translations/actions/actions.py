@@ -14,21 +14,8 @@ from src.translations.types import TranslationTaskStatus
 
 @dataclass(frozen=True)
 class ActionTaskContext:
-    """Task and session owned by the current worker invocation.
-
-    Callbacks may mutate the task and use the session, but must not commit,
-    roll back, or close it. The wrapper owns the transaction and session lifetime.
-    This context stays in the worker; queue messages contain only the task ID.
-    Status, failure, and claim fields belong to the wrapper. Renew cooperatively
-    before expiry during long work, before flushing or locking the task row:
-    renewal uses its own transaction. A single awaited operation must fit
-    within the lease. Renewal failure raises and prevents completion.
-    """
-
     db: AsyncSession
     task: TranslationTask
-    claim_token: uuid.UUID
-    renew_lease: Callable[[], Awaitable[None]]
 
 
 type ActionCallback = Callable[[ActionTaskContext], Awaitable[None]]

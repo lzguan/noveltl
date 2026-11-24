@@ -28,26 +28,32 @@ The API and the worker use `AsyncSession` throughout; `create_job` is async and
 commits the caller's session. Controls commit before awaiting dispatch.
 
 Step bodies are async: `ActionTaskContext.db` is an `AsyncSession`,
-`renew_lease` is awaited (its own transaction), and callbacks return
-`Awaitable[None]` (polls `Awaitable[bool]`). Inputs, outputs, validation and
+callbacks return `Awaitable[None]` (polls `Awaitable[bool]`). Inputs, outputs, validation and
 memory selection are async-generator pipelines (`src/lib/aiter.py` holds
 `achain`, `azip_longest`, `agroupby`, `as_async_iter`). `iter_batch_memories`
 streams with `db.stream(...)`; nothing else may query that session until the
 stream closes. Batch clients are async and open their HTTP client per operation
 (the Celery path runs each step in its own `asyncio.run` loop).
-OpenRouter streams its upload body, so `content()` keeps renewing during the
-upload. Qwen spools `content()` to a temp file first (the SDK reads files
-synchronously), then uploads in one await with no renewal: that upload must fit
-within the submit lease.
+OpenRouter streams its upload body; Qwen spools it to a temp file first (the SDK
+reads files synchronously).
+
+Connections and leases: the runner loads the task, commits to release the
+connection (the row stays loaded, `expire_on_commit=False`), runs the step, then
+runs `finish_claim` and commits. A read checks a connection out until the next
+commit, so read helpers commit after reading and before slow I/O (`_stage`,
+`stage_types`, `batch_chapter_ids`, `resolve_inputs`, the `get_file` reads before `fetch_file`,
+`store_lines` before its upload). Steps stage writes only after their last read,
+so those commits flush nothing; the staged task fields and `StoredFile` rows land
+behind the fence. There is no mid-step lease renewal: a step must finish within
+its 300 s lease (batch size keeps it there) or it fails at the fence. Pinned by
+`test_step_starts_without_a_connection_and_reads_release_theirs`.
 
 Steps run on taskiq ([broker.py](../../backend/src/translations/broker.py),
 [taskiq_actions.py](../../backend/src/translations/actions/execution/taskiq_actions.py)):
 queue `translations` on `TRANSLATIONS_DATABASE`, messages carry the task ID as a
 string, one worker process with `--max-async-tasks 16` on a pooled engine of
-16+16 connections. A step holds its transaction connection for the whole callback,
-provider I/O included, and `renew_lease` takes a second one, so the pool is 2x the
-task limit; raising the task limit needs a bigger pool or steps that release the
-connection while awaiting providers. Pending polls go through `schedule_by_time`
+16+16 connections; steps hold one only while reading or finishing, so the task
+limit can grow past the pool. Pending polls go through `schedule_by_time`
 into a `ListRedisScheduleSource` (prefix `translations-schedules`); the
 `translations-scheduler` compose service (worker image, `taskiq scheduler
 --update-interval 5`, run exactly one) sends them when due. The list source reads
@@ -135,8 +141,7 @@ takes the expected name → type mapping and enforces exactly one record per
 chapter per stream of the declared type. **Exhaust the iterator before
 publishing**; completeness is checked at the end. `store_lines` in
 [files.py](../../backend/src/translations/actions/common/files.py) is the only
-spool-and-upload path, for both provider request files and output files, and
-renews the lease while writing. The record key is embedded in provider request
+spool-and-upload path, for both provider request files and output files. The record key is embedded in provider request
 IDs, so stream names will need a restricted character set once free naming is
 allowed.
 
@@ -239,10 +244,9 @@ whole batch runs inside `submit`, so it must finish within the 300 s submit leas
 use small batches. These objects have no `StoredFile` row and are never cleaned
 up. The model appears in the editor's model list through `configSchema`.
 
-Wrappers own commit/rollback, status, failure, and claim fields. Callbacks must
-not commit, roll back, or close the session. Long work renews its lease
-cooperatively; a blocking operation must fit inside that lease. An expired or
-lost owner cannot publish completion. Queue messages carry task IDs, not the
+Wrappers own status, failure, and claim fields and the final commit. Callbacks
+commit only to end a read before I/O, never roll back or close the session, and
+must fit inside the lease. An expired or lost owner cannot publish completion. Queue messages carry task IDs, not the
 worker's session/context.
 
 Failure is represented by `failed_at`/`error` while retaining the lifecycle

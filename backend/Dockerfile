@@ -63,6 +63,4 @@ FROM base AS translations-worker
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group tagent --group taskiq --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
-# One process: steps mostly wait on providers. Each step may hold two database connections
-# (its transaction and a lease renewal), so the pool in taskiq_actions.py is sized to 2x this.
 CMD ["uv", "run", "--no-sync", "taskiq", "worker", "src.translations.broker:broker", "src.translations.actions", "--workers", "1", "--max-async-tasks", "16"]

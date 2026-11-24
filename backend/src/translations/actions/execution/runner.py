@@ -8,7 +8,7 @@ from sqlalchemy.orm import aliased
 
 from src.translations.actions.actions import ActionTaskContext, PollCallback
 from src.translations.models import TranslationStage, TranslationTask
-from src.translations.tasks.claims import TranslationClaimLostError, claim_task, fail_claim, finish_claim, renew_claim
+from src.translations.tasks.claims import claim_task, fail_claim, finish_claim
 from src.translations.types import TranslationTaskStatus
 
 type StepOutcome = Literal["unclaimed", "advanced", "pending"]
@@ -30,17 +30,13 @@ async def run_claimed_step(
         if not await claim_task(session, task_id, token, expect=expect, during=during, duration=duration):
             return "unclaimed"
 
-    async def renew_lease() -> None:
-        async with session_factory.begin() as session:
-            if not await renew_claim(session, task_id, token, during=during, duration=duration):
-                raise TranslationClaimLostError(f"Lost translation task claim: {task_id}")
-
     try:
-        async with session_factory.begin() as session:
+        async with session_factory() as session:
             task = (
                 await session.execute(select(TranslationTask).where(TranslationTask.task_id == task_id))
             ).scalar_one()
-            done = await f(ActionTaskContext(db=session, task=task, claim_token=token, renew_lease=renew_lease))
+            await session.commit()
+            done = await f(ActionTaskContext(db=session, task=task))
             await finish_claim(
                 session,
                 task_id,
@@ -49,6 +45,7 @@ async def run_claimed_step(
                 finish=finish if done else expect,
                 poll_interval=timedelta(seconds=interval_seconds) if not done else None,
             )
+            await session.commit()
     except Exception as error:
         async with session_factory.begin() as session:
             await fail_claim(session, task_id, token, during=during, error=str(error))

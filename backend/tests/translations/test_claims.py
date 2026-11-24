@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from celery import Celery
-from sqlalchemy import func, select, update
+from sqlalchemy import func, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session
 
@@ -19,7 +19,6 @@ from src.translations.tasks.claims import (
     claim_task,
     fail_claim,
     finish_claim,
-    renew_claim,
 )
 from src.translations.types import TranslationTaskStatus as State
 
@@ -89,19 +88,13 @@ async def expire(db: AsyncSession, task_id: UUID) -> None:
     )
 
 
-async def test_live_claim_excludes_other_worker_and_can_renew(
+async def test_live_claim_excludes_other_worker(
     task_id: UUID, testing_async_session_local: async_sessionmaker[AsyncSession]
 ) -> None:
-    token = uuid4()
     async with testing_async_session_local.begin() as db:
-        assert await acquire(db, task_id, token)
+        assert await acquire(db, task_id, uuid4())
     async with testing_async_session_local.begin() as db:
         assert not await acquire(db, task_id, uuid4())
-        assert not await renew_claim(db, task_id, uuid4(), during=State.PREPARING, duration=DURATION)
-        before = await db.scalar(select(TranslationTask.claim_expires_at).where(TranslationTask.task_id == task_id))
-        assert await renew_claim(db, task_id, token, during=State.PREPARING, duration=DURATION * 2)
-        after = await db.scalar(select(TranslationTask.claim_expires_at).where(TranslationTask.task_id == task_id))
-        assert before is not None and after is not None and after > before
 
 
 @pytest.mark.parametrize("replace", [False, True])
@@ -120,7 +113,6 @@ async def test_stale_callback_writes_roll_back(
         # The stale transaction began before expiry; completion must use wall-clock time.
         async with testing_async_session_local.begin() as db:
             await expire(db, task_id)
-            assert not await renew_claim(db, task_id, token, during=State.PREPARING, duration=DURATION)
             if replace:
                 assert await acquire(db, task_id, replacement)
         with pytest.raises(TranslationClaimLostError):
@@ -168,7 +160,6 @@ async def test_wrapper_failure_rolls_back_and_blocks_retry(
     @callbacks.new_func(expect=State.READY, during=State.PREPARING, finish=State.PREPARED)
     async def failing(context: ActionTaskContext) -> None:
         calls.append(context.task.task_id)
-        await context.renew_lease()
         context.task.provider_batch_id = "rolled-back"
         await context.db.flush()
         raise ValueError("failed preparation")

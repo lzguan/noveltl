@@ -6,7 +6,7 @@ from uuid import UUID
 
 import pytest
 from redis.asyncio import Redis
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from taskiq import InMemoryBroker, ScheduledTask, ScheduleSource
 from taskiq_redis import ListRedisScheduleSource
@@ -71,6 +71,28 @@ async def test_wrapper_commits_before_running_next_step(
         assert task.status == State.COMPLETE and task.claim_token is None
 
 
+async def test_step_starts_without_a_connection_and_reads_release_theirs(
+    task_id: UUID,  # noqa: F811
+    broker: InMemoryBroker,
+) -> None:
+    # Steps await providers and the object store; the session must not hold a
+    # connection (or an open transaction) across that I/O.
+    callbacks = TaskiqActionCallbacks(broker, RecordingSource(), {})
+    observed: list[bool] = []
+
+    @callbacks.new_func(expect=State.READY, during=State.PREPARING, finish=State.PREPARED, name="test.release")
+    async def step(context: ActionTaskContext) -> None:
+        observed.append(context.db.in_transaction())
+        await context.db.scalar(select(func.clock_timestamp()))
+        observed.append(context.db.in_transaction())
+        await context.db.commit()
+        observed.append(context.db.in_transaction())
+        context.task.provider_batch_id = "staged after the last read"
+
+    await callbacks.entrypoint(task_id)
+    assert observed == [False, True, False]
+
+
 async def test_wrapper_failure_rolls_back_and_blocks_retry(
     task_id: UUID,  # noqa: F811
     broker: InMemoryBroker,
@@ -82,7 +104,6 @@ async def test_wrapper_failure_rolls_back_and_blocks_retry(
     @callbacks.new_func(expect=State.READY, during=State.PREPARING, finish=State.PREPARED, name="test.failing")
     async def failing(context: ActionTaskContext) -> None:
         calls.append(context.task.task_id)
-        await context.renew_lease()
         context.task.provider_batch_id = "rolled-back"
         await context.db.flush()
         raise ValueError("failed preparation")

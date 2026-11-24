@@ -23,7 +23,7 @@ async def load(context: ActionTaskContext) -> None:
     loaded = iter_initial_records(context, stage, LoadInputsConfig.model_validate(stage.config).inputs)
     output = output_records(context, store, stage, loaded, await stage_types(context.db, stage))
     context.task.output_file_id = await store_lines(
-        context, store, (encode_translation_record(record) async for record in output), renew_seconds=_LEASE_SECONDS / 3
+        context, store, (encode_translation_record(record) async for record in output)
     )
 
 

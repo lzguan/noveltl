@@ -19,9 +19,6 @@ from src.translations.actions.actions import (
 from src.translations.actions.execution.runner import ready_next_task, run_claimed_step
 from src.translations.types import ActionName, TranslationTaskStatus
 
-# One event loop serves every step in a worker process, so its connections are pooled.
-# A step can hold its transaction and a lease renewal at once: 32 covers the worker's
-# 16 concurrent tasks (--max-async-tasks in the Dockerfile) without waiting.
 _taskiq_engine = create_async_engine(database_settings.DB_URL, pool_size=16, max_overflow=16)
 TaskiqSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
     _taskiq_engine, autoflush=False, expire_on_commit=False

@@ -12,9 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.datasets import NovelDataset
-from src.labels.constants import LabelRole
 from src.labels.models import Label as LabelModel
-from src.labels.models import LabelContributor, LabelData, LabelGroup
+from src.labels.models import LabelData, LabelGroup
 from src.labels.schemas import Label as LabelSchema
 from src.novels.models import ChapterContent
 from src.novels.schemas import TextOp
@@ -34,14 +33,6 @@ def dd_label_group(
         novel_id=xianxia_scenario.novels["novel"].novel_id,
     )
     test_db.add(group)
-    test_db.commit()
-    test_db.add(
-        LabelContributor(
-            label_group_id=group.label_group_id,
-            user_id=xianxia_scenario.users["owner"].user_id,
-            label_contributor_role=LabelRole.OWNER,
-        )
-    )
     test_db.commit()
     return group
 

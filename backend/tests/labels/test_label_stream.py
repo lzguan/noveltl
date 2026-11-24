@@ -187,7 +187,7 @@ def test_viewer_cannot_update_label(
     test_db: Session,
     label_access_scenario: DatabaseScenario,
 ) -> None:
-    actor = label_access_scenario.users["collaborator"]
+    actor = label_access_scenario.users["viewer"]
     label_data = label_access_scenario.label_datas["with_viewer_data"]
     label = label_access_scenario.labels["viewer_test"]
 

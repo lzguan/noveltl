@@ -3,11 +3,11 @@ from uuid import uuid4
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.database import get_db
+from src.database import get_async_db
 from src.translations.router import router
 from src.translations.schemas import TranslateStageCreate, TranslationJobCreate
 
@@ -19,18 +19,22 @@ def creation_client(monkeypatch: pytest.MonkeyPatch):
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[get_current_user] = lambda: User()
-    with Session() as db:
-        app.dependency_overrides[get_db] = lambda: db
+
+    async def get_test_db():
+        async with AsyncSession() as db:
+            yield db
+
+    app.dependency_overrides[get_async_db] = get_test_db
+    with TestClient(app) as client:
         received: list[TranslationJobCreate] = []
         job_id = uuid4()
 
-        def create(db: Session, user: User, request: TranslationJobCreate):
+        async def create(db: AsyncSession, user: User, request: TranslationJobCreate):
             received.append(request)
             return job_id
 
         monkeypatch.setattr("src.translations.router.create_translation_job", create)
-        with TestClient(app) as client:
-            yield client, received, job_id
+        yield client, received, job_id
 
 
 def test_generic_request_validates_and_applies_defaults(creation_client):

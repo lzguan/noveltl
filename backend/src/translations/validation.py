@@ -1,18 +1,18 @@
 """Validate the stream set of a normalized stage output."""
 
-from collections.abc import Collection, Iterable, Iterator
+from collections.abc import AsyncIterable, AsyncIterator, Collection
 from uuid import UUID
 
 from src.translations.records import TranslationRecord
 from src.translations.types import ActionType, TranslationDataKey
 
 
-def validate_output_records(
-    records: Iterable[TranslationRecord],
+async def validate_output_records(
+    records: AsyncIterable[TranslationRecord],
     *,
     chapter_ids: Collection[UUID],
     output_type: ActionType,
-) -> Iterator[TranslationRecord]:
+) -> AsyncIterator[TranslationRecord]:
     """Yield records whose keys form exactly the required chapter/stream set.
 
     Payloads are already validated by the record schemas. Retain only keys,
@@ -25,7 +25,7 @@ def validate_output_records(
     """
     chapters = set(chapter_ids)
     remaining = {TranslationDataKey(chapter_id, stream) for chapter_id in chapters for stream in output_type}
-    for record in records:
+    async for record in records:
         key = record.key
         if key.chapter_id not in chapters:
             raise ValueError(f"Unexpected chapter in output: {key.chapter_id}")

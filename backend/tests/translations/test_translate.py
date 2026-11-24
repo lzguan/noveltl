@@ -1,5 +1,5 @@
 import json
-from collections.abc import Iterable, Iterator
+from collections.abc import AsyncIterable, AsyncIterator
 from datetime import timedelta
 from io import BytesIO
 from unittest.mock import Mock
@@ -7,6 +7,7 @@ from uuid import UUID
 
 import pytest
 from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.files.access import create_file
@@ -42,13 +43,14 @@ from src.translations.task_names import TRANSLATE_FINALIZE, TRANSLATE_POLL, TRAN
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationDataKey
 from src.translations.types import TranslationTaskStatus as State
+from test_support.steps import celery_step
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
 
 LOADED_TEXT = "Loaded chapter"
 # The registered Celery tasks: claim, run the step, then dispatch the next one.
 prepare, submit, poll, finalize = (
-    app.tasks[name] for name in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE)
+    celery_step(name) for name in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE)
 )
 
 
@@ -81,16 +83,17 @@ class FakeBatchClient:
         self.polled: list[BatchJobId] = []
         self.result: BatchJobPoll = BatchJobPending()
 
-    def create_batch_job(self, content: Iterable[bytes]) -> BatchJobId:
-        self.uploads.append(b"".join(content))
+    async def create_batch_job(self, content: AsyncIterable[bytes]) -> BatchJobId:
+        self.uploads.append(b"".join([chunk async for chunk in content]))
         return BatchJobId("provider-job")
 
-    def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
+    async def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
         self.polled.append(job_id)
         return self.result
 
-    def fetch_batch_output(self, output_id: BatchOutputId) -> Iterator[bytes]:
+    async def fetch_batch_output(self, output_id: BatchOutputId) -> AsyncIterator[bytes]:
         raise AssertionError("Polling must not download results")
+        yield b""
 
 
 @pytest.fixture
@@ -101,15 +104,17 @@ def recording_codec(monkeypatch: pytest.MonkeyPatch) -> RecordingCodec:
 
 
 @pytest.fixture
-def worker(testing_session_local: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> MemoryObjectStore:
+def worker(
+    testing_async_session_local: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
+) -> MemoryObjectStore:
     store = MemoryObjectStore()
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
-    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
+    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr("src.translations.actions.translate.get_async_object_store", lambda: store)
     return store
 
 
-def make_job(
-    db: Session,
+async def make_job(
+    db: AsyncSession,
     scenario: DatabaseScenario,
     store: MemoryObjectStore,
     *,
@@ -126,7 +131,7 @@ def make_job(
         novel = scenario.novels["novel_1"]
         group = MemoryGroup(novel_id=novel.novel_id, memory_group_name="Context", memory_language=novel.language_code)
         db.add(group)
-        db.flush()
+        await db.flush()
         memory = Memory(
             memory_group_id=group.memory_group_id,
             memory_observed_in=scenario.contents["chapter_1_v2"].chapter_content_id,
@@ -137,7 +142,7 @@ def make_job(
             plugin_name="continuity",
         )
         db.add(memory)
-        db.flush()
+        await db.flush()
         memories = [MemorySchema.model_validate(memory)]
         inputs = {
             name: {"type": name, "memory_group_id": str(group.memory_group_id)}
@@ -154,7 +159,7 @@ def make_job(
             "max_output_tokens": 2048,
         },
     }
-    job_id = create_job(
+    job_id = await create_job(
         db,
         TranslationJobCreate.model_validate(
             {
@@ -165,14 +170,16 @@ def make_job(
             }
         ),
     )
-    loader, task = db.scalars(
-        select(TranslationTask)
-        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-        .where(TranslationStage.job_id == job_id)
-        .order_by(TranslationStage.stage_num)
+    loader, task = (
+        await db.scalars(
+            select(TranslationTask)
+            .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+            .where(TranslationStage.job_id == job_id)
+            .order_by(TranslationStage.stage_num)
+        )
     ).all()
     records: list[TranslationRecord] = []
-    for chapter_id in db.scalars(
+    for chapter_id in await db.scalars(
         select(TranslationJobChapter.chapter_id).where(TranslationJobChapter.job_id == job_id)
     ):
         records.append(ChapterRecord(chapter_id=chapter_id, stream="chapter", payload=LOADED_TEXT))
@@ -205,7 +212,7 @@ def make_job(
             )
     task.status = State.READY
     if loaded:
-        stored = create_file(
+        stored = await create_file(
             db,
             store,
             BytesIO(b"".join(encode_translation_record(record) for record in records)),
@@ -214,17 +221,17 @@ def make_job(
             namespace="translations",
             content_type="application/jsonl",
         )
-        db.flush()
+        await db.flush()
         loader.status, loader.output_file_id = State.COMPLETE, stored.file_id
-    db.commit()
+    await db.commit()
     return task.task_id, records
 
 
 @pytest.mark.parametrize("with_memories", [False, True])
 @pytest.mark.parametrize("with_terms", [False, True])
 @pytest.mark.parametrize("with_conventions", [False, True])
-def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_bytes(
-    test_db: Session,
+async def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_bytes(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     worker: MemoryObjectStore,
     with_memories: bool,
@@ -232,8 +239,8 @@ def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_by
     with_conventions: bool,
     recording_codec: RecordingCodec,
 ) -> None:
-    task_id, records = make_job(
-        test_db,
+    task_id, records = await make_job(
+        async_test_db,
         sample_scenario,
         worker,
         with_memories=with_memories,
@@ -242,13 +249,13 @@ def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_by
     )
     chapter_ids = {record.chapter_id for record in records}
 
-    prepare(task_id)
+    await prepare(task_id)
 
-    test_db.expire_all()
-    task = test_db.get(TranslationTask, task_id)
+    async_test_db.expunge_all()
+    task = await async_test_db.get(TranslationTask, task_id)
     assert task is not None and task.status == State.PREPARED and task.request_file_id is not None
     assert task.output_file_id is None and task.claim_token is None
-    stored = test_db.get(StoredFile, task.request_file_id)
+    stored = await async_test_db.get(StoredFile, task.request_file_id)
     assert stored is not None
     assert worker.objects[stored.object_key] == b'{"encoded_by_adapter":true}\n' * len(chapter_ids)
     assert {item.key for item in recording_codec.items} == {
@@ -276,13 +283,22 @@ def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_by
     assert worker.fetched_keys
 
 
-def test_prepare_accepts_empty_enabled_context_streams(
-    test_db: Session, sample_scenario: DatabaseScenario, worker: MemoryObjectStore, recording_codec: RecordingCodec
+async def test_prepare_accepts_empty_enabled_context_streams(
+    async_test_db: AsyncSession,
+    sample_scenario: DatabaseScenario,
+    worker: MemoryObjectStore,
+    recording_codec: RecordingCodec,
 ) -> None:
-    task_id, records = make_job(
-        test_db, sample_scenario, worker, with_memories=True, with_terms=True, with_conventions=True, empty_context=True
+    task_id, records = await make_job(
+        async_test_db,
+        sample_scenario,
+        worker,
+        with_memories=True,
+        with_terms=True,
+        with_conventions=True,
+        empty_context=True,
     )
-    prepare(task_id)
+    await prepare(task_id)
     assert len(recording_codec.items) == len({record.chapter_id for record in records})
     for item in recording_codec.items:
         assert (
@@ -291,42 +307,43 @@ def test_prepare_accepts_empty_enabled_context_streams(
         )
 
 
-def test_prepare_upload_failure_does_not_publish_input(
-    test_db: Session,
+async def test_prepare_upload_failure_does_not_publish_input(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     worker: MemoryObjectStore,
     recording_codec: RecordingCodec,
 ) -> None:
-    task_id, _ = make_job(test_db, sample_scenario, worker)
+    task_id, _ = await make_job(async_test_db, sample_scenario, worker)
     worker.upload_error = ConnectionError("upload failed")
     with pytest.raises(ConnectionError, match="upload failed"):
-        prepare(task_id)
-    test_db.expire_all()
-    task = test_db.get(TranslationTask, task_id)
+        await prepare(task_id)
+    async_test_db.expunge_all()
+    task = await async_test_db.get(TranslationTask, task_id)
     assert task is not None and task.request_file_id is None and task.failed_at is not None
     assert task.status == State.PREPARING
     # Only the loader's file exists.
-    assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 1
+    assert await async_test_db.scalar(select(func.count()).select_from(StoredFile)) == 1
 
 
-def test_prepare_rejects_incomplete_previous_task(
-    test_db: Session,
+async def test_prepare_rejects_incomplete_previous_task(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     worker: MemoryObjectStore,
     recording_codec: RecordingCodec,
 ) -> None:
-    task_id, _ = make_job(test_db, sample_scenario, worker, loaded=False)
+    task_id, _ = await make_job(async_test_db, sample_scenario, worker, loaded=False)
     with pytest.raises(ValueError, match="completed output artifact"):
-        prepare(task_id)
+        await prepare(task_id)
     assert not recording_codec.items and not worker.objects
 
 
 @pytest.mark.parametrize("with_memories", [False, True])
 @pytest.mark.parametrize("failed", [False, True])
-def test_submission_and_polling_persist_progress_before_dispatch(
-    test_db: Session,
+async def test_submission_and_polling_persist_progress_before_dispatch(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
     worker: MemoryObjectStore,
     recording_codec: RecordingCodec,
@@ -336,11 +353,11 @@ def test_submission_and_polling_persist_progress_before_dispatch(
 ) -> None:
     # Finalization/recovery rely on durable provider IDs, and pending polls must
     # release their claim so a fresh worker can perform the next check.
-    task_id, records = make_job(test_db, sample_scenario, worker, with_memories=with_memories)
+    task_id, records = await make_job(async_test_db, sample_scenario, worker, with_memories=with_memories)
     requests = len({record.chapter_id for record in records})
     client = FakeBatchClient()
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)
-    prepare(task_id)
+    await prepare(task_id)
     queued_tasks["submit"].assert_called_once_with((task_id,))
 
     def observe_poll_dispatch(*args: object, **kwargs: object) -> None:
@@ -352,35 +369,35 @@ def test_submission_and_polling_persist_progress_before_dispatch(
             assert task.failed_at is None
 
     queued_tasks["poll"].side_effect = observe_poll_dispatch
-    submit(task_id)
-    submit(task_id)  # Duplicate delivery must not submit twice.
+    await submit(task_id)
+    await submit(task_id)  # Duplicate delivery must not submit twice.
     assert client.uploads == [b'{"encoded_by_adapter":true}\n' * requests]
     queued_tasks["poll"].assert_called_once_with((task_id,))
     queued_tasks["poll"].reset_mock()
-    poll(task_id)
+    await poll(task_id)
     queued_tasks["poll"].assert_called_once_with((task_id,), countdown=60)
     queued_tasks["poll"].reset_mock()
 
     # Early duplicate messages must neither call the provider nor reschedule.
-    poll(task_id)
+    await poll(task_id)
     queued_tasks["poll"].assert_not_called()
     assert client.polled == ["provider-job"]
-    test_db.execute(
+    await async_test_db.execute(
         update(TranslationTask)
         .where(TranslationTask.task_id == task_id)
         .values(next_poll_at=func.clock_timestamp() - timedelta(seconds=1))
     )
-    test_db.commit()
+    await async_test_db.commit()
 
     if failed:
         client.result = BatchJobFailed("provider rejected batch")
         with pytest.raises(RuntimeError, match="provider rejected batch"):
-            poll(task_id)
+            await poll(task_id)
     else:
         client.result = BatchJobComplete(BatchOutputId("provider-output"))
-        poll(task_id)
-    test_db.expire_all()
-    task = test_db.get(TranslationTask, task_id)
+        await poll(task_id)
+    async_test_db.expunge_all()
+    task = await async_test_db.get(TranslationTask, task_id)
     assert task is not None
     assert task.status == (State.PROCESSING if failed else State.PROCESSED)
     assert task.provider_output_id == (None if failed else "provider-output")
@@ -401,21 +418,21 @@ def test_submission_and_polling_persist_progress_before_dispatch(
 @pytest.mark.parametrize(
     "failure", [None, "duplicate", "missing", "stream", "foreign", "item", "malformed", "download", "upload"]
 )
-def test_finalize_publishes_only_the_complete_state_after_translation(
-    test_db: Session,
+async def test_finalize_publishes_only_the_complete_state_after_translation(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
     worker: MemoryObjectStore,
     failure: str | None,
     with_memories: bool,
 ) -> None:
-    task_id, records = make_job(test_db, sample_scenario, worker, with_memories=with_memories)
+    task_id, records = await make_job(async_test_db, sample_scenario, worker, with_memories=with_memories)
     chapter_ids = sorted({record.chapter_id for record in records})
-    task = test_db.get(TranslationTask, task_id)
+    task = await async_test_db.get(TranslationTask, task_id)
     assert task is not None
     task.status = State.PROCESSED
     task.provider_output_id = "provider-output"
-    test_db.commit()
+    await async_test_db.commit()
 
     def line(chapter_id: UUID, stream: str = "chapter") -> bytes:
         wire: dict[str, object] = {
@@ -451,7 +468,7 @@ def test_finalize_publishes_only_the_complete_state_after_translation(
     output = b"\r\n".join(lines)
 
     class OutputClient(FakeBatchClient):
-        def fetch_batch_output(self, output_id: BatchOutputId) -> Iterator[bytes]:
+        async def fetch_batch_output(self, output_id: BatchOutputId) -> AsyncIterator[bytes]:
             assert output_id == "provider-output"
             # Split even multibyte characters, and omit the final newline.
             for offset in range(0, len(output), 3):
@@ -463,7 +480,7 @@ def test_finalize_publishes_only_the_complete_state_after_translation(
         worker.upload_error = ConnectionError("upload interrupted")
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", OutputClient)
     if failure is None:
-        finalize(task_id)
+        await finalize(task_id)
     else:
         expected_error = {
             "duplicate": "Duplicate output",
@@ -476,20 +493,20 @@ def test_finalize_publishes_only_the_complete_state_after_translation(
             "upload": "upload interrupted",
         }[failure]
         with pytest.raises((ValueError, ConnectionError), match=expected_error):
-            finalize(task_id)
-    test_db.expire_all()
-    task = test_db.get(TranslationTask, task_id)
+            await finalize(task_id)
+    async_test_db.expunge_all()
+    task = await async_test_db.get(TranslationTask, task_id)
     assert task is not None
     assert task.claim_token is None and task.claim_expires_at is None
     if failure is not None:
         assert task.status == State.FINALIZING and task.failed_at is not None
         # Only the loader's file exists.
         assert task.output_file_id is None and len(worker.objects) == 1
-        assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 1
+        assert await async_test_db.scalar(select(func.count()).select_from(StoredFile)) == 1
         return
     assert task.status == State.COMPLETE and task.failed_at is None
     assert task.output_file_id is not None
-    stored = test_db.get(StoredFile, task.output_file_id)
+    stored = await async_test_db.get(StoredFile, task.output_file_id)
     assert stored is not None
     # The output is the full state: untouched streams copied forward, then the translated chapters.
     assert list(iter_translation_records([worker.objects[stored.object_key]])) == [

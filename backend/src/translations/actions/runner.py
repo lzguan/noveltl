@@ -3,7 +3,8 @@ from datetime import timedelta
 from typing import Literal
 
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session, aliased, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import aliased
 
 from src.translations.actions.actions import ActionTaskContext, PollCallback
 from src.translations.models import TranslationStage, TranslationTask
@@ -13,8 +14,8 @@ from src.translations.types import TranslationTaskStatus
 type StepOutcome = Literal["unclaimed", "advanced", "pending"]
 
 
-def run_claimed_step(
-    session_factory: sessionmaker[Session],
+async def run_claimed_step(
+    session_factory: async_sessionmaker[AsyncSession],
     task_id: uuid.UUID,
     f: PollCallback,
     *,
@@ -25,20 +26,22 @@ def run_claimed_step(
     interval_seconds: int,
 ) -> StepOutcome:
     token = uuid.uuid4()
-    with session_factory.begin() as session:
-        if not claim_task(session, task_id, token, expect=expect, during=during, duration=duration):
+    async with session_factory.begin() as session:
+        if not await claim_task(session, task_id, token, expect=expect, during=during, duration=duration):
             return "unclaimed"
 
-    def renew_lease() -> None:
-        with session_factory.begin() as session:
-            if not renew_claim(session, task_id, token, during=during, duration=duration):
+    async def renew_lease() -> None:
+        async with session_factory.begin() as session:
+            if not await renew_claim(session, task_id, token, during=during, duration=duration):
                 raise TranslationClaimLostError(f"Lost translation task claim: {task_id}")
 
     try:
-        with session_factory.begin() as session:
-            task = session.execute(select(TranslationTask).where(TranslationTask.task_id == task_id)).scalar_one()
-            done = f(ActionTaskContext(db=session, task=task, claim_token=token, renew_lease=renew_lease))
-            finish_claim(
+        async with session_factory.begin() as session:
+            task = (
+                await session.execute(select(TranslationTask).where(TranslationTask.task_id == task_id))
+            ).scalar_one()
+            done = await f(ActionTaskContext(db=session, task=task, claim_token=token, renew_lease=renew_lease))
+            await finish_claim(
                 session,
                 task_id,
                 token,
@@ -47,14 +50,16 @@ def run_claimed_step(
                 poll_interval=timedelta(seconds=interval_seconds) if not done else None,
             )
     except Exception as error:
-        with session_factory.begin() as session:
-            fail_claim(session, task_id, token, during=during, error=str(error))
+        async with session_factory.begin() as session:
+            await fail_claim(session, task_id, token, during=during, error=str(error))
         raise
     return "advanced" if done else "pending"
 
 
-def ready_next_task(session_factory: sessionmaker[Session], task_id: uuid.UUID) -> tuple[uuid.UUID, str] | None:
-    with session_factory.begin() as session:
+async def ready_next_task(
+    session_factory: async_sessionmaker[AsyncSession], task_id: uuid.UUID
+) -> tuple[uuid.UUID, str] | None:
+    async with session_factory.begin() as session:
         cur_task_q = (
             select(TranslationTask.batch_id, TranslationStage.job_id, TranslationStage.stage_num)
             .where(
@@ -67,16 +72,18 @@ def ready_next_task(session_factory: sessionmaker[Session], task_id: uuid.UUID) 
         )
         tsa = aliased(TranslationStage)
         tta = aliased(TranslationTask)
-        next_task = session.execute(
-            select(tta.task_id, tsa.action)
-            .select_from(cur_task_q)
-            .join(tsa, (tsa.job_id == cur_task_q.c.job_id) & (tsa.stage_num == cur_task_q.c.stage_num + 1))
-            .join(tta, (tta.batch_id == cur_task_q.c.batch_id) & (tta.stage_id == tsa.stage_id))
+        next_task = (
+            await session.execute(
+                select(tta.task_id, tsa.action)
+                .select_from(cur_task_q)
+                .join(tsa, (tsa.job_id == cur_task_q.c.job_id) & (tsa.stage_num == cur_task_q.c.stage_num + 1))
+                .join(tta, (tta.batch_id == cur_task_q.c.batch_id) & (tta.stage_id == tsa.stage_id))
+            )
         ).one_or_none()
         if next_task is None:
             return None
         next_task_id, next_action = next_task
-        ready_task_id = session.scalar(
+        ready_task_id = await session.scalar(
             update(TranslationTask)
             .where(
                 TranslationTask.task_id == next_task_id,

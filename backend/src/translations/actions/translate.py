@@ -1,11 +1,11 @@
 """Translate chapters through provider-neutral batch inference, using memories when the job loads them."""
 
 import json
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from time import monotonic
 
 from src.files.access import fetch_file
-from src.files.dependencies import get_object_store
+from src.files.dependencies import get_async_object_store
 from src.translations.actions.actions import ActionStepSpec, ActionTaskContext, PollSpec, StepSpec, register_steps
 from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
@@ -29,7 +29,7 @@ from src.translations.clients.batch_jobs import (
 from src.translations.clients.registry import get_batch_client
 from src.translations.codecs.batch_lines import BatchItem, BatchItemFailure, InferenceMessage, InferenceRequest
 from src.translations.codecs.registry import get_codec
-from src.translations.jsonl import encode_translation_record, iter_jsonl_lines
+from src.translations.jsonl import aiter_jsonl_lines, encode_translation_record
 from src.translations.models import TranslationStage
 from src.translations.records import ChapterRecord, ConventionsRecord, MemoriesRecord, TermsRecord
 from src.translations.schemas import TranslateConfig
@@ -46,16 +46,16 @@ _SUBMIT_LEASE_SECONDS = 300
 _FINALIZE_LEASE_SECONDS = 300
 
 
-def _stage(context: ActionTaskContext) -> tuple[TranslationStage, TranslateConfig]:
-    stage = context.db.get(TranslationStage, context.task.stage_id)
+async def _stage(context: ActionTaskContext) -> tuple[TranslationStage, TranslateConfig]:
+    stage = await context.db.get(TranslationStage, context.task.stage_id)
     if stage is None or stage.action != "translate":
         raise ValueError("Translation callbacks require a translate stage")
     return stage, TranslateConfig.model_validate(stage.config)
 
 
-def prepare(context: ActionTaskContext) -> None:
-    stage, config = _stage(context)
-    store, codec = get_object_store(), get_codec(config.model)
+async def prepare(context: ActionTaskContext) -> None:
+    stage, config = await _stage(context)
+    store, codec = get_async_object_store(), get_codec(config.model)
     instructions = (
         f"Translate the supplied novel chapter into {config.target_language}. "
         "Preserve its meaning, narrative voice, dialogue, and paragraph structure. "
@@ -65,11 +65,11 @@ def prepare(context: ActionTaskContext) -> None:
         " Use the context memories for consistent names and continuity; translate only the supplied chapter."
     )
     extra_instructions = "\n\n" + config.instructions if config.instructions else ""
-    types = stage_types(context.db, stage)
+    types = await stage_types(context.db, stage)
     records = select_streams(resolve_inputs(context, store, stage, types.before), types.declared)
 
-    def requests() -> Iterator[bytes]:
-        for inputs in group_by_chapter(records, streams=types.before.keys() & types.declared):
+    async def requests() -> AsyncIterator[bytes]:
+        async for inputs in group_by_chapter(records, streams=types.before.keys() & types.declared):
             chapter = inputs["chapter"]
             memories = inputs.get("memories")
             terms = inputs.get("terms")
@@ -116,39 +116,41 @@ def prepare(context: ActionTaskContext) -> None:
             )
             yield codec.encode_request(item)
 
-    context.task.request_file_id = store_lines(context, store, requests(), renew_seconds=_PREPARE_LEASE_SECONDS / 3)
+    context.task.request_file_id = await store_lines(
+        context, store, requests(), renew_seconds=_PREPARE_LEASE_SECONDS / 3
+    )
 
 
-def submit(context: ActionTaskContext) -> None:
+async def submit(context: ActionTaskContext) -> None:
     if context.task.provider_batch_id is not None:
         return
     if context.task.request_file_id is None:
         raise ValueError("Submission requires a prepared request file")
-    _, config = _stage(context)
+    _, config = await _stage(context)
     client = get_batch_client(config.model)
-    store = get_object_store()
+    store = get_async_object_store()
     request_file_id = context.task.request_file_id
 
-    def content() -> Iterator[bytes]:
+    async def content() -> AsyncIterator[bytes]:
         renew_at = monotonic() + _SUBMIT_LEASE_SECONDS / 3
-        for chunk in fetch_file(context.db, store, request_file_id):
+        async for chunk in fetch_file(context.db, store, request_file_id):
             if monotonic() >= renew_at:
-                context.renew_lease()
+                await context.renew_lease()
                 renew_at = monotonic() + _SUBMIT_LEASE_SECONDS / 3
             yield chunk
 
-    context.renew_lease()
-    job_id = client.create_batch_job(content())
+    await context.renew_lease()
+    job_id = await client.create_batch_job(content())
     if not job_id:
         raise ValueError("Batch client returned an empty job ID")
     context.task.provider_batch_id = job_id
 
 
-def poll(context: ActionTaskContext) -> bool:
+async def poll(context: ActionTaskContext) -> bool:
     if context.task.provider_batch_id is None:
         raise ValueError("Polling requires a provider batch ID")
-    _, config = _stage(context)
-    result = get_batch_client(config.model).poll_batch_job(BatchJobId(context.task.provider_batch_id))
+    _, config = await _stage(context)
+    result = await get_batch_client(config.model).poll_batch_job(BatchJobId(context.task.provider_batch_id))
     match result:
         case BatchJobPending():
             return False
@@ -161,34 +163,33 @@ def poll(context: ActionTaskContext) -> bool:
             raise RuntimeError(f"Provider batch failed: {error}")
 
 
-def finalize(context: ActionTaskContext) -> None:
+async def finalize(context: ActionTaskContext) -> None:
     if context.task.provider_output_id is None:
         raise ValueError("Finalization requires a provider output ID")
-    stage, config = _stage(context)
+    stage, config = await _stage(context)
     codec = get_codec(config.model)
     client = get_batch_client(config.model)
-    store = get_object_store()
+    store = get_async_object_store()
     output_id = BatchOutputId(context.task.provider_output_id)
 
-    def chunks() -> Iterator[bytes]:
+    async def chunks() -> AsyncIterator[bytes]:
         renew_at = monotonic() + _FINALIZE_LEASE_SECONDS / 3
-        for chunk in client.fetch_batch_output(output_id):
+        async for chunk in client.fetch_batch_output(output_id):
             if monotonic() >= renew_at:
-                context.renew_lease()
+                await context.renew_lease()
                 renew_at = monotonic() + _FINALIZE_LEASE_SECONDS / 3
             yield chunk
 
-    def records() -> Iterator[ChapterRecord]:
-        for line in iter_jsonl_lines(chunks()):
+    async def records() -> AsyncIterator[ChapterRecord]:
+        async for line in aiter_jsonl_lines(chunks()):
             result = codec.decode_result(line)
             if isinstance(result, BatchItemFailure):
                 raise ValueError(f"Translation result failed for {result.key}: {result.error}")
             yield ChapterRecord(chapter_id=result.key.chapter_id, stream=result.key.stream, payload=result.text)
 
-    output = output_records(context, store, stage, records(), stage_types(context.db, stage))
-    context.task.output_file_id = store_lines(
-        context, store, map(encode_translation_record, output), renew_seconds=_FINALIZE_LEASE_SECONDS / 3
-    )
+    output = output_records(context, store, stage, records(), await stage_types(context.db, stage))
+    encoded = (encode_translation_record(record) async for record in output)
+    context.task.output_file_id = await store_lines(context, store, encoded, renew_seconds=_FINALIZE_LEASE_SECONDS / 3)
 
 
 STEPS: tuple[ActionStepSpec, ...] = (

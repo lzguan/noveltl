@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from pydantic import TypeAdapter
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.translations.actions import load_inputs, prune_memories, translate
 from src.translations.actions.actions import (
@@ -37,7 +37,7 @@ class _Step:
 class AsyncActionCallbacks(ActionCallbacks):
     def __init__(
         self,
-        session_factory: sessionmaker[Session],
+        session_factory: async_sessionmaker[AsyncSession],
         callbacks_dict: Mapping[ActionName, ActionCallbacks],
         semaphore: asyncio.Semaphore,
     ) -> None:
@@ -57,8 +57,8 @@ class AsyncActionCallbacks(ActionCallbacks):
         name: str | None = None,
     ) -> Callable[[ActionCallback], ActionTask]:
         def decorate(f: ActionCallback) -> ActionTask:
-            def run(context: ActionTaskContext) -> bool:
-                f(context)
+            async def run(context: ActionTaskContext) -> bool:
+                await f(context)
                 return True
 
             return self._register(run, expect, during, finish, lease_seconds, interval_seconds=60)
@@ -106,13 +106,13 @@ class AsyncActionCallbacks(ActionCallbacks):
 
         self._steps.append(ActionStep(expect, during, finish, dispatch))
 
-        def run_once(task_id: uuid.UUID) -> None:
-            self._claim_and_run(step, task_id)
+        async def run_once(task_id: uuid.UUID) -> None:
+            await self._claim_and_run(step, task_id)
 
         return run_once
 
-    def _claim_and_run(self, step: _Step, task_id: uuid.UUID) -> StepOutcome:
-        return run_claimed_step(
+    async def _claim_and_run(self, step: _Step, task_id: uuid.UUID) -> StepOutcome:
+        return await run_claimed_step(
             self._session_factory,
             task_id,
             step.callback,
@@ -127,7 +127,7 @@ class AsyncActionCallbacks(ActionCallbacks):
         while index < len(self._registered):
             step = self._registered[index]
             async with self._semaphore:
-                outcome = await asyncio.to_thread(self._claim_and_run, step, task_id)
+                outcome = await self._claim_and_run(step, task_id)
             if outcome == "unclaimed":
                 return
             if outcome == "pending":
@@ -154,7 +154,7 @@ class AsyncActionCallbacks(ActionCallbacks):
         await self._run_from(0, x)
 
     async def exitpoint(self, x: uuid.UUID) -> None:
-        ready = await asyncio.to_thread(ready_next_task, self._session_factory, x)
+        ready = await ready_next_task(self._session_factory, x)
         if ready is None:
             return
         next_task_id, next_action = ready
@@ -169,7 +169,7 @@ _ACTION_STEPS: tuple[tuple[ActionName, tuple[ActionStepSpec, ...]], ...] = (
 
 
 def build_async_registry(
-    session_factory: sessionmaker[Session], *, max_concurrent_steps: int = 4
+    session_factory: async_sessionmaker[AsyncSession], *, max_concurrent_steps: int = 4
 ) -> dict[ActionName, ActionCallbacks]:
     if max_concurrent_steps <= 0:
         raise ValueError("max_concurrent_steps must be positive")

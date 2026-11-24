@@ -1,12 +1,12 @@
 """Resolve model-selected indices against persisted memory candidates."""
 
-from collections.abc import Iterable, Iterator
+from collections.abc import AsyncIterable, AsyncIterator
 from dataclasses import dataclass
-from itertools import zip_longest
 from uuid import UUID
 
 from pydantic import StrictInt, TypeAdapter
 
+from src.lib.aiter import azip_longest
 from src.translations.codecs.batch_lines import BatchItemFailure, BatchItemResult
 from src.translations.records import MemoriesRecord, TranslationRecord
 from src.translations.types import TranslationDataKey
@@ -45,10 +45,10 @@ def _select(record: MemoriesRecord, selection: MemorySelection) -> MemoriesRecor
     )
 
 
-def apply_memory_selections(
-    selections: Iterable[MemorySelection],
-    records: Iterable[TranslationRecord],
-) -> Iterator[TranslationRecord]:
+async def apply_memory_selections(
+    selections: AsyncIterable[MemorySelection],
+    records: AsyncIterable[TranslationRecord],
+) -> AsyncIterator[TranslationRecord]:
     """Match unordered streams and release each pair as soon as it is available.
 
     Pass non-memory records through unchanged; filter memories in original list
@@ -60,7 +60,7 @@ def apply_memory_selections(
     pending_memories: dict[UUID, MemoriesRecord] = {}
     seen_selections: set[UUID] = set()
     seen_records: set[TranslationDataKey] = set()
-    for selection, record in zip_longest(selections, records):
+    async for selection, record in azip_longest(selections, records):
         if selection is not None:
             chapter_id = selection.chapter_id
             if chapter_id in seen_selections:

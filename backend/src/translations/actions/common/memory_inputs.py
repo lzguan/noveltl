@@ -1,12 +1,12 @@
 """Batch memory retrieval for translation preparation."""
 
-from collections.abc import Generator
-from itertools import groupby
+from collections.abc import AsyncGenerator
 from uuid import UUID
 
 from sqlalchemy import and_, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.lib.aiter import agroupby
 from src.memory.models import Memory as MemoryRow
 from src.memory.models import MemoryGroup
 from src.memory.schemas import Memory
@@ -16,8 +16,8 @@ from src.translations.models import TranslationJob, TranslationJobChapter
 from src.translations.records import MemoriesRecord
 
 
-def iter_batch_memories(
-    db: Session,
+async def iter_batch_memories(
+    db: AsyncSession,
     *,
     job_id: UUID,
     batch_id: UUID,
@@ -26,7 +26,7 @@ def iter_batch_memories(
     memory_types: list[MemoryType] | None = None,
     exclude_current_chapter: bool = True,
     stream: str = "memories",
-) -> Generator[MemoriesRecord]:
+) -> AsyncGenerator[MemoriesRecord]:
     """Read one ordered candidate list per chapter using a single SQL query.
 
     Include pending/approved memories active at N (end > N), optionally excluding
@@ -74,13 +74,13 @@ def iter_batch_memories(
         )
         .execution_options(yield_per=100)
     )
-    result = db.execute(statement)
+    result = await db.stream(statement)
     try:
-        for chapter_id, rows in groupby(result, key=lambda row: row[0]):
+        async for chapter_id, rows in agroupby(result, key=lambda row: row[0]):
             yield MemoriesRecord(
                 chapter_id=chapter_id,
                 stream=stream,
                 payload=[Memory.model_validate(memory) for _, memory in rows if memory is not None],
             )
     finally:
-        result.close()
+        await result.close()

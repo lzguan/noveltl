@@ -90,3 +90,26 @@ def test_closing_early_cancels_in_flight_work() -> None:
 
     assert asyncio.run(run()) == 0
     assert sorted(cancelled) == [1, 2]
+
+
+def test_pulls_lazily_from_an_async_source() -> None:
+    started: list[int] = []
+
+    async def job(value: int) -> int:
+        await asyncio.sleep(0)
+        return value
+
+    async def jobs():
+        for value in range(5):
+            started.append(value)
+            yield job(value)
+
+    async def run() -> list[int]:
+        results = []
+        async for value in async_buffer(jobs(), size=2):
+            # At most the window plus the one awaitable that made room has been pulled.
+            assert len(started) <= len(results) + 3
+            results.append(value)
+        return results
+
+    assert sorted(asyncio.run(run())) == [0, 1, 2, 3, 4]

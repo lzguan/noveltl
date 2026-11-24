@@ -14,6 +14,7 @@ from uuid import UUID
 import httpx2
 import pytest
 
+from src.lib.aiter import as_async_iter
 from src.translations.clients.batch_jobs import (
     BatchJobComplete,
     BatchJobFailed,
@@ -31,21 +32,16 @@ from src.translations.codecs.batch_lines import (
 )
 from src.translations.codecs.registry import get_codec
 from src.translations.types import TranslationDataKey
+from test_support.aiter import alist
 
 MODEL = "deepseek/deepseek-v4.1-flash"
 
 
 @contextmanager
 def client_for(handler: Callable[[httpx2.Request], httpx2.Response]) -> Generator[OpenRouterClient]:
-    client = OpenRouterClient(api_key="test-key", base_url="https://example.invalid/api/v1")
-    client.client.close()
-    with httpx2.Client(
-        base_url="https://example.invalid/api/v1/",
-        headers={"Authorization": "Bearer test-key", "Content-Type": "application/json"},
-        transport=httpx2.MockTransport(handler),
-    ) as transport:
-        client.client = transport
-        yield client
+    yield OpenRouterClient(
+        api_key="test-key", base_url="https://example.invalid/api/v1", transport=httpx2.MockTransport(handler)
+    )
 
 
 def request_line(key: TranslationDataKey, *, model: str = MODEL) -> bytes:
@@ -62,7 +58,7 @@ def request_line(key: TranslationDataKey, *, model: str = MODEL) -> bytes:
     )
 
 
-def test_submit_poll_and_fresh_worker_output_preserve_codec_contract() -> None:
+async def test_submit_poll_and_fresh_worker_output_preserve_codec_contract() -> None:
     keys = [TranslationDataKey(UUID(int=1), name) for name in ("chapter", "memories")]
     lines = [request_line(key) for key in keys]
     custom_ids = [json.loads(line)["custom_id"] for line in lines]
@@ -126,15 +122,15 @@ def test_submit_poll_and_fresh_worker_output_preserve_codec_contract() -> None:
     # Include arbitrary chunk boundaries and CRLF; the input is single-use.
     content = b"".join(lines).replace(b"\n", b"\r\n")
     with client_for(handle) as submitter:
-        job_id = submitter.create_batch_job(iter((content[:13], content[13:])))
+        job_id = await submitter.create_batch_job(as_async_iter(iter((content[:13], content[13:]))))
     with client_for(handle) as poller:
-        assert poller.poll_batch_job(job_id) == BatchJobPending()
-        finished = poller.poll_batch_job(job_id)
+        assert await poller.poll_batch_job(job_id) == BatchJobPending()
+        finished = await poller.poll_batch_job(job_id)
         assert finished == BatchJobComplete(output_id=BatchOutputId("batch-1"))
     codec = get_codec(MODEL)
     with client_for(handle) as finalizer:
         for _ in range(2):
-            output = list(finalizer.fetch_batch_output(BatchOutputId("batch-1")))
+            output = await alist(finalizer.fetch_batch_output(BatchOutputId("batch-1")))
             assert all(line.endswith(b"\n") and line.count(b"\n") == 1 for line in output)
             assert [codec.decode_result(line) for line in output] == [
                 BatchItemFailure(key=keys[1], error="Provider rejected this request", code=None),
@@ -144,35 +140,35 @@ def test_submit_poll_and_fresh_worker_output_preserve_codec_contract() -> None:
 
 
 @pytest.mark.parametrize("status", ["validating", "in_progress", "finalizing", "cancelling"])
-def test_nonterminal_batches_remain_pending(status: str) -> None:
+async def test_nonterminal_batches_remain_pending(status: str) -> None:
     with client_for(lambda _: httpx2.Response(200, json={"id": "batch-1", "status": status})) as client:
-        assert client.poll_batch_job(BatchJobId("batch-1")) == BatchJobPending()
+        assert await client.poll_batch_job(BatchJobId("batch-1")) == BatchJobPending()
 
 
 @pytest.mark.parametrize("status", ["failed", "expired", "cancelled"])
-def test_terminal_failure_preserves_status_and_provider_reason(status: str) -> None:
+async def test_terminal_failure_preserves_status_and_provider_reason(status: str) -> None:
     with client_for(
         lambda _: httpx2.Response(
             200, json={"id": "batch-1", "status": status, "error": {"message": "Provider reason"}}
         )
     ) as client:
-        assert client.poll_batch_job(BatchJobId("batch-1")) == BatchJobFailed(
+        assert await client.poll_batch_job(BatchJobId("batch-1")) == BatchJobFailed(
             error=f"OpenRouter batch batch-1 {status}: Provider reason"
         )
 
 
 @pytest.mark.parametrize("status,results", [("in_progress", None), ("failed", []), ("completed", None)])
-def test_unavailable_results_raise_instead_of_emitting_an_empty_output(status: str, results: object) -> None:
+async def test_unavailable_results_raise_instead_of_emitting_an_empty_output(status: str, results: object) -> None:
     with client_for(
         lambda _: httpx2.Response(200, json={"id": "batch-1", "status": status, "results": results})
     ) as client:
         with pytest.raises(ValueError, match="results are not available"):
-            list(client.fetch_batch_output(BatchOutputId("batch-1")))
+            await alist(client.fetch_batch_output(BatchOutputId("batch-1")))
 
 
 @pytest.mark.parametrize("operation", ["submit", "poll", "fetch"])
 @pytest.mark.parametrize("status", [422, 500])
-def test_http_failure_propagates_without_replaying_submission(operation: str, status: int) -> None:
+async def test_http_failure_propagates_without_replaying_submission(operation: str, status: int) -> None:
     requests: list[httpx2.Request] = []
 
     def handle(request: httpx2.Request) -> httpx2.Response:
@@ -181,11 +177,13 @@ def test_http_failure_propagates_without_replaying_submission(operation: str, st
 
     with client_for(handle) as client, pytest.raises(httpx2.HTTPStatusError, match="Provider failure detail") as exc:
         if operation == "submit":
-            client.create_batch_job(iter((request_line(TranslationDataKey(UUID(int=1), "chapter")),)))
+            await client.create_batch_job(
+                as_async_iter(iter((request_line(TranslationDataKey(UUID(int=1), "chapter")),)))
+            )
         elif operation == "poll":
-            client.poll_batch_job(BatchJobId("batch-1"))
+            await client.poll_batch_job(BatchJobId("batch-1"))
         else:
-            list(client.fetch_batch_output(BatchOutputId("batch-1")))
+            await alist(client.fetch_batch_output(BatchOutputId("batch-1")))
     assert exc.value.response.status_code == status
     assert len(requests) == 1
 
@@ -199,15 +197,15 @@ def test_http_failure_propagates_without_replaying_submission(operation: str, st
         {"id": "batch-1", "status": "completed", "results": {}},
     ],
 )
-def test_invalid_poll_responses_raise(response: dict[str, object]) -> None:
+async def test_invalid_poll_responses_raise(response: dict[str, object]) -> None:
     with client_for(lambda _: httpx2.Response(200, json=response)) as client, pytest.raises(ValueError):
-        client.poll_batch_job(BatchJobId("batch-1"))
+        await client.poll_batch_job(BatchJobId("batch-1"))
 
 
 @pytest.mark.parametrize(
     "invalid", ["empty", "malformed", "mixed-models", "duplicate-keys", "wrong-endpoint", "long-id", "invalid-id"]
 )
-def test_invalid_submission_cannot_produce_a_job_handle(invalid: str) -> None:
+async def test_invalid_submission_cannot_produce_a_job_handle(invalid: str) -> None:
     key = TranslationDataKey(UUID(int=1), "chapter")
     line = request_line(key)
     content = {
@@ -221,4 +219,4 @@ def test_invalid_submission_cannot_produce_a_job_handle(invalid: str) -> None:
     }[invalid]
     with client_for(lambda _: httpx2.Response(202, json={"id": "batch-1", "status": "validating"})) as client:
         with pytest.raises(ValueError):
-            client.create_batch_job(iter((content,)))
+            await client.create_batch_job(as_async_iter(iter((content,))))

@@ -1,12 +1,11 @@
-import asyncio
 import json
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import AsyncIterable, AsyncIterator, Callable, Mapping
 from typing import Any
 from uuid import uuid4
 
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI
 
-from src.files.storage import ObjectStore
+from src.files.async_storage import AsyncObjectStore
 from src.lib.async_buffer import async_buffer
 from src.translations.clients.batch_jobs import (
     BatchJobClient,
@@ -15,7 +14,7 @@ from src.translations.clients.batch_jobs import (
     BatchJobPoll,
     BatchOutputId,
 )
-from src.translations.jsonl import iter_jsonl_lines
+from src.translations.jsonl import aiter_jsonl_lines
 
 
 # Completes the whole batch inside create_batch_job, so a batch must finish within the
@@ -25,7 +24,7 @@ class SyncChatClient(BatchJobClient):
     def __init__(
         self,
         client_factory: Callable[[], AsyncOpenAI],
-        store: ObjectStore,
+        store: AsyncObjectStore,
         *,
         provider_models: Mapping[str, str],
         max_concurrency: int = 4,
@@ -33,32 +32,29 @@ class SyncChatClient(BatchJobClient):
     ) -> None:
         if max_concurrency <= 0:
             raise ValueError("max_concurrency must be positive")
-        # A factory, not a client: each batch runs on its own event loop, and an async
-        # client binds to the loop it first runs on.
+        # A factory, not a client: a Celery step runs on a fresh event loop each time, and
+        # an async client binds to the loop it first runs on.
         self.client_factory = client_factory
         self.store = store
         self.provider_models = dict(provider_models)
         self.max_concurrency = max_concurrency
         self.max_retries = max_retries
 
-    def create_batch_job(self, content: Iterable[bytes]) -> BatchJobId:
-        # Stopgap until the steps are async; the calling thread has no running loop.
-        return asyncio.run(self._run_batch(content))
-
-    async def _run_batch(self, content: Iterable[bytes]) -> BatchJobId:
+    async def create_batch_job(self, content: AsyncIterable[bytes]) -> BatchJobId:
         key = f"translations/sync-batches/{uuid4().hex}.jsonl"
         async with self.client_factory().with_options(max_retries=self.max_retries) as client:
-            requests = (self._complete(client, line) for line in iter_jsonl_lines(content))
-            with self.store.create(key, content_type="application/jsonl") as writer:
+            requests = (self._complete(client, line) async for line in aiter_jsonl_lines(content))
+            async with self.store.create(key, content_type="application/jsonl") as writer:
                 async for result in async_buffer(requests, size=self.max_concurrency):
-                    writer.write(result)
+                    await writer.write(result)
         return BatchJobId(key)
 
-    def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
+    async def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
         return BatchJobComplete(output_id=BatchOutputId(job_id))
 
-    def fetch_batch_output(self, output_id: BatchOutputId) -> Iterator[bytes]:
-        yield from self.store.fetch(output_id)
+    async def fetch_batch_output(self, output_id: BatchOutputId) -> AsyncIterator[bytes]:
+        async for chunk in self.store.fetch(output_id):
+            yield chunk
 
     async def _complete(self, client: AsyncOpenAI, line: bytes) -> bytes:
         request = json.loads(line)

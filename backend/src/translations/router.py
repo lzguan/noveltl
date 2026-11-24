@@ -4,11 +4,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.database import get_db
+from src.database import get_async_db
 from src.translations.metadata import check_pipeline, read_action_metadata
 from src.translations.pipeline_schemas import TranslationPipelineCheck
 from src.translations.schemas import (
@@ -32,21 +32,21 @@ from src.translations.service import (
 from src.translations.viewer import list_translation_jobs, read_translation_batches
 
 router = APIRouter(prefix="/translation-jobs", tags=["translations"])
-type DB = Annotated[Session, Depends(get_db)]
+type DB = Annotated[AsyncSession, Depends(get_async_db)]
 type CurrentUser = Annotated[User, Depends(get_current_user)]
 type JobId = Annotated[UUID, Path(alias="jobId")]
 type BatchId = Annotated[UUID, Path(alias="batchId")]
 
 
 @router.post("", response_model=TranslationJobCreated, status_code=201)
-def create(request: TranslationJobCreateRequest, db: DB, current_user: CurrentUser) -> TranslationJobCreated:
+async def create(request: TranslationJobCreateRequest, db: DB, current_user: CurrentUser) -> TranslationJobCreated:
     try:
         validated = TranslationJobCreate.model_validate(request.model_dump())
     except ValidationError as error:
         errors = [{**item, "loc": ("body", *item["loc"])} for item in error.errors()]
         raise RequestValidationError(errors, body=request.model_dump()) from error
     try:
-        return TranslationJobCreated(job_id=create_translation_job(db, current_user, validated))
+        return TranslationJobCreated(job_id=await create_translation_job(db, current_user, validated))
     except TranslationNotFoundError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:
@@ -65,7 +65,7 @@ def check(draft: TranslationJobDraft, current_user: CurrentUser) -> TranslationP
 
 
 @router.get("", response_model=TranslationJobPage)
-def list_jobs(
+async def list_jobs(
     db: DB,
     current_user: CurrentUser,
     novel_id: Annotated[UUID, Query(alias="novelId")],
@@ -73,13 +73,13 @@ def list_jobs(
     limit: Annotated[int, Query(ge=1, le=50)] = 5,
 ) -> TranslationJobPage:
     try:
-        return list_translation_jobs(db, current_user, novel_id, offset=offset, limit=limit)
+        return await list_translation_jobs(db, current_user, novel_id, offset=offset, limit=limit)
     except TranslationNotFoundError as error:
         raise HTTPException(404, str(error)) from error
 
 
 @router.get("/{jobId}/batches", response_model=TranslationBatchPage)
-def list_batches(
+async def list_batches(
     job_id: JobId,
     db: DB,
     current_user: CurrentUser,
@@ -87,24 +87,24 @@ def list_batches(
     limit: Annotated[int, Query(ge=1, le=50)] = 5,
 ) -> TranslationBatchPage:
     try:
-        return read_translation_batches(db, current_user, job_id, offset=offset, limit=limit)
+        return await read_translation_batches(db, current_user, job_id, offset=offset, limit=limit)
     except TranslationNotFoundError as error:
         raise HTTPException(404, str(error)) from error
 
 
 @router.get("/{jobId}", response_model=TranslationJobRead)
-def read(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationJobRead:
+async def read(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationJobRead:
     try:
-        return read_translation_job(db, current_user, job_id)
+        return await read_translation_job(db, current_user, job_id)
     except TranslationNotFoundError as error:
         raise HTTPException(404, str(error)) from error
 
 
-def _control(
-    db: Session, user: User, job_id: UUID, operation: Control, batch_id: UUID | None = None
+async def _control(
+    db: AsyncSession, user: User, job_id: UUID, operation: Control, batch_id: UUID | None = None
 ) -> TranslationControlResult:
     try:
-        return control_translation_job(db, user, job_id, operation, batch_id=batch_id)
+        return await control_translation_job(db, user, job_id, operation, batch_id=batch_id)
     except TranslationNotFoundError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:
@@ -112,40 +112,40 @@ def _control(
 
 
 @router.post("/{jobId}/start", response_model=TranslationControlResult)
-def start(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
-    return _control(db, current_user, job_id, "start")
+async def start(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return await _control(db, current_user, job_id, "start")
 
 
 @router.post("/{jobId}/resume-all", response_model=TranslationControlResult)
-def resume_all(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
-    return _control(db, current_user, job_id, "resume")
+async def resume_all(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return await _control(db, current_user, job_id, "resume")
 
 
 @router.post("/{jobId}/cancel-all", response_model=TranslationControlResult)
-def cancel_all(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
-    return _control(db, current_user, job_id, "cancel")
+async def cancel_all(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return await _control(db, current_user, job_id, "cancel")
 
 
 @router.post("/{jobId}/retry-all", response_model=TranslationControlResult)
-def retry_all(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
-    return _control(db, current_user, job_id, "retry")
+async def retry_all(job_id: JobId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return await _control(db, current_user, job_id, "retry")
 
 
 @router.post("/{jobId}/batches/{batchId}/cancel", response_model=TranslationControlResult)
-def cancel(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
-    return _control(db, current_user, job_id, "cancel", batch_id)
+async def cancel(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return await _control(db, current_user, job_id, "cancel", batch_id)
 
 
 @router.post("/{jobId}/batches/{batchId}/retry", response_model=TranslationControlResult)
-def retry(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
-    return _control(db, current_user, job_id, "retry", batch_id)
+async def retry(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return await _control(db, current_user, job_id, "retry", batch_id)
 
 
 @router.post("/{jobId}/batches/{batchId}/start", response_model=TranslationControlResult)
-def start_batch(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
-    return _control(db, current_user, job_id, "start", batch_id)
+async def start_batch(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return await _control(db, current_user, job_id, "start", batch_id)
 
 
 @router.post("/{jobId}/batches/{batchId}/resume", response_model=TranslationControlResult)
-def resume_batch(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
-    return _control(db, current_user, job_id, "resume", batch_id)
+async def resume_batch(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return await _control(db, current_user, job_id, "resume", batch_id)

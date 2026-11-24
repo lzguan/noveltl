@@ -22,6 +22,31 @@ as optional context by translation prompts.
 | Provider transport and response codecs | [clients/](../../backend/src/translations/clients/), [codecs/](../../backend/src/translations/codecs/) |
 | Frontend pipeline builder and results viewer | [translations panel](../../frontend/src/edit/panels/translations/) |
 
+## API and worker sessions
+
+The API and the worker use `AsyncSession` throughout; `create_job` is async and
+commits the caller's session. Controls commit before awaiting dispatch.
+
+Step bodies are async: `ActionTaskContext.db` is an `AsyncSession`,
+`renew_lease` is awaited (its own transaction), and callbacks return
+`Awaitable[None]` (polls `Awaitable[bool]`). Inputs, outputs, validation and
+memory selection are async-generator pipelines (`src/lib/aiter.py` holds
+`achain`, `azip_longest`, `agroupby`, `as_async_iter`). `iter_batch_memories`
+streams with `db.stream(...)`; nothing else may query that session until the
+stream closes. Batch clients are async and open their HTTP client per operation,
+because Celery runs each step in its own `asyncio.run` loop on a `NullPool`
+engine (`CelerySessionLocal`); blocking `apply_async` runs in `asyncio.to_thread`.
+OpenRouter streams its upload body, so `content()` keeps renewing during the
+upload. Qwen spools `content()` to a temp file first (the SDK reads files
+synchronously), then uploads in one await with no renewal: that upload must fit
+within the submit lease.
+
+Tests run Celery tasks through `test_support/steps.py` (`celery_step`), which calls
+the task in `asyncio.to_thread` because its `asyncio.run` cannot nest in the test loop. Mock side effects
+on `apply_async` run in a worker thread, so they read with the sync session. Scenario
+fixture rows belong to the sync `test_db`; load them into `async_test_db` before
+editing.
+
 ## Streams, signatures, and full-state artifacts
 
 A job's data flows as named **streams**, each with a type (`StreamType`: `chapter`,
@@ -173,7 +198,7 @@ next stage's task READY) take a session factory and contain no dispatch.
 [async_actions.py](../../backend/src/translations/actions/async_actions.py)
 (marked not audited, strictly for agent-eval use) implements `ActionCallbacks`
 in-process. Awaiting `entrypoint(task_id)` runs that batch's remaining stages to
-completion: steps run in `asyncio.to_thread` through `run_claimed_step` behind a
+completion: steps are awaited through `run_claimed_step` behind a
 shared semaphore, pending polls `asyncio.sleep` their interval without holding
 it, and `exitpoint` awaits the next stage's `entrypoint`. A step error is
 recorded on the task and raised from `entrypoint`; an unclaimable task returns
@@ -188,8 +213,8 @@ Model `qwen-flash-sync` uses
 [sync_client.py](../../backend/src/translations/clients/sync_client.py) behind
 the same `BatchJobClient` interface: `create_batch_job` sends each request
 line's body to the chat-completions endpoint (model renamed to `qwen-flash`),
-at most four at once with SDK retries for 429/5xx (one `asyncio.run` per batch,
-`AsyncOpenAI` from a factory with `async_buffer`; the interface stays sync), and writes provider
+at most four at once with SDK retries for 429/5xx (`AsyncOpenAI` from a factory,
+requests streamed through `async_buffer`), and writes provider
 batch-output lines to the object store at `translations/sync-batches/<uuid>.jsonl`.
 That key is the job and output ID, and the first poll is complete, so a stage
 needs no poll wait. A failed request becomes that chapter's failed line. The

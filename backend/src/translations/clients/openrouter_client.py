@@ -1,8 +1,7 @@
 """OpenRouter's inline batch API behind the worker's JSONL transport contract."""
 
 import json
-from collections.abc import Iterable, Iterator
-from itertools import chain
+from collections.abc import AsyncIterable, AsyncIterator
 from typing import Literal
 from urllib.parse import quote
 
@@ -18,7 +17,7 @@ from src.translations.clients.batch_jobs import (
     BatchJobPoll,
     BatchOutputId,
 )
-from src.translations.jsonl import iter_jsonl_lines
+from src.translations.jsonl import aiter_jsonl_lines
 
 
 class _ChatBody(BaseModel):
@@ -61,9 +60,9 @@ def _raise_for_status(response: httpx2.Response) -> None:
         ) from error
 
 
-def _encode_batch(content: Iterable[bytes]) -> Iterator[bytes]:
-    lines = iter_jsonl_lines(content)
-    first_line = next(lines, None)
+async def _encode_batch(content: AsyncIterable[bytes]) -> AsyncIterator[bytes]:
+    lines = aiter_jsonl_lines(content)
+    first_line = await anext(lines, None)
     if first_line is None:
         raise ValueError("Cannot submit an empty OpenRouter batch")
     first = _RequestLine.model_validate_json(first_line)
@@ -72,49 +71,56 @@ def _encode_batch(content: Iterable[bytes]) -> Iterator[bytes]:
     metadata = {"endpoint": first.url, "model": first.body.model, "completion_window": "24h"}
     yield json.dumps(metadata).encode("utf-8")[:-1] + b',"requests":['
     seen: set[str] = set()
-    for item in chain((first,), (_RequestLine.model_validate_json(line) for line in lines)):
+
+    def encode(item: _RequestLine) -> bytes:
         if item.body.model != first.body.model:
             raise ValueError("OpenRouter batches must use a single model")
         if item.custom_id in seen:
             raise ValueError("OpenRouter batch custom_id values must be unique")
-        if seen:
-            yield b","
+        separator = b"," if seen else b""
         seen.add(item.custom_id)
-        yield json.dumps(
+        return separator + json.dumps(
             {"custom_id": item.custom_id, "body": item.body.model_dump(mode="json")},
             ensure_ascii=False,
             allow_nan=False,
         ).encode("utf-8")
+
+    yield encode(first)
+    async for line in lines:
+        yield encode(_RequestLine.model_validate_json(line))
     yield b"]}"
 
 
 class OpenRouterClient(BatchJobClient):
-    def __init__(self, api_key: str, base_url: str) -> None:
+    def __init__(self, api_key: str, base_url: str, *, transport: httpx2.AsyncBaseTransport | None = None) -> None:
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY must be configured")
-        self.client = httpx2.Client(
-            base_url=base_url.rstrip("/") + "/",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            timeout=60,
-        )
+        self.base_url = base_url.rstrip("/") + "/"
+        self.headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        self.transport = transport
 
-    def create_batch_job(self, content: Iterable[bytes]) -> BatchJobId:
-        # HTTPX does not automatically retry this single-use submission stream.
-        response = self.client.post("batches", content=_encode_batch(content))
+    def _client(self) -> httpx2.AsyncClient:
+        return httpx2.AsyncClient(base_url=self.base_url, headers=self.headers, timeout=60, transport=self.transport)
+
+    async def create_batch_job(self, content: AsyncIterable[bytes]) -> BatchJobId:
+        async with self._client() as client:
+            # HTTPX does not automatically retry this single-use submission stream.
+            response = await client.post("batches", content=_encode_batch(content))
         _raise_for_status(response)
         batch = _Batch.model_validate_json(response.content)
         return BatchJobId(batch.id)
 
-    def _retrieve(self, batch_id: str) -> _Batch:
-        response = self.client.get(f"batches/{quote(batch_id, safe='')}")
+    async def _retrieve(self, client: httpx2.AsyncClient, batch_id: str) -> _Batch:
+        response = await client.get(f"batches/{quote(batch_id, safe='')}")
         _raise_for_status(response)
         batch = _Batch.model_validate_json(response.content)
         if batch.id != batch_id:
             raise ValueError("OpenRouter returned a different batch ID")
         return batch
 
-    def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
-        batch = self._retrieve(job_id)
+    async def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
+        async with self._client() as client:
+            batch = await self._retrieve(client, job_id)
         if batch.status == "completed":
             if batch.results is None:
                 return BatchJobPending()
@@ -126,8 +132,9 @@ class OpenRouterClient(BatchJobClient):
             return BatchJobFailed(error=f"OpenRouter batch {batch.id} {batch.status}{detail}")
         return BatchJobPending()
 
-    def fetch_batch_output(self, output_id: BatchOutputId) -> Iterator[bytes]:
-        batch = self._retrieve(output_id)
+    async def fetch_batch_output(self, output_id: BatchOutputId) -> AsyncIterator[bytes]:
+        async with self._client() as client:
+            batch = await self._retrieve(client, output_id)
         if batch.status != "completed" or batch.results is None:
             raise ValueError("OpenRouter batch results are not available")
         for result in batch.results:

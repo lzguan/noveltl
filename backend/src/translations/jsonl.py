@@ -1,6 +1,6 @@
 """Streaming serialization of canonical translation artifacts."""
 
-from collections.abc import Iterable, Iterator
+from collections.abc import AsyncIterable, AsyncIterator, Iterable, Iterator
 
 from src.translations.records import TranslationRecord, translation_record_adapter
 
@@ -21,10 +21,30 @@ def iter_translation_records(chunks: Iterable[bytes]) -> Iterator[TranslationRec
         yield translation_record_adapter.validate_json(line)
 
 
+async def aiter_translation_records(chunks: AsyncIterable[bytes]) -> AsyncIterator[TranslationRecord]:
+    """Async counterpart of `iter_translation_records`."""
+    async for line in aiter_jsonl_lines(chunks):
+        yield translation_record_adapter.validate_json(line)
+
+
 def iter_jsonl_lines(chunks: Iterable[bytes]) -> Iterator[bytes]:
     """Frame arbitrary chunks as lines, retaining CR and accepting a final newline-less line."""
     pending = bytearray()
     for chunk in chunks:
+        start = 0
+        while (end := chunk.find(b"\n", start)) != -1:
+            pending.extend(chunk[start:end])
+            yield bytes(pending)
+            pending.clear()
+            start = end + 1
+        pending.extend(chunk[start:])
+    if pending:
+        yield bytes(pending)
+
+
+async def aiter_jsonl_lines(chunks: AsyncIterable[bytes]) -> AsyncIterator[bytes]:
+    pending = bytearray()
+    async for chunk in chunks:
         start = 0
         while (end := chunk.find(b"\n", start)) != -1:
             pending.extend(chunk[start:end])

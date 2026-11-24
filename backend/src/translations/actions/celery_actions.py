@@ -6,8 +6,10 @@ from datetime import timedelta
 from celery import Celery
 from celery.app.task import Task
 from pydantic import TypeAdapter
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from src.database import SessionLocal
+from src.config import database_settings
 from src.translations.actions.actions import (
     ActionCallback,
     ActionCallbacks,
@@ -18,6 +20,11 @@ from src.translations.actions.actions import (
 )
 from src.translations.actions.runner import ready_next_task, run_claimed_step
 from src.translations.types import ActionName, TranslationTaskStatus
+
+_celery_engine = create_async_engine(database_settings.DB_URL, poolclass=NullPool)
+CelerySessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    _celery_engine, autoflush=False, expire_on_commit=False
+)
 
 
 class CeleryActionCallbacks(ActionCallbacks):
@@ -37,8 +44,8 @@ class CeleryActionCallbacks(ActionCallbacks):
         name: str | None = None,
     ) -> Callable[[ActionCallback], ActionTask]:
         def decorate(f: ActionCallback) -> ActionTask:
-            def run(context: ActionTaskContext) -> bool:
-                f(context)
+            async def run(context: ActionTaskContext) -> bool:
+                await f(context)
                 return True
 
             return self._register(
@@ -94,10 +101,9 @@ class CeleryActionCallbacks(ActionCallbacks):
         duration = timedelta(seconds=lease_seconds)
         idx = len(self._intermediate)
 
-        @self.celery_app.task(name=name, shared=False)
-        def celery_task(x: uuid.UUID) -> None:
-            outcome = run_claimed_step(
-                SessionLocal,
+        async def run_step(x: uuid.UUID) -> None:
+            outcome = await run_claimed_step(
+                CelerySessionLocal,
                 x,
                 f,
                 expect=expect,
@@ -109,23 +115,29 @@ class CeleryActionCallbacks(ActionCallbacks):
             if outcome == "unclaimed":
                 return
             if outcome == "pending":
-                asyncio.run(dispatch(x, delay=timedelta(seconds=interval_seconds)))
+                await dispatch(x, delay=timedelta(seconds=interval_seconds))
             elif idx + 1 < len(self._intermediate):
-                self._intermediate[idx + 1].apply_async((x,))
+                await asyncio.to_thread(self._intermediate[idx + 1].apply_async, (x,))
             else:
-                self.exitpoint(x)
+                await self.exitpoint(x)
+
+        @self.celery_app.task(name=name, shared=False)
+        def celery_task(x: uuid.UUID) -> None:
+            asyncio.run(run_step(x))
 
         self._intermediate.append(celery_task)
 
         async def dispatch(task_id: uuid.UUID, *, delay: timedelta | None = None) -> None:
             if delay is None:
-                celery_task.apply_async((task_id,))
+                await asyncio.to_thread(celery_task.apply_async, (task_id,))
             else:
                 # A deadline already passed means the gate is open; fire at once.
-                celery_task.apply_async((task_id,), countdown=max(delay, timedelta(0)).total_seconds())
+                await asyncio.to_thread(
+                    celery_task.apply_async, (task_id,), countdown=max(delay, timedelta(0)).total_seconds()
+                )
 
         self._steps.append(ActionStep(expect, during, finish, dispatch))
-        return celery_task
+        return run_step
 
     def resume_step(self, state: TranslationTaskStatus) -> ActionStep | None:
         if state == TranslationTaskStatus.COMPLETE:
@@ -143,15 +155,15 @@ class CeleryActionCallbacks(ActionCallbacks):
 
     async def entrypoint(self, x: uuid.UUID) -> None:
         if self._intermediate:
-            self._intermediate[0].apply_async((x,))
+            await asyncio.to_thread(self._intermediate[0].apply_async, (x,))
         else:
-            self.exitpoint(x)
+            await self.exitpoint(x)
 
-    def exitpoint(self, x: uuid.UUID) -> None:
-        ready = ready_next_task(SessionLocal, x)
+    async def exitpoint(self, x: uuid.UUID) -> None:
+        ready = await ready_next_task(CelerySessionLocal, x)
         if ready is None:
             return
         next_task_id, next_action = ready
         # A failed dispatch leaves the task READY so exitpoint can be retried.
         next_callbacks = self._callbacks_dict[TypeAdapter(ActionName).validate_python(next_action)]
-        asyncio.run(next_callbacks.entrypoint(next_task_id))
+        await next_callbacks.entrypoint(next_task_id)

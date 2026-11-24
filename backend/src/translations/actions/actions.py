@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Protocol
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.translations.models import TranslationTask
 from src.translations.types import TranslationTaskStatus
@@ -21,19 +21,19 @@ class ActionTaskContext:
     This context stays in the worker; queue messages contain only the task ID.
     Status, failure, and claim fields belong to the wrapper. Renew cooperatively
     before expiry during long work, before flushing or locking the task row:
-    renewal uses its own transaction. A single blocking operation must fit
+    renewal uses its own transaction. A single awaited operation must fit
     within the lease. Renewal failure raises and prevents completion.
     """
 
-    db: Session
+    db: AsyncSession
     task: TranslationTask
     claim_token: uuid.UUID
-    renew_lease: Callable[[], None]
+    renew_lease: Callable[[], Awaitable[None]]
 
 
-type ActionCallback = Callable[[ActionTaskContext], None]
-type PollCallback = Callable[[ActionTaskContext], bool]
-type ActionTask = Callable[[uuid.UUID], None]
+type ActionCallback = Callable[[ActionTaskContext], Awaitable[None]]
+type PollCallback = Callable[[ActionTaskContext], Awaitable[bool]]
+type ActionTask = Callable[[uuid.UUID], Awaitable[None]]
 
 
 class StepDispatcher(Protocol):

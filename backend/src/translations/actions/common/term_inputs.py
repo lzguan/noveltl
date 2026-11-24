@@ -1,14 +1,14 @@
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.models import TermTranslation
 from src.memory.types import ReviewStatus
 
 
-def read_term_translation_map(db: Session, memory_group_id: UUID) -> dict[str, str]:
+async def read_term_translation_map(db: AsyncSession, memory_group_id: UUID) -> dict[str, str]:
     statement = (
         select(GlossaryTerm.term, TermTranslation.translation)
         .join(TermTranslation, TermTranslation.term_id == GlossaryTerm.term_id)
@@ -19,4 +19,4 @@ def read_term_translation_map(db: Session, memory_group_id: UUID) -> dict[str, s
         )
         .order_by(GlossaryTerm.term)
     )
-    return {term: translation for term, translation in db.execute(statement)}
+    return {term: translation for term, translation in await db.execute(statement)}

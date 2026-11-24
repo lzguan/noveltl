@@ -1,11 +1,11 @@
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from unittest.mock import Mock
 from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import Engine, event, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import event, select
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
@@ -23,15 +23,16 @@ from src.translations.schemas import TranslationJobCreate
 from src.translations.task_names import LOAD_INPUTS_LOAD
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
+from test_support.steps import celery_step
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
 
 
-def _group(db: Session, scenario: DatabaseScenario) -> MemoryGroup:
+async def _group(db: AsyncSession, scenario: DatabaseScenario) -> MemoryGroup:
     novel = scenario.novels["novel_1"]
     group = MemoryGroup(novel_id=novel.novel_id, memory_group_name="Inputs", memory_language=novel.language_code)
     db.add(group)
-    db.flush()
+    await db.flush()
     db.add(
         Memory(
             memory_group_id=group.memory_group_id,
@@ -43,7 +44,7 @@ def _group(db: Session, scenario: DatabaseScenario) -> MemoryGroup:
             plugin_name="continuity",
         )
     )
-    db.flush()
+    await db.flush()
     return group
 
 
@@ -58,50 +59,53 @@ def _request(scenario: DatabaseScenario, stage: dict, inputs: dict | None = None
     )
 
 
-def _run_loader(
-    db: Session,
-    session_factory: sessionmaker[Session],
+async def _run_loader(
+    db: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
     request: TranslationJobCreate,
     next_step: str,
-    before_load: Callable[[], None] | None = None,
+    before_load: Callable[[], Awaitable[None]] | None = None,
 ) -> tuple[list[TranslationRecord], list[UUID], TranslationTask, Mock]:
-    job_id = create_job(db, request)
-    rows = db.execute(
-        select(TranslationTask, TranslationStage.action)
-        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-        .where(TranslationStage.job_id == job_id)
-        .order_by(TranslationStage.stage_num)
+    job_id = await create_job(db, request)
+    rows = (
+        await db.execute(
+            select(TranslationTask, TranslationStage.action)
+            .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+            .where(TranslationStage.job_id == job_id)
+            .order_by(TranslationStage.stage_num)
+        )
     ).all()
     (loader, loader_action), (following, _) = rows
     assert loader_action == "load_inputs"
     assert (loader.status, following.status) == (State.READY, State.WAITING)
     chapter_ids = list(
-        db.scalars(select(TranslationJobChapter.chapter_id).where(TranslationJobChapter.job_id == job_id))
+        await db.scalars(select(TranslationJobChapter.chapter_id).where(TranslationJobChapter.job_id == job_id))
     )
     store, dispatch = MemoryObjectStore(), Mock()
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", session_factory)
-    monkeypatch.setattr("src.translations.actions.load_inputs.get_object_store", lambda: store)
+    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", session_factory)
+    monkeypatch.setattr("src.translations.actions.load_inputs.get_async_object_store", lambda: store)
     monkeypatch.setattr(app.tasks[next_step], "apply_async", dispatch)
 
     if before_load is not None:
-        before_load()
-    app.tasks[LOAD_INPUTS_LOAD](loader.task_id)
+        await before_load()
+    await celery_step(LOAD_INPUTS_LOAD)(loader.task_id)
 
-    db.expire_all()
+    await db.refresh(loader)
+    await db.refresh(following)
     assert loader.status == State.COMPLETE and loader.output_file_id is not None
-    stored = db.get(StoredFile, loader.output_file_id)
+    stored = await db.get(StoredFile, loader.output_file_id)
     assert stored is not None
     return list(iter_translation_records([store.objects[stored.object_key]])), chapter_ids, following, dispatch
 
 
-def test_loader_captures_every_enabled_stream_and_readies_the_next_stage(
-    test_db: Session,
+async def test_loader_captures_every_enabled_stream_and_readies_the_next_stage(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    group = _group(test_db, sample_scenario)
+    group = await _group(async_test_db, sample_scenario)
     inputs = {
         "memories": {
             "type": "memories",
@@ -111,8 +115,12 @@ def test_loader_captures_every_enabled_stream_and_readies_the_next_stage(
     }
     request = _request(sample_scenario, {"action": "prune_memories", "config": {"model": "qwen-plus"}}, inputs)
 
-    records, chapter_ids, following, dispatch = _run_loader(
-        test_db, testing_session_local, monkeypatch, request, "src.translations.actions.prune_memories.prepare"
+    records, chapter_ids, following, dispatch = await _run_loader(
+        async_test_db,
+        testing_async_session_local,
+        monkeypatch,
+        request,
+        "src.translations.actions.prune_memories.prepare",
     )
 
     assert {(record.chapter_id, record.stream, record.data_name) for record in records} == {
@@ -127,16 +135,16 @@ def test_loader_captures_every_enabled_stream_and_readies_the_next_stage(
     dispatch.assert_called_once_with((following.task_id,))
 
 
-def test_loader_captures_only_chapters_when_no_streams_are_enabled(
-    test_db: Session,
+async def test_loader_captures_only_chapters_when_no_streams_are_enabled(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     request = _request(sample_scenario, {"action": "translate", "config": {"model": "qwen-plus"}})
 
-    records, chapter_ids, _, _ = _run_loader(
-        test_db, testing_session_local, monkeypatch, request, "src.translations.actions.translate.prepare"
+    records, chapter_ids, _, _ = await _run_loader(
+        async_test_db, testing_async_session_local, monkeypatch, request, "src.translations.actions.translate.prepare"
     )
 
     assert all(isinstance(record, ChapterRecord) and record.payload for record in records)
@@ -155,54 +163,59 @@ def test_creation_rejects_stages_whose_streams_the_job_does_not_load(sample_scen
 
 
 @pytest.mark.parametrize("stream", ["memories", "terms", "conventions"])
-def test_loader_rejects_a_memory_group_from_another_novel(
-    test_db: Session,
+async def test_loader_rejects_a_memory_group_from_another_novel(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
     stream: str,
 ) -> None:
     # The service checks ownership at creation; the loader checks again in case the group moved since.
-    group = _group(test_db, sample_scenario)
+    group = await _group(async_test_db, sample_scenario)
     inputs = {stream: {"type": stream, "memory_group_id": str(group.memory_group_id)}}
     request = _request(sample_scenario, {"action": "translate", "config": {"model": "qwen-plus"}}, inputs)
-    job_id = create_job(test_db, request)
+    job_id = await create_job(async_test_db, request)
     group.novel_id = sample_scenario.novels["novel_2"].novel_id
-    test_db.commit()
-    loader = test_db.scalars(
-        select(TranslationTask)
-        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-        .where(TranslationStage.job_id == job_id, TranslationStage.stage_num == 0)
+    await async_test_db.commit()
+    loader = (
+        await async_test_db.scalars(
+            select(TranslationTask)
+            .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+            .where(TranslationStage.job_id == job_id, TranslationStage.stage_num == 0)
+        )
     ).one()
     store = MemoryObjectStore()
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
-    monkeypatch.setattr("src.translations.actions.load_inputs.get_object_store", lambda: store)
+    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr("src.translations.actions.load_inputs.get_async_object_store", lambda: store)
 
     with pytest.raises(ValueError, match="does not belong"):
-        app.tasks[LOAD_INPUTS_LOAD](loader.task_id)
+        await celery_step(LOAD_INPUTS_LOAD)(loader.task_id)
 
-    test_db.expire_all()
+    await async_test_db.refresh(loader)
     assert loader.output_file_id is None and loader.failed_at is not None
     assert not store.objects
 
 
-def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventions(
-    test_db: Session,
-    test_engine: Engine,
+async def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventions(
+    async_test_db: AsyncSession,
+    test_async_engine: AsyncEngine,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    group = _group(test_db, sample_scenario)
-    source = sample_scenario.contents["chapter_1_v2"]
+    group = await _group(async_test_db, sample_scenario)
+    # Scenario rows belong to the sync session; edit them through the async one.
+    source = await async_test_db.get_one(ChapterContent, sample_scenario.contents["chapter_1_v2"].chapter_content_id)
     source.chapter_content_text = "Alpha Approved RejectedTerm RejectedMapping Unmapped"
     chapter_id = source.chapter_id
     other_group = MemoryGroup(novel_id=group.novel_id, memory_group_name="Other", memory_language="en")
     second = Chapter(novel_id=group.novel_id, chapter_num=100, chapter_title="No matches", chapter_is_public=False)
-    test_db.add_all([other_group, second])
-    test_db.flush()
+    async_test_db.add_all([other_group, second])
+    await async_test_db.flush()
     second_id = second.chapter_id
-    test_db.add(ChapterContent(chapter_id=second_id, chapter_content_version=1, chapter_content_text="No matches"))
+    async_test_db.add(
+        ChapterContent(chapter_id=second_id, chapter_content_version=1, chapter_content_text="No matches")
+    )
     for name, term_status, translation_status in [
         ("Alpha", ReviewStatus.PENDING, ReviewStatus.PENDING),
         ("Approved", ReviewStatus.APPROVED, ReviewStatus.APPROVED),
@@ -212,9 +225,9 @@ def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventions(
         ("NewOnly", ReviewStatus.PENDING, ReviewStatus.PENDING),
     ]:
         term = GlossaryTerm(memory_group_id=group.memory_group_id, term=name, review_status=term_status)
-        test_db.add(term)
-        test_db.flush()
-        test_db.add(
+        async_test_db.add(term)
+        await async_test_db.flush()
+        async_test_db.add(
             TermTranslation(
                 term_id=term.term_id,
                 translation=f"English {name}",
@@ -222,18 +235,20 @@ def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventions(
                 creator_type=Creator.USER,
             )
         )
-    test_db.add(GlossaryTerm(memory_group_id=group.memory_group_id, term="Unmapped"))
+    async_test_db.add(GlossaryTerm(memory_group_id=group.memory_group_id, term="Unmapped"))
     foreign_term = GlossaryTerm(memory_group_id=other_group.memory_group_id, term="Alpha")
-    test_db.add(foreign_term)
-    test_db.flush()
-    test_db.add(TermTranslation(term_id=foreign_term.term_id, translation="Wrong group", creator_type=Creator.USER))
+    async_test_db.add(foreign_term)
+    await async_test_db.flush()
+    async_test_db.add(
+        TermTranslation(term_id=foreign_term.term_id, translation="Wrong group", creator_type=Creator.USER)
+    )
     for title, category, status, owner in [
         ("Names", ConventionCategory.NAMING, ReviewStatus.PENDING, group),
         ("Voice", ConventionCategory.STYLE, ReviewStatus.APPROVED, group),
         ("Rejected", ConventionCategory.STYLE, ReviewStatus.REJECTED, group),
         ("Foreign", ConventionCategory.NAMING, ReviewStatus.APPROVED, other_group),
     ]:
-        test_db.add(
+        async_test_db.add(
             TranslationConvention(
                 memory_group_id=owner.memory_group_id,
                 category=category,
@@ -244,15 +259,17 @@ def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventions(
                 creator_type=Creator.USER,
             )
         )
-    test_db.flush()
+    await async_test_db.flush()
     inputs = {
         stream: {"type": stream, "memory_group_id": str(group.memory_group_id)} for stream in ("terms", "conventions")
     }
     request = _request(sample_scenario, {"action": "translate", "config": {"model": "qwen-plus"}}, inputs)
 
-    def edit_after_pinning() -> None:
-        test_db.add(ChapterContent(chapter_id=chapter_id, chapter_content_version=3, chapter_content_text="NewOnly"))
-        test_db.commit()
+    async def edit_after_pinning() -> None:
+        async_test_db.add(
+            ChapterContent(chapter_id=chapter_id, chapter_content_version=3, chapter_content_text="NewOnly")
+        )
+        await async_test_db.commit()
 
     chapter_reads: list[str] = []
 
@@ -260,18 +277,18 @@ def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventions(
         if "chapter_content_text" in statement and "source_chapter_content_id" in statement:
             chapter_reads.append(statement)
 
-    event.listen(test_engine, "before_cursor_execute", record_query)
+    event.listen(test_async_engine.sync_engine, "before_cursor_execute", record_query)
     try:
-        records, chapter_ids, following, _ = _run_loader(
-            test_db,
-            testing_session_local,
+        records, chapter_ids, following, _ = await _run_loader(
+            async_test_db,
+            testing_async_session_local,
             monkeypatch,
             request,
             "src.translations.actions.translate.prepare",
             edit_after_pinning,
         )
     finally:
-        event.remove(test_engine, "before_cursor_execute", record_query)
+        event.remove(test_async_engine.sync_engine, "before_cursor_execute", record_query)
     assert len(chapter_reads) == 1
     assert {(record.chapter_id, record.stream) for record in records} == {
         (chapter, stream) for chapter in chapter_ids for stream in ("chapter", "terms", "conventions")
@@ -290,21 +307,21 @@ def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventions(
 
 
 @pytest.mark.parametrize("stream", ["terms", "conventions"])
-def test_loader_emits_empty_records_for_an_independently_enabled_stream(
-    test_db: Session,
+async def test_loader_emits_empty_records_for_an_independently_enabled_stream(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
     stream: str,
 ) -> None:
-    group = _group(test_db, sample_scenario)
+    group = await _group(async_test_db, sample_scenario)
     request = _request(
         sample_scenario,
         {"action": "translate", "config": {"model": "qwen-plus"}},
         {stream: {"type": stream, "memory_group_id": str(group.memory_group_id)}},
     )
-    records, chapter_ids, _, _ = _run_loader(
-        test_db, testing_session_local, monkeypatch, request, "src.translations.actions.translate.prepare"
+    records, chapter_ids, _, _ = await _run_loader(
+        async_test_db, testing_async_session_local, monkeypatch, request, "src.translations.actions.translate.prepare"
     )
     assert {(record.chapter_id, record.stream) for record in records} == {
         (chapter, name) for chapter in chapter_ids for name in ("chapter", stream)

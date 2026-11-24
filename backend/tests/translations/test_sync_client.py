@@ -5,6 +5,7 @@ import httpx2
 from openai import AsyncOpenAI
 from pydantic import TypeAdapter
 
+from src.lib.aiter import as_async_iter
 from src.translations.clients.batch_jobs import BatchJobComplete, BatchOutputId
 from src.translations.clients.sync_client import SyncChatClient
 from src.translations.codecs.batch_lines import (
@@ -16,6 +17,7 @@ from src.translations.codecs.batch_lines import (
 )
 from src.translations.codecs.openai_chat import OpenAIChatBatchCodec
 from src.translations.types import TranslationDataKey
+from test_support.aiter import alist
 from tests.files.test_access import MemoryObjectStore
 
 CODEC = OpenAIChatBatchCodec(TypeAdapter(TranslationDataKey), max_tokens_field="max_tokens")
@@ -58,7 +60,7 @@ def _client(handler, store: MemoryObjectStore, *, max_retries: int = 0) -> SyncC
     )
 
 
-def test_batch_runs_immediately_and_reads_back_through_the_batch_codec() -> None:
+async def test_batch_runs_immediately_and_reads_back_through_the_batch_codec() -> None:
     store = MemoryObjectStore()
     sent: list[dict] = []
 
@@ -74,13 +76,15 @@ def test_batch_runs_immediately_and_reads_back_through_the_batch_codec() -> None
     client = _client(handle, store)
     content = b"".join(_line(chapter, text) for chapter, text in ((1, "one"), (2, "reject"), (3, "three")))
     # Chunks need not align with lines.
-    job_id = client.create_batch_job(content[offset : offset + 7] for offset in range(0, len(content), 7))
+    job_id = await client.create_batch_job(
+        as_async_iter(content[offset : offset + 7] for offset in range(0, len(content), 7))
+    )
 
     assert job_id.startswith("translations/sync-batches/") and job_id.endswith(".jsonl")
-    assert client.poll_batch_job(job_id) == BatchJobComplete(output_id=BatchOutputId(job_id))
+    assert await client.poll_batch_job(job_id) == BatchJobComplete(output_id=BatchOutputId(job_id))
     results = {
         result.key.chapter_id.int: result
-        for line in b"".join(client.fetch_batch_output(BatchOutputId(job_id))).splitlines()
+        for line in b"".join(await alist(client.fetch_batch_output(BatchOutputId(job_id)))).splitlines()
         for result in [CODEC.decode_result(line)]
     }
     assert {body["model"] for body in sent} == {"qwen-flash"} and {body["max_tokens"] for body in sent} == {64}
@@ -89,7 +93,7 @@ def test_batch_runs_immediately_and_reads_back_through_the_batch_codec() -> None
     assert isinstance(results[2], BatchItemFailure) and results[2].code == "400"
 
 
-def test_rate_limited_requests_are_retried_by_the_sdk() -> None:
+async def test_rate_limited_requests_are_retried_by_the_sdk() -> None:
     store = MemoryObjectStore()
     calls = 0
 
@@ -101,8 +105,8 @@ def test_rate_limited_requests_are_retried_by_the_sdk() -> None:
         return httpx2.Response(200, json=_completion("ok"))
 
     client = _client(handle, store, max_retries=1)
-    job_id = client.create_batch_job([_line(1, "hello")])
+    job_id = await client.create_batch_job(as_async_iter([_line(1, "hello")]))
 
-    (line,) = b"".join(client.fetch_batch_output(BatchOutputId(job_id))).splitlines()
+    (line,) = b"".join(await alist(client.fetch_batch_output(BatchOutputId(job_id)))).splitlines()
     result = CODEC.decode_result(line)
     assert calls == 2 and isinstance(result, BatchItemSuccess) and result.text == "ok"

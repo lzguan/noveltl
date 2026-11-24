@@ -37,8 +37,8 @@ async def test_deleting_translation_source_removes_only_its_association(
     removed_id, retained_id = (c.chapter_id for c in chapters)
     content_id = contents[0].chapter_content_id
     user = sample_scenario.users["admin"]
-    job_id = create_translation_job(
-        test_db,
+    job_id = await create_translation_job(
+        async_test_db,
         user,
         TranslationJobCreate.model_validate(
             {

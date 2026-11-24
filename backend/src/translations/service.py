@@ -1,6 +1,5 @@
 """User-facing job controls; database transitions commit before queue dispatch."""
 
-import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from functools import partial
@@ -9,7 +8,7 @@ from uuid import UUID
 
 from pydantic import TypeAdapter
 from sqlalchemy import DateTime, and_, case, func, or_, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.memory.models import MemoryGroup
@@ -37,21 +36,21 @@ class TranslationNotFoundError(LookupError):
     pass
 
 
-def _job(db: Session, user: User, job_id: UUID) -> TranslationJob:
+async def _job(db: AsyncSession, user: User, job_id: UUID) -> TranslationJob:
     query = (
         select(TranslationJob)
         .join(Novel, Novel.novel_id == TranslationJob.novel_id)
         .where(TranslationJob.job_id == job_id)
     )
-    job = db.scalar(novel_mod_access_select(query, user, edit_only=True))
+    job = await db.scalar(novel_mod_access_select(query, user, edit_only=True))
     if job is None:
         raise TranslationNotFoundError("Translation job not found")
     return job
 
 
-def create_translation_job(db: Session, user: User, request: TranslationJobCreate) -> UUID:
+async def create_translation_job(db: AsyncSession, user: User, request: TranslationJobCreate) -> UUID:
     if (
-        db.scalar(
+        await db.scalar(
             novel_mod_access_select(
                 select(Novel.novel_id).where(Novel.novel_id == request.novel_id), user, edit_only=True
             )
@@ -62,7 +61,7 @@ def create_translation_job(db: Session, user: User, request: TranslationJobCreat
     group_ids = {source.memory_group_id for source in request.inputs.values()}
     if group_ids:
         found = set(
-            db.scalars(
+            await db.scalars(
                 select(MemoryGroup.memory_group_id).where(
                     MemoryGroup.memory_group_id.in_(group_ids),
                     MemoryGroup.novel_id == request.novel_id,
@@ -71,22 +70,28 @@ def create_translation_job(db: Session, user: User, request: TranslationJobCreat
         )
         if found != group_ids:
             raise ValueError("Memory groups must belong to the job's novel")
-    return create_job(db, request)
+    return await create_job(db, request)
 
 
-def read_translation_job(db: Session, user: User, job_id: UUID) -> TranslationJobRead:
-    job = _job(db, user, job_id)
-    stages = db.scalars(
-        select(TranslationStage).where(TranslationStage.job_id == job_id).order_by(TranslationStage.stage_num)
+async def read_translation_job(db: AsyncSession, user: User, job_id: UUID) -> TranslationJobRead:
+    job = await _job(db, user, job_id)
+    stages = (
+        await db.scalars(
+            select(TranslationStage).where(TranslationStage.job_id == job_id).order_by(TranslationStage.stage_num)
+        )
     ).all()
-    batches = db.scalars(
-        select(TranslationBatch).where(TranslationBatch.job_id == job_id).order_by(TranslationBatch.batch_num)
+    batches = (
+        await db.scalars(
+            select(TranslationBatch).where(TranslationBatch.job_id == job_id).order_by(TranslationBatch.batch_num)
+        )
     ).all()
-    tasks = db.scalars(
-        select(TranslationTask)
-        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-        .where(TranslationStage.job_id == job_id)
-        .order_by(TranslationTask.batch_id, TranslationStage.stage_num)
+    tasks = (
+        await db.scalars(
+            select(TranslationTask)
+            .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+            .where(TranslationStage.job_id == job_id)
+            .order_by(TranslationTask.batch_id, TranslationStage.stage_num)
+        )
     ).all()
     return TranslationJobRead(
         job_id=job.job_id,
@@ -234,8 +239,8 @@ def _restart_statement(job_id: UUID, operation: Literal["start", "resume", "retr
     ).execution_options(synchronize_session=False)
 
 
-def control_translation_job(
-    db: Session,
+async def control_translation_job(
+    db: AsyncSession,
     user: User,
     job_id: UUID,
     operation: Control,
@@ -245,10 +250,10 @@ def control_translation_job(
     result = TranslationControlResult()
     dispatches: list[tuple[UUID, Callable[[UUID], Awaitable[None]]]] = []
     try:
-        _job(db, user, job_id)
+        await _job(db, user, job_id)
         if (
             batch_id is not None
-            and db.scalar(
+            and await db.scalar(
                 select(TranslationBatch.batch_id).where(
                     TranslationBatch.job_id == job_id,
                     TranslationBatch.batch_id == batch_id,
@@ -258,9 +263,9 @@ def control_translation_job(
         ):
             raise TranslationNotFoundError("Translation batch not found")
         if operation == "cancel":
-            result.affected_batch_ids = list(dict.fromkeys(db.scalars(_cancel_statement(job_id, batch_id))))
+            result.affected_batch_ids = list(dict.fromkeys(await db.scalars(_cancel_statement(job_id, batch_id))))
         else:
-            rows = db.execute(_restart_statement(job_id, operation, batch_id)).all()
+            rows = (await db.execute(_restart_statement(job_id, operation, batch_id))).all()
             result.affected_batch_ids = list(dict.fromkeys(row[1] for row in rows))
             for row in rows:
                 task_id, _, name, state, position, poll_in = row
@@ -274,13 +279,13 @@ def control_translation_job(
                     step = resume_step(action, State(state))
                     if step is not None:
                         dispatches.append((task_id, partial(step.dispatch, delay=poll_in)))
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     for task_id, cor in dispatches:
         try:
-            asyncio.run(cor(task_id))
+            await cor(task_id)
         except Exception:
             logger.exception("Translation dispatch failed for task %s", task_id)
             result.dispatch_failed_task_ids.append(task_id)

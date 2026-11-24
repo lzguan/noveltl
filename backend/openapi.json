@@ -1871,56 +1871,6 @@
         }
       }
     },
-    "/label-groups-with-role": {
-      "get": {
-        "summary": "Read Label Groups With Role",
-        "description": "Gets all label groups of the current user for a novel, along with their roles.",
-        "operationId": "read_label_groups_with_role_label_groups_with_role_get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "novelId",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Novelid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LabelGroupWithRole"
-                  },
-                  "title": "Response Read Label Groups With Role Label Groups With Role Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/label-groups/{labelGroupId}": {
       "get": {
         "summary": "Read Label Group",
@@ -2329,56 +2279,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Label"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/label-groups/{labelGroupId}/contributors": {
-      "get": {
-        "summary": "Read Label Contributors",
-        "description": "Get the list of contributors for a label group.",
-        "operationId": "read_label_contributors_label_groups__labelGroupId__contributors_get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "labelGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Labelgroupid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LabelContributor"
-                  },
-                  "title": "Response Read Label Contributors Label Groups  Labelgroupid  Contributors Get"
                 }
               }
             }
@@ -11084,31 +10984,6 @@
         "title": "LabelBase",
         "description": "Pydantic schema for a single label without a parent LabelData reference.\nUsed by autolabels and other contexts where labels exist independently of a LabelData.\n\nAttributes:\n    label_entity_group: Some arbitrary string denoting the entity group this label belongs to (e.g. PERSON, LOCATION, etc.).\n    label_score: Some float corresponding to how likely a label is to be correct. Used by label autogeneration modules (TBD).\n    label_word: Word that this label is labeling.\n    label_start: Start position of this label in text.\n    label_end: End position of this label in text.\n    label_dirty: Use TBD, most likely will be for score calculations in LabelData aggregate operations.\n\nNote:\n    label_start must be strictly less than label_end. Otherwise a ValueError will occur.\n    label_word must have length label_end - label_start. Otherwise a ValueError will occur."
       },
-      "LabelContributor": {
-        "properties": {
-          "labelContributorRole": {
-            "$ref": "#/components/schemas/LabelRole"
-          },
-          "labelGroupId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Labelgroupid"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Userid"
-          }
-        },
-        "type": "object",
-        "required": [
-          "labelContributorRole",
-          "labelGroupId",
-          "userId"
-        ],
-        "title": "LabelContributor",
-        "description": "Pydantic schema for a label contributor, which can be either a user or an autolabel model.\n\nAttributes:\n    label_contributor_role: Role of the contributor, either a user or an autolabel model.\n    label_group_id: UUID of label group this contributor belongs to.\n    user_id: UUID of user"
-      },
       "LabelData": {
         "properties": {
           "labelDataId": {
@@ -11162,23 +11037,6 @@
         ],
         "title": "LabelGroup",
         "description": "Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to."
-      },
-      "LabelGroupWithRole": {
-        "properties": {
-          "labelGroup": {
-            "$ref": "#/components/schemas/LabelGroup"
-          },
-          "role": {
-            "$ref": "#/components/schemas/LabelRole"
-          }
-        },
-        "type": "object",
-        "required": [
-          "labelGroup",
-          "role"
-        ],
-        "title": "LabelGroupWithRole",
-        "description": "Pydantic schema for a label group with a user's role in that label group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role of the user in this label group."
       },
       "LabelOp": {
         "oneOf": [
@@ -11399,15 +11257,6 @@
         "additionalProperties": false,
         "type": "object",
         "title": "LabelRefField"
-      },
-      "LabelRole": {
-        "type": "string",
-        "enum": [
-          "owner",
-          "viewer",
-          "editor"
-        ],
-        "title": "LabelRole"
       },
       "Language": {
         "properties": {

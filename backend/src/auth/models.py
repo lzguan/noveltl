@@ -13,7 +13,6 @@ from src.models import Base
 
 if TYPE_CHECKING:
     from src.autolabels.models import AutoLabelRun
-    from src.labels.models import LabelContributor
     from src.novels.models import NovelContributor
 
 
@@ -40,9 +39,6 @@ class User(Base):
 
     novel_contributors_with_user: Mapped[list[NovelContributor]] = relationship(
         back_populates="user_of_novel_contributor"
-    )
-    label_contributors_with_user: Mapped[list[LabelContributor]] = relationship(
-        back_populates="user_of_label_contributor"
     )
     autolabel_runs: Mapped[list[AutoLabelRun]] = relationship(back_populates="triggered_by_user")
 

@@ -12,7 +12,7 @@ from sqlalchemy import Delete, Select, Update, exists, select
 from sqlalchemy.orm import aliased
 
 from src.auth.models import User
-from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
+from src.labels.models import Label, LabelData, LabelGroup
 from src.novels import models as novel_models
 from src.novels.permissions import chapter_content_mod_access_select, novel_mod_access_select
 
@@ -22,17 +22,14 @@ def label_group_mod_access_select[T: Select[*tuple[Any, ...]]](
     current_user: User,
     aliased_type: type[LabelGroup] = LabelGroup,
     *,
-    novel_edit_only: bool = False,
-    label_edit_only: bool = False,
+    edit_only: bool = False,
 ) -> T:
     """
     Takes a select statement for label groups and returns a select statement that restricts permissions on q.
 
-    Setting either ``novel_edit_only`` or ``label_edit_only`` requires
-    owner/editor access to the underlying novel.
+    Setting ``edit_only`` requires owner/editor access to the underlying novel.
     """
     novel_alias = aliased(novel_models.Novel)
-    edit_only = novel_edit_only or label_edit_only
 
     q_exists_novel = (
         select(novel_alias.novel_id).where(novel_alias.novel_id == aliased_type.novel_id).correlate(aliased_type)
@@ -76,15 +73,13 @@ def label_data_mod_access_select[T: Select[*tuple[Any, ...]]](
     current_user: User,
     aliased_type: type[LabelData] = LabelData,
     *,
-    novel_edit_only: bool = False,
-    label_edit_only: bool = False,
+    edit_only: bool = False,
 ) -> T:
     """
     Takes a select statement for label datas and returns a select statement that restricts permissions on q.
     """
     cc_alias = aliased(novel_models.ChapterContent)
     lg_alias = aliased(LabelGroup)
-    edit_only = novel_edit_only or label_edit_only
 
     q_exists_chapter_content = (
         select(cc_alias.chapter_content_id)
@@ -106,7 +101,7 @@ def label_data_mod_access_select[T: Select[*tuple[Any, ...]]](
         q_exists_label_group,
         current_user,
         lg_alias,
-        novel_edit_only=edit_only,
+        edit_only=edit_only,
     )
     return q.where(exists(q_exists_chapter_content)).where(exists(q_exists_label_group))
 
@@ -138,7 +133,7 @@ def label_data_mod_access_update[T: Update](q: T, current_user: User, aliased_ty
         q_exists_label_group,
         current_user,
         lg_alias,
-        novel_edit_only=True,
+        edit_only=True,
     )
     return q.where(exists(q_exists_chapter_content)).where(exists(q_exists_label_group))
 
@@ -153,7 +148,7 @@ def label_data_mod_access_insert[T: Select[*tuple[Any, ...]]](q: T, current_user
         q_exists_label_group,
         current_user,
         lg_alias,
-        novel_edit_only=True,
+        edit_only=True,
     )
     return q.where(exists(q_exists_label_group))
 
@@ -168,7 +163,7 @@ def label_mod_access_insert[T: Select[*tuple[Any, ...]]](q: T, current_user: Use
         q_exists_label_data,
         current_user,
         ld_alias,
-        novel_edit_only=True,
+        edit_only=True,
     )
     return q.where(exists(q_exists_label_data))
 
@@ -187,7 +182,7 @@ def label_mod_access_update[T: Update](q: T, current_user: User, aliased_type: t
         q_exists_label_data,
         current_user,
         ld_alias,
-        novel_edit_only=True,
+        edit_only=True,
     )
     return q.where(exists(q_exists_label_data))
 
@@ -206,22 +201,6 @@ def label_mod_access_delete[T: Delete](q: T, current_user: User, aliased_type: t
         q_exists_label_data,
         current_user,
         ld_alias,
-        novel_edit_only=True,
+        edit_only=True,
     )
     return q.where(exists(q_exists_label_data))
-
-
-def label_contributors_mod_access_select[T: Select[*tuple[Any, ...]]](
-    q: T, current_user: User, aliased_type: type[LabelContributor] = LabelContributor
-) -> T:
-    """
-    Takes a select statement for label contributors and returns a select statement that restricts permissions on q.
-    """
-    lg_alias = aliased(LabelGroup)
-    q_exists_label_group = (
-        select(lg_alias.label_group_id)
-        .where(lg_alias.label_group_id == aliased_type.label_group_id)
-        .correlate(aliased_type)
-    )
-    q_exists_label_group = label_group_mod_access_select(q_exists_label_group, current_user, lg_alias)
-    return q.where(exists(q_exists_label_group))

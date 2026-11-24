@@ -1,5 +1,4 @@
 import type { ChapterDataManager } from "./types/dataTypes";
-import type { LabelRole } from "@/api/models";
 import { Effect } from "effect";
 import {
 	FatalException,
@@ -94,7 +93,7 @@ export interface ChapterIndex extends SlotIndex<
 
 export interface LabelGroupIndex extends SlotIndex<
 	LGProvId,
-	{ labelGroup: ProvLabelGroup; role: LabelRole },
+	{ labelGroup: ProvLabelGroup },
 	never,
 	never
 > {}
@@ -253,11 +252,9 @@ export const buildChapterIndex = (
 	});
 
 export const buildLabelGroupIndex = (
-	items: [LGProvId, { labelGroup: ProvLabelGroup; role: LabelRole }][],
+	items: [LGProvId, { labelGroup: ProvLabelGroup }][],
 ): Effect.Effect<LabelGroupIndex, FatalException> =>
-	buildIndexInternals<LGProvId, { labelGroup: ProvLabelGroup; role: LabelRole }, never, never>(
-		items,
-	);
+	buildIndexInternals<LGProvId, { labelGroup: ProvLabelGroup }, never, never>(items);
 
 export const buildLabelDataIndex = (): Effect.Effect<LabelDataIndex, FatalException> =>
 	buildIndexInternals<

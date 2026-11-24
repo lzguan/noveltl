@@ -1,14 +1,12 @@
-import uuid
 from datetime import timedelta
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
-from src.labels.models import LabelContributor, LabelData
+from src.labels.models import LabelData
 from src.novels.models import Chapter, ChapterContent
 from test_support.test_data.scenarios import DatabaseScenario
 
@@ -18,12 +16,8 @@ def _auth_headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _contributors_url(label_group_id: object) -> str:
-    return f"/label-groups/{label_group_id}/contributors"
-
-
-def _label_groups_with_role_url(novel_id: object) -> str:
-    return f"/label-groups-with-role?novelId={novel_id}"
+def _label_groups_url(novel_id: object) -> str:
+    return f"/label-groups?novelId={novel_id}"
 
 
 def _label_url(label_id: object) -> str:
@@ -31,10 +25,9 @@ def _label_url(label_id: object) -> str:
 
 
 class TestCreateLabelGroup:
-    def test_owner_and_editor_can_create_label_group_without_label_contributors(
+    def test_owner_and_editor_can_create_label_group(
         self,
         client: TestClient,
-        test_db: Session,
         label_access_scenario: DatabaseScenario,
     ) -> None:
         novel = label_access_scenario.novels["private"]
@@ -47,13 +40,9 @@ class TestCreateLabelGroup:
             )
 
             assert response.status_code == status.HTTP_200_OK
-            created_id = uuid.UUID(response.json()["labelGroupId"])
-            contributors = (
-                test_db.execute(select(LabelContributor).where(LabelContributor.label_group_id == created_id))
-                .scalars()
-                .all()
-            )
-            assert contributors == []
+            payload = response.json()
+            assert payload["labelGroupName"] == group_name
+            assert payload["novelId"] == str(novel.novel_id)
 
     def test_viewer_and_outsider_cannot_create_label_group(
         self,
@@ -187,80 +176,35 @@ class TestReadLabelDatas:
         }
 
 
-class TestReadLabelGroupsWithRole:
-    def test_owner_reads_all_groups_with_owner_role(
+class TestReadLabelGroups:
+    def test_contributors_and_admin_read_public_and_private_groups(
         self,
         client: TestClient,
         label_access_scenario: DatabaseScenario,
     ) -> None:
-        actor = label_access_scenario.users["owner"]
-        novel = label_access_scenario.novels["public"]
+        for user_key in ("owner", "editor", "viewer", "admin"):
+            actor = label_access_scenario.users[user_key]
+            public_response = client.get(
+                _label_groups_url(label_access_scenario.novels["public"].novel_id),
+                headers=_auth_headers(actor),
+            )
+            private_response = client.get(
+                _label_groups_url(label_access_scenario.novels["private"].novel_id),
+                headers=_auth_headers(actor),
+            )
 
-        response = client.get(_label_groups_with_role_url(novel.novel_id), headers=_auth_headers(actor))
+            assert public_response.status_code == status.HTTP_200_OK
+            assert {entry["labelGroupName"] for entry in public_response.json()} == {
+                "Owner Only Group",
+                "With Editor Group",
+                "With Viewer Group",
+            }
+            assert private_response.status_code == status.HTTP_200_OK
+            assert {entry["labelGroupName"] for entry in private_response.json()} == {
+                "Private Novel Group",
+            }
 
-        assert response.status_code == status.HTTP_200_OK
-        payload = response.json()
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in payload} == {
-            ("Owner Only Group", "owner"),
-            ("With Editor Group", "owner"),
-            ("With Viewer Group", "owner"),
-        }
-
-    def test_editor_reads_all_groups_with_editor_role_without_label_contributors(
-        self,
-        client: TestClient,
-        label_access_scenario: DatabaseScenario,
-    ) -> None:
-        actor = label_access_scenario.users["editor"]
-
-        public_response = client.get(
-            _label_groups_with_role_url(label_access_scenario.novels["public"].novel_id),
-            headers=_auth_headers(actor),
-        )
-        private_response = client.get(
-            _label_groups_with_role_url(label_access_scenario.novels["private"].novel_id),
-            headers=_auth_headers(actor),
-        )
-
-        assert public_response.status_code == status.HTTP_200_OK
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in public_response.json()} == {
-            ("Owner Only Group", "editor"),
-            ("With Editor Group", "editor"),
-            ("With Viewer Group", "editor"),
-        }
-        assert private_response.status_code == status.HTTP_200_OK
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in private_response.json()} == {
-            ("Private Novel Group", "editor"),
-        }
-
-    def test_viewer_reads_all_groups_with_viewer_role(
-        self,
-        client: TestClient,
-        label_access_scenario: DatabaseScenario,
-    ) -> None:
-        actor = label_access_scenario.users["viewer"]
-
-        public_response = client.get(
-            _label_groups_with_role_url(label_access_scenario.novels["public"].novel_id),
-            headers=_auth_headers(actor),
-        )
-        private_response = client.get(
-            _label_groups_with_role_url(label_access_scenario.novels["private"].novel_id),
-            headers=_auth_headers(actor),
-        )
-
-        assert public_response.status_code == status.HTTP_200_OK
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in public_response.json()} == {
-            ("Owner Only Group", "viewer"),
-            ("With Editor Group", "viewer"),
-            ("With Viewer Group", "viewer"),
-        }
-        assert private_response.status_code == status.HTTP_200_OK
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in private_response.json()} == {
-            ("Private Novel Group", "viewer"),
-        }
-
-    def test_outsider_reads_public_groups_as_viewer_and_no_private_groups(
+    def test_outsider_reads_public_groups_only(
         self,
         client: TestClient,
         label_access_scenario: DatabaseScenario,
@@ -268,140 +212,19 @@ class TestReadLabelGroupsWithRole:
         actor = label_access_scenario.users["outsider"]
 
         public_response = client.get(
-            _label_groups_with_role_url(label_access_scenario.novels["public"].novel_id),
+            _label_groups_url(label_access_scenario.novels["public"].novel_id),
             headers=_auth_headers(actor),
         )
         private_response = client.get(
-            _label_groups_with_role_url(label_access_scenario.novels["private"].novel_id),
+            _label_groups_url(label_access_scenario.novels["private"].novel_id),
             headers=_auth_headers(actor),
         )
 
         assert public_response.status_code == status.HTTP_200_OK
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in public_response.json()} == {
-            ("Owner Only Group", "viewer"),
-            ("With Editor Group", "viewer"),
-            ("With Viewer Group", "viewer"),
+        assert {entry["labelGroupName"] for entry in public_response.json()} == {
+            "Owner Only Group",
+            "With Editor Group",
+            "With Viewer Group",
         }
         assert private_response.status_code == status.HTTP_200_OK
         assert private_response.json() == []
-
-    def test_label_contributor_rows_do_not_override_derived_role(
-        self,
-        client: TestClient,
-        label_access_scenario: DatabaseScenario,
-    ) -> None:
-        actor = label_access_scenario.users["collaborator"]
-        novel = label_access_scenario.novels["public"]
-
-        response = client.get(_label_groups_with_role_url(novel.novel_id), headers=_auth_headers(actor))
-
-        assert response.status_code == status.HTTP_200_OK
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in response.json()} == {
-            ("Owner Only Group", "viewer"),
-            ("With Editor Group", "viewer"),
-            ("With Viewer Group", "viewer"),
-        }
-
-    def test_admin_reads_all_groups_with_owner_role(
-        self,
-        client: TestClient,
-        label_access_scenario: DatabaseScenario,
-    ) -> None:
-        actor = label_access_scenario.users["admin"]
-
-        public_response = client.get(
-            _label_groups_with_role_url(label_access_scenario.novels["public"].novel_id),
-            headers=_auth_headers(actor),
-        )
-        private_response = client.get(
-            _label_groups_with_role_url(label_access_scenario.novels["private"].novel_id),
-            headers=_auth_headers(actor),
-        )
-
-        assert public_response.status_code == status.HTTP_200_OK
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in public_response.json()} == {
-            ("Owner Only Group", "owner"),
-            ("With Editor Group", "owner"),
-            ("With Viewer Group", "owner"),
-        }
-        assert private_response.status_code == status.HTTP_200_OK
-        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in private_response.json()} == {
-            ("Private Novel Group", "owner"),
-        }
-
-
-class TestReadLabelContributors:
-    def test_owner_can_read_contributors(
-        self,
-        client: TestClient,
-        label_access_scenario: DatabaseScenario,
-    ) -> None:
-        actor = label_access_scenario.users["owner"]
-        label_group = label_access_scenario.label_groups["owner_only"]
-
-        response = client.get(
-            _contributors_url(label_group.label_group_id),
-            headers=_auth_headers(actor),
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        payload = response.json()
-        assert payload == [
-            {
-                "labelContributorRole": "owner",
-                "labelGroupId": str(label_group.label_group_id),
-                "userId": str(actor.user_id),
-            }
-        ]
-
-    def test_viewer_can_read_all_group_contributors(
-        self,
-        client: TestClient,
-        label_access_scenario: DatabaseScenario,
-    ) -> None:
-        actor = label_access_scenario.users["viewer"]
-        label_group = label_access_scenario.label_groups["with_viewer"]
-
-        response = client.get(
-            _contributors_url(label_group.label_group_id),
-            headers=_auth_headers(actor),
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        payload = response.json()
-        assert {(entry["userId"], entry["labelContributorRole"]) for entry in payload} == {
-            (str(label_access_scenario.users["owner"].user_id), "owner"),
-            (str(label_access_scenario.users["collaborator"].user_id), "viewer"),
-        }
-        assert {entry["labelGroupId"] for entry in payload} == {str(label_group.label_group_id)}
-
-    def test_outsider_without_novel_access_gets_404(
-        self,
-        client: TestClient,
-        label_access_scenario: DatabaseScenario,
-    ) -> None:
-        actor = label_access_scenario.users["outsider"]
-        label_group = label_access_scenario.label_groups["private"]
-
-        response = client.get(
-            _contributors_url(label_group.label_group_id),
-            headers=_auth_headers(actor),
-        )
-
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"] == f"Label group with id {label_group.label_group_id} not found."
-
-    def test_missing_group_gets_404(
-        self,
-        client: TestClient,
-        label_access_scenario: DatabaseScenario,
-    ) -> None:
-        actor = label_access_scenario.users["owner"]
-
-        response = client.get(
-            _contributors_url("00000000-0000-0000-0000-000000000000"),
-            headers=_auth_headers(actor),
-        )
-
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.json()["detail"] == "Label group with id 00000000-0000-0000-0000-000000000000 not found."

@@ -9,8 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.auth.utils import hash_password
-from src.labels.constants import LabelRole
-from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
+from src.labels.models import Label, LabelData, LabelGroup
 from src.languages.models import Language
 from src.models import Base
 from src.novels.constants import NovelType, Role, Visibility
@@ -128,16 +127,7 @@ def main() -> None:
             label_group_id=label_group.label_group_id,
             chapter_content_id=content.chapter_content_id,
         )
-        db.add_all(
-            [
-                LabelContributor(
-                    label_group_id=label_group.label_group_id,
-                    user_id=user.user_id,
-                    label_contributor_role=LabelRole.OWNER,
-                ),
-                label_data,
-            ]
-        )
+        db.add(label_data)
         db.commit()
         db.refresh(label_data)
         db.add(

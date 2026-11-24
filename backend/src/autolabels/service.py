@@ -416,7 +416,7 @@ async def create_promotion_job(
         and_(models.AutoLabelRun.run_id == request.run_id, models.AutoLabelRun.novel_id == LabelGroup.novel_id),
     )
     job_values = label_group_mod_access_select(
-        job_values.where(LabelGroup.label_group_id == label_group_id), current_user, label_edit_only=True
+        job_values.where(LabelGroup.label_group_id == label_group_id), current_user, edit_only=True
     )
     try:
         created = (

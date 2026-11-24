@@ -43,10 +43,8 @@ import type {
   GlossaryTerm,
   HTTPValidationError,
   Label,
-  LabelContributor,
   LabelData,
   LabelGroup,
-  LabelGroupWithRole,
   LabelPromotionFailure,
   LabelPromotionJob,
   Language,
@@ -79,7 +77,6 @@ import type {
   ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetParams,
   ReadLabelDatasByGroupChaptersLabelDatasGetParams,
   ReadLabelGroupsLabelGroupsGetParams,
-  ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,
   ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetParams,
   ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetParams,
   ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetParams,
@@ -1576,56 +1573,6 @@ return customFetch<createLabelGroupLabelGroupsPostResponse>(getCreateLabelGroupL
 );}
 
 
-export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse200 = {
-  data: LabelGroupWithRole[]
-  status: 200
-}
-
-export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseSuccess = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse200) & {
-  headers: Headers;
-};
-export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseError = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse422) & {
-  headers: Headers;
-};
-
-export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseSuccess | readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseError)
-
-export const getReadLabelGroupsWithRoleLabelGroupsWithRoleGetUrl = (params: ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/label-groups-with-role?${stringifiedParams}` : `/api/label-groups-with-role`
-}
-
-/**
- * Gets all label groups of the current user for a novel, along with their roles.
- * @summary Read Label Groups With Role
- */
-export const readLabelGroupsWithRoleLabelGroupsWithRoleGet = async (params: ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse> => {
-
-  return customFetch<readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse>(getReadLabelGroupsWithRoleLabelGroupsWithRoleGetUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
 export type readLabelGroupLabelGroupsLabelGroupIdGetResponse200 = {
   data: LabelGroup
   status: 200
@@ -1730,49 +1677,6 @@ return customFetch<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse>(getUpda
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateLabelGroup)
-  }
-);}
-
-
-export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse200 = {
-  data: LabelContributor[]
-  status: 200
-}
-
-export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseSuccess = (readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse200) & {
-  headers: Headers;
-};
-export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseError = (readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse422) & {
-  headers: Headers;
-};
-
-export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse = (readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseSuccess | readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseError)
-
-export const getReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetUrl = (labelGroupId: string,) => {
-
-
-
-
-  return `/api/label-groups/${labelGroupId}/contributors`
-}
-
-/**
- * Get the list of contributors for a label group.
- * @summary Read Label Contributors
- */
-export const readLabelContributorsLabelGroupsLabelGroupIdContributorsGet = async (labelGroupId: string, options?: Parameters<typeof customFetch>[1]): Promise<readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse> => {
-
-  return customFetch<readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse>(getReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetUrl(labelGroupId),
-  {
-    ...options,
-    method: 'GET'
-
-
   }
 );}
 

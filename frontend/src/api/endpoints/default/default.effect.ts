@@ -1183,40 +1183,6 @@ export const CreateLabelGroupLabelGroupsPost422Response = S.Struct({
 })
 
 /**
- * Gets all label groups of the current user for a novel, along with their roles.
- * @summary Read Label Groups With Role
- */
-export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGetQueryParams = S.Struct({
-  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-})
-
-export const readLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseLabelGroupLabelGroupNameMax = 31;
-
-
-
-export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseItem = S.Struct({
-  "labelGroup": S.Struct({
-  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.check(S.isMaxLength(readLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseLabelGroupLabelGroupNameMax)),
-  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
-  "role": S.Literals(['owner', 'viewer', 'editor'])
-}).annotate({ description: 'Pydantic schema for a label group with a user\'s role in that label group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role of the user in this label group.' })
-export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGet200Response = S.Array(ReadLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseItem)
-
-export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGet422Response = S.Struct({
-  "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.StructWithRest(S.Struct({
-
-}), [S.Record(S.String, S.Unknown)])),
-  "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union([S.String, S.Number])),
-  "msg": S.String,
-  "type": S.String
-})))
-})
-
-/**
  * Gets a label group by id.
  *
  * Raises:
@@ -1280,33 +1246,6 @@ export const UpdateLabelGroupLabelGroupsLabelGroupIdPatch200Response = S.Struct(
 }).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
 
 export const UpdateLabelGroupLabelGroupsLabelGroupIdPatch422Response = S.Struct({
-  "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.StructWithRest(S.Struct({
-
-}), [S.Record(S.String, S.Unknown)])),
-  "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union([S.String, S.Number])),
-  "msg": S.String,
-  "type": S.String
-})))
-})
-
-/**
- * Get the list of contributors for a label group.
- * @summary Read Label Contributors
- */
-export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetParams = S.Struct({
-  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-})
-
-export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet200ResponseItem = S.Struct({
-  "labelContributorRole": S.Literals(['owner', 'viewer', 'editor']),
-  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "userId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotate({ description: 'Pydantic schema for a label contributor, which can be either a user or an autolabel model.\n\nAttributes:\n    label_contributor_role: Role of the contributor, either a user or an autolabel model.\n    label_group_id: UUID of label group this contributor belongs to.\n    user_id: UUID of user' })
-export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet200Response = S.Array(ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet200ResponseItem)
-
-export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.StructWithRest(S.Struct({
 

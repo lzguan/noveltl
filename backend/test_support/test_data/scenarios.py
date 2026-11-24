@@ -18,8 +18,7 @@ from src.auth.models import User
 from src.autolabels.models import AutoLabel, AutoLabelRun
 from src.datasets.domain import NovelDataset
 from src.datasets.materializer import MaterializedNovel, make_novel, materialize_novel_contents
-from src.labels.constants import LabelRole
-from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
+from src.labels.models import Label, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
@@ -41,7 +40,6 @@ class DatabaseScenario:
     chapters: dict[str, Chapter] = field(default_factory=dict)
     contents: dict[str, ChapterContent] = field(default_factory=dict)
     label_groups: dict[str, LabelGroup] = field(default_factory=dict)
-    label_contributors: dict[str, LabelContributor] = field(default_factory=dict)
     label_datas: dict[str, LabelData] = field(default_factory=dict)
     labels: dict[str, Label] = field(default_factory=dict)
     autolabel_runs: dict[str, AutoLabelRun] = field(default_factory=dict)
@@ -202,24 +200,6 @@ class ScenarioBuilder:
         self.db.flush()
         self.scenario.label_groups[key] = group
         return group
-
-    def label_contributor(
-        self,
-        key: str,
-        *,
-        group: str,
-        user: str,
-        role: LabelRole,
-    ) -> LabelContributor:
-        contributor = LabelContributor(
-            label_group_id=self.scenario.label_groups[group].label_group_id,
-            user_id=self.scenario.users[user].user_id,
-            label_contributor_role=role,
-        )
-        self.db.add(contributor)
-        self.db.flush()
-        self.scenario.label_contributors[key] = contributor
-        return contributor
 
     def label_data(self, key: str, *, group: str, content: str) -> LabelData:
         label_data = LabelData(

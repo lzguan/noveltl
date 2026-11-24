@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Effect } from "effect";
 import {
 	readChaptersByNovelChaptersGet,
-	readLabelGroupsWithRoleLabelGroupsWithRoleGet,
+	readLabelGroupsLabelGroupsGet,
 	readNovelWithContributorsNovelsNovelIdWithContributorsGet,
 } from "@/api/endpoints/default/default";
-import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
+import type { Chapter, LabelGroup, Novel } from "@/api/models";
 import type { SelectedAutoLabelRun } from "@/autolabels/runs/autoLabelRunsState";
 import { buildController } from "../controller/controller";
 import type { NovelData } from "../controller/novelDataManager";
@@ -56,7 +56,7 @@ export function EditNovelPage() {
 	const [novel, setNovel] = useState<{ novel: Novel; role: Role } | null>(null);
 	const [novelId, setNovelId] = useState<string | null>(null);
 	const [chapters, setChapters] = useState<Chapter[] | null>(null);
-	const [labelGroups, setLabelGroups] = useState<LabelGroupWithRole[] | null>(null);
+	const [labelGroups, setLabelGroups] = useState<LabelGroup[] | null>(null);
 	const [error, setError] = useState<unknown>(null);
 
 	const editorState = useEditorState();
@@ -147,7 +147,7 @@ export function EditNovelPage() {
 				if (resp.status !== 200) throw new Error(`Failed to load chapters: ${resp.status}`);
 				setChapters(resp.data);
 			})
-			.then(() => readLabelGroupsWithRoleLabelGroupsWithRoleGet({ novelId }))
+			.then(() => readLabelGroupsLabelGroupsGet({ novelId }))
 			.then((resp) => {
 				if (resp.status !== 200)
 					throw new Error(`Failed to load label groups: ${resp.status}`);

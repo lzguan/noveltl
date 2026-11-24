@@ -221,7 +221,7 @@ async def insert_label_datas_by_autolabels(
     permission_query = label_group_mod_access_select(
         select(label_models.LabelGroup.label_group_id).where(label_models.LabelGroup.label_group_id == label_group_id),
         current_user,
-        label_edit_only=True,
+        edit_only=True,
     )
     if (await db.execute(permission_query)).scalar_one_or_none() is None:
         raise LabelGroupNotFoundException(f"Label group with ID {label_group_id} not found or not accessible.")
@@ -257,7 +257,7 @@ async def insert_label_datas_by_autolabels(
         )
         .order_by(novel_models.Chapter.chapter_num)
     )
-    q = label_group_mod_access_select(q, current_user, label_edit_only=True)
+    q = label_group_mod_access_select(q, current_user, edit_only=True)
     if request.chapter_ids is not None and len(request.chapter_ids) > 0:
         q = q.where(novel_models.Chapter.chapter_id.in_(request.chapter_ids))
     if request.start is not None:

@@ -6,7 +6,6 @@ from sqlalchemy import delete, literal, select, update
 from sqlalchemy.orm import Session, aliased
 
 from src.labels import models as label_models
-from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelData, LabelGroup
 from src.labels.permissions import (
     label_data_mod_access_insert,
@@ -47,7 +46,7 @@ class TestLabelGroupSelect:
             assert result is not None
             assert result.label_group_id == label_group.label_group_id
 
-    def test_novel_editor_can_select_groups_without_label_contributor(
+    def test_novel_editor_can_select_groups(
         self,
         test_db: Session,
         label_access_scenario: DatabaseScenario,
@@ -55,13 +54,11 @@ class TestLabelGroupSelect:
         actor = label_access_scenario.users["editor"]
         for group_key in ("owner_only", "private"):
             label_group = label_access_scenario.label_groups[group_key]
-            for novel_edit_only, label_edit_only in ((False, False), (False, True), (True, False)):
+            for edit_only in (False, True):
                 q = select(label_models.LabelGroup).where(
                     label_models.LabelGroup.label_group_id == label_group.label_group_id
                 )
-                q = label_group_mod_access_select(
-                    q, actor, novel_edit_only=novel_edit_only, label_edit_only=label_edit_only
-                )
+                q = label_group_mod_access_select(q, actor, edit_only=edit_only)
                 assert test_db.execute(q).scalar_one_or_none() is not None
 
     def test_novel_viewer_can_read_but_cannot_select_for_edit(
@@ -77,12 +74,7 @@ class TestLabelGroupSelect:
             )
             assert test_db.execute(label_group_mod_access_select(base, actor)).scalar_one_or_none() is not None
             assert (
-                test_db.execute(label_group_mod_access_select(base, actor, label_edit_only=True)).scalar_one_or_none()
-                is None
-            )
-            assert (
-                test_db.execute(label_group_mod_access_select(base, actor, novel_edit_only=True)).scalar_one_or_none()
-                is None
+                test_db.execute(label_group_mod_access_select(base, actor, edit_only=True)).scalar_one_or_none() is None
             )
 
     def test_outsider_can_read_public_group_only(
@@ -102,43 +94,9 @@ class TestLabelGroupSelect:
         )
         assert test_db.execute(label_group_mod_access_select(public_q, actor)).scalar_one_or_none() is not None
         assert (
-            test_db.execute(label_group_mod_access_select(public_q, actor, label_edit_only=True)).scalar_one_or_none()
-            is None
+            test_db.execute(label_group_mod_access_select(public_q, actor, edit_only=True)).scalar_one_or_none() is None
         )
         assert test_db.execute(label_group_mod_access_select(private_q, actor)).scalar_one_or_none() is None
-
-    def test_label_contributor_row_alone_does_not_grant_edit_or_private_read(
-        self,
-        test_db: Session,
-        label_access_scenario: DatabaseScenario,
-    ):
-        actor = label_access_scenario.users["collaborator"]
-        public_group = label_access_scenario.label_groups["with_editor"]
-        private_group = label_access_scenario.label_groups["private"]
-        test_db.add(
-            label_models.LabelContributor(
-                label_group_id=private_group.label_group_id,
-                user_id=actor.user_id,
-                label_contributor_role=LabelRole.EDITOR,
-            )
-        )
-        test_db.commit()
-
-        public_edit_q = label_group_mod_access_select(
-            select(label_models.LabelGroup).where(
-                label_models.LabelGroup.label_group_id == public_group.label_group_id
-            ),
-            actor,
-            label_edit_only=True,
-        )
-        private_read_q = label_group_mod_access_select(
-            select(label_models.LabelGroup).where(
-                label_models.LabelGroup.label_group_id == private_group.label_group_id
-            ),
-            actor,
-        )
-        assert test_db.execute(public_edit_q).scalar_one_or_none() is None
-        assert test_db.execute(private_read_q).scalar_one_or_none() is None
 
     def test_admin_can_select_any_group(
         self,
@@ -151,7 +109,7 @@ class TestLabelGroupSelect:
             q = select(label_models.LabelGroup).where(
                 label_models.LabelGroup.label_group_id == label_group.label_group_id
             )
-            q = label_group_mod_access_select(q, actor, label_edit_only=True)
+            q = label_group_mod_access_select(q, actor, edit_only=True)
             assert test_db.execute(q).scalar_one_or_none() is not None
 
 
@@ -269,7 +227,7 @@ class TestLabelDataSelect:
                 q = label_data_mod_access_select(q, actor)
                 assert test_db.execute(q).scalar_one_or_none() is not None
 
-    def test_edit_only_allows_novel_editor_and_denies_viewer_and_label_only_editor(
+    def test_edit_only_allows_novel_editor_and_denies_viewer_and_outsider(
         self,
         test_db: Session,
         label_access_scenario: DatabaseScenario,
@@ -280,18 +238,12 @@ class TestLabelDataSelect:
         )
 
         editor = label_access_scenario.users["editor"]
-        assert test_db.execute(label_data_mod_access_select(base, editor, label_edit_only=True)).scalar_one_or_none()
-        assert test_db.execute(label_data_mod_access_select(base, editor, novel_edit_only=True)).scalar_one_or_none()
+        assert test_db.execute(label_data_mod_access_select(base, editor, edit_only=True)).scalar_one_or_none()
 
-        for denied_key in ("viewer", "collaborator", "outsider"):
+        for denied_key in ("viewer", "outsider"):
             actor = label_access_scenario.users[denied_key]
             assert (
-                test_db.execute(label_data_mod_access_select(base, actor, label_edit_only=True)).scalar_one_or_none()
-                is None
-            )
-            assert (
-                test_db.execute(label_data_mod_access_select(base, actor, novel_edit_only=True)).scalar_one_or_none()
-                is None
+                test_db.execute(label_data_mod_access_select(base, actor, edit_only=True)).scalar_one_or_none() is None
             )
 
     def test_outsider_can_select_public_chapter_only(
@@ -487,23 +439,14 @@ class TestLabelUpdate:
 
         assert result_ids == set(label_ids)
 
-    def test_label_only_editor_cannot_update_public_or_private_labels(
+    def test_outsider_cannot_update_public_or_private_labels(
         self,
         test_db: Session,
         label_access_scenario: DatabaseScenario,
     ):
-        actor = label_access_scenario.users["collaborator"]
+        actor = label_access_scenario.users["outsider"]
         public_label = label_access_scenario.labels["editor_test"]
-        private_group = label_access_scenario.label_groups["private"]
         private_label = label_access_scenario.labels["private_test"]
-        test_db.add(
-            label_models.LabelContributor(
-                label_group_id=private_group.label_group_id,
-                user_id=actor.user_id,
-                label_contributor_role=LabelRole.EDITOR,
-            )
-        )
-        test_db.commit()
 
         for target in (public_label, private_label):
             stmt = (
@@ -621,32 +564,3 @@ class TestLabelDelete:
             .all()
         )
         assert len(remaining) == 0
-
-    def test_label_only_editor_cannot_delete_public_or_private_labels(
-        self,
-        test_db: Session,
-        label_access_scenario: DatabaseScenario,
-    ):
-        actor = label_access_scenario.users["collaborator"]
-        public_label = label_access_scenario.labels["editor_test"]
-        private_group = label_access_scenario.label_groups["private"]
-        private_label = label_access_scenario.labels["private_test"]
-        test_db.add(
-            label_models.LabelContributor(
-                label_group_id=private_group.label_group_id,
-                user_id=actor.user_id,
-                label_contributor_role=LabelRole.EDITOR,
-            )
-        )
-        test_db.commit()
-
-        for target in (public_label, private_label):
-            stmt = delete(label_models.Label).where(label_models.Label.label_id == target.label_id)
-            stmt = label_mod_access_delete(stmt, actor)
-            test_db.execute(stmt)
-            test_db.commit()
-
-            remaining = test_db.execute(
-                select(label_models.Label).where(label_models.Label.label_id == target.label_id)
-            ).scalar_one_or_none()
-            assert remaining is not None

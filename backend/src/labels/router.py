@@ -24,10 +24,8 @@ from src.labels.schemas import (
     CreateLabelData,
     CreateLabelGroup,
     Label,
-    LabelContributor,
     LabelData,
     LabelGroup,
-    LabelGroupWithRole,
     OpsResult,
     UpdateLabelDataStream,
     UpdateLabelGroup,
@@ -38,12 +36,10 @@ from src.labels.service import (
     modify_label_data_by_stream,
     modify_label_group,
     query_label_by_id,
-    query_label_contributors_of_label_group,
     query_label_data_by_id,
     query_label_datas,
     query_label_group_by_id,
     query_label_groups,
-    query_label_groups_with_contributor_info,
     query_labels_by_label_data_id,
 )
 from src.novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
@@ -64,18 +60,6 @@ async def read_label_groups(
     Gets all label groups of the current user for a novel.
     """
     return await query_label_groups(db, current_user, novel_id)
-
-
-@router.get("/label-groups-with-role", response_model=list[LabelGroupWithRole])
-async def read_label_groups_with_role(
-    novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
-    db: Annotated[AsyncSession, Depends(get_async_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    """
-    Gets all label groups of the current user for a novel, along with their roles.
-    """
-    return await query_label_groups_with_contributor_info(db, current_user, novel_id)
 
 
 @router.get("/label-groups/{labelGroupId}", response_model=LabelGroup)
@@ -157,24 +141,6 @@ async def read_label(
         return await query_label_by_id(db, current_user, label_id)
     except LabelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Label not found.") from e
-
-
-@router.get("/label-groups/{labelGroupId}/contributors", response_model=list[LabelContributor])
-async def read_label_contributors(
-    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    db: Annotated[AsyncSession, Depends(get_async_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-):
-    """
-    Get the list of contributors for a label group.
-    """
-    try:
-        contributors = await query_label_contributors_of_label_group(db, current_user, label_group_id)
-    except LabelGroupNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Label group with id {label_group_id} not found."
-        ) from e
-    return contributors
 
 
 @router.post(

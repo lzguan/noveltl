@@ -7,15 +7,13 @@ import uuid
 from collections.abc import Sequence
 
 from psycopg.errors import ForeignKeyViolation, StringDataRightTruncation, UniqueViolation
-from sqlalchemy import and_, func, insert, literal, select, update
+from sqlalchemy import func, insert, literal, select, update
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.constants import UserType
 from src.auth.models import User
 from src.exceptions import DataTooLongException, NotFoundException
 from src.labels import models, schemas
-from src.labels.constants import LabelRole
 from src.labels.exceptions import (
     LabelDataNotFoundException,
     LabelDataRevisionDuplicateException,
@@ -23,7 +21,6 @@ from src.labels.exceptions import (
     LabelNotFoundException,
 )
 from src.labels.permissions import (
-    label_contributors_mod_access_select,
     label_data_mod_access_insert,
     label_data_mod_access_select,
     label_group_mod_access_insert,
@@ -32,16 +29,9 @@ from src.labels.permissions import (
 )
 from src.labels.utils import apply_operation
 from src.novels import models as novel_models
-from src.novels.constants import Role
 from src.novels.exceptions import NovelNotFoundException
 
 logger = logging.getLogger(__name__)
-
-_NOVEL_ROLE_TO_LABEL_ROLE: dict[Role, LabelRole] = {
-    Role.OWNER: LabelRole.OWNER,
-    Role.EDITOR: LabelRole.EDITOR,
-    Role.VIEWER: LabelRole.VIEWER,
-}
 
 
 async def query_label_groups(db: AsyncSession, current_user: User, novel_id: uuid.UUID) -> Sequence[models.LabelGroup]:
@@ -58,45 +48,6 @@ async def query_label_groups(db: AsyncSession, current_user: User, novel_id: uui
     result = await db.execute(q)
     result_rows = result.scalars().all()
     return result_rows
-
-
-async def query_label_groups_with_contributor_info(
-    db: AsyncSession, current_user: User, novel_id: uuid.UUID
-) -> Sequence[schemas.LabelGroupWithRole]:
-    """
-    Queries all label groups accessible to current_user for a novel, along with the user's derived role.
-
-    Args:
-        db: Database that we query from.
-        current_user: Current user.
-        novel_id: id of novel to query label groups for.
-    """
-    q = (
-        select(models.LabelGroup, novel_models.NovelContributor.contributor_role)
-        .outerjoin(
-            novel_models.NovelContributor,
-            and_(
-                novel_models.NovelContributor.novel_id == models.LabelGroup.novel_id,
-                novel_models.NovelContributor.user_id == current_user.user_id,
-            ),
-        )
-        .where(models.LabelGroup.novel_id == novel_id)
-    )
-    q = label_group_mod_access_select(q, current_user)
-    result = await db.execute(q)
-    result_rows = result.all()
-    out: list[schemas.LabelGroupWithRole] = []
-    for lg, contributor_role in result_rows:
-        label_group: models.LabelGroup = lg
-        if current_user.user_type == UserType.ADMIN:
-            role = LabelRole.OWNER
-        elif contributor_role is not None:
-            role = _NOVEL_ROLE_TO_LABEL_ROLE[contributor_role]
-        else:
-            role = LabelRole.VIEWER
-        out.append(schemas.LabelGroupWithRole(label_group=label_group, role=role))
-
-    return out
 
 
 async def query_label_group_by_id(db: AsyncSession, current_user: User, label_group_id: uuid.UUID) -> models.LabelGroup:
@@ -220,26 +171,6 @@ async def query_label_by_id(db: AsyncSession, current_user: User, label_id: uuid
         return (await db.execute(q)).scalar_one()
     except NoResultFound as e:
         raise LabelNotFoundException from e
-
-
-async def query_label_contributors_of_label_group(
-    db: AsyncSession, current_user: User, label_group_id: uuid.UUID
-) -> Sequence[models.LabelContributor]:
-    """
-    Returns a list of all label contributors corresponding to a label group.
-
-    Args:
-        db: Database to query from.
-        current_user: Current user.
-        label_group_id: id of label group.
-    """
-    q = select(models.LabelContributor).where(models.LabelContributor.label_group_id == label_group_id)
-    q = label_contributors_mod_access_select(q, current_user)
-    result = await db.execute(q)
-    result_rows = result.scalars().all()
-    if len(result_rows) == 0:
-        raise LabelGroupNotFoundException
-    return result_rows
 
 
 async def insert_label_group(
@@ -401,7 +332,7 @@ async def modify_label_data_by_stream(
             novel_models.ChapterContent.chapter_content_id == models.LabelData.chapter_content_id,
         )
     )
-    q = label_data_mod_access_select(q, current_user, label_edit_only=True)
+    q = label_data_mod_access_select(q, current_user, edit_only=True)
     try:
         result = await db.execute(q)
         text = result.scalar_one()

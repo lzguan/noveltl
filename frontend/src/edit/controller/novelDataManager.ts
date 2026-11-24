@@ -27,7 +27,7 @@ import {
 	type ProvLabelGroup,
 } from "./types/idTypes";
 import { makeReservationRequest, Prov } from "./types/helperTypes";
-import type { Chapter, LabelGroup, LabelRole, Novel } from "@/api/models";
+import type { Chapter, LabelGroup, Novel } from "@/api/models";
 import type { RequestEvent } from "./types/requestTypes";
 import {
 	CreateChapterNovelsNovelIdChaptersPost200Response,
@@ -46,7 +46,7 @@ import { buildChapterDataManager } from "./chapterDataManager";
 export type NovelData = {
 	novel: Novel;
 	chapters: Chapter[];
-	labelGroups: { labelGroup: LabelGroup; role: LabelRole }[];
+	labelGroups: LabelGroup[];
 	novelRole: Role;
 };
 
@@ -76,29 +76,26 @@ export const buildNovelDataManager = (
 			}),
 		);
 		const labelGroupsIndex: LabelGroupIndex = yield* buildLabelGroupIndex(
-			novelData.labelGroups.map<[LGProvId, { labelGroup: ProvLabelGroup; role: LabelRole }]>(
-				(val) => {
-					const newIdExit = Effect.runSyncExit(
-						idRepo.newIdAndBindId({
-							kind: "labelGroup",
-							servId: LGServId(val.labelGroup.labelGroupId),
-						}),
-					);
-					if (newIdExit._tag === "Failure") {
-						throw new FatalException({
-							orig: newIdExit.cause,
-						});
-					}
-					const newId = newIdExit.value;
-					return [
-						newId,
-						{
-							labelGroup: Prov({ ...val.labelGroup, labelGroupId: newId }),
-							role: val.role,
-						},
-					];
-				},
-			),
+			novelData.labelGroups.map<[LGProvId, { labelGroup: ProvLabelGroup }]>((val) => {
+				const newIdExit = Effect.runSyncExit(
+					idRepo.newIdAndBindId({
+						kind: "labelGroup",
+						servId: LGServId(val.labelGroupId),
+					}),
+				);
+				if (newIdExit._tag === "Failure") {
+					throw new FatalException({
+						orig: newIdExit.cause,
+					});
+				}
+				const newId = newIdExit.value;
+				return [
+					newId,
+					{
+						labelGroup: Prov({ ...val, labelGroupId: newId }),
+					},
+				];
+			}),
 		);
 
 		const { decorate, flush: _flush } = buildRequestQueueDispatcher<RequestEvent>();
@@ -179,16 +176,14 @@ export const buildNovelDataManager = (
 					labelGroupName,
 					novelId: novelData.novel.novelId,
 				});
-				yield* labelGroupsIndex
-					.new(newId, { labelGroup: newLabelGroup, role: "owner" })
-					.pipe(
-						Effect.mapError(
-							() =>
-								new UnknownError({
-									message: "Failed to add label group to index",
-								}),
-						),
-					);
+				yield* labelGroupsIndex.new(newId, { labelGroup: newLabelGroup }).pipe(
+					Effect.mapError(
+						() =>
+							new UnknownError({
+								message: "Failed to add label group to index",
+							}),
+					),
+				);
 				yield* labelGroupsIndex.increment(newId).pipe(
 					Effect.mapError(
 						() =>

@@ -129,6 +129,7 @@ export type NovelUserEvent =
  */
 export type TriggerEvent =
 	| { eventType: "textChanged"; op: TextOp; chapterId: CProvId }
+	| { eventType: "textSynced"; chapterId: CProvId }
 	| { eventType: "labelChanged"; op: IDLabelOp }
 	| { eventType: "labelGroupAdded"; labelGroup: ProvLabelGroup }
 	| { eventType: "chapterAdded"; chapter: ProvChapter }

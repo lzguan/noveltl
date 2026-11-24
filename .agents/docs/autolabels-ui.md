@@ -20,13 +20,13 @@ and their boundary with the editor controller.
 
 The Effect editor controller stores no autolabel state. Data crosses the editor
 boundary in one direction only: `createOpenChapterContentsSubscriber` listens to
-`chapterOpened`, `chapterClosed`, and `textChanged` and exposes
+`chapterOpened`, `chapterClosed`, `textChanged`, and `textSynced` and exposes
 `openChapterContentIds` (`chapterServerId -> synced chapterContentServerId | null`).
 
 ```mermaid
 %%{init: {"theme": "dark", "themeVariables": {"lineColor": "#e2e8f0"}}}%%
 flowchart LR
-    Controller["Editor controller (Effect)"] -->|"chapterOpened / chapterClosed / textChanged"| Tracker["useOpenChapterContents"]
+    Controller["Editor controller (Effect)"] -->|"chapterOpened / chapterClosed / textChanged / textSynced"| Tracker["useOpenChapterContents"]
     Tracker -->|"openChapterContentIds"| Page["EditNovelPage"]
     EditorState["useEditorState (segmentManager)"] -->|"loaded chapter text"| Page
     Page -->|"previewTarget (synced chapter + text)"| Preview["useAutoLabelPreview"]
@@ -89,8 +89,9 @@ flowchart TD
 
 - `nextDelay()` returns `null` when `seeded && !hasActiveRuns()`, parking the loop with no
   timer until a user action calls `notify()`.
-- While unseeded or while any loaded run is active, `nextDelay()` polls every 2 s with
-  exponential backoff up to 30 s on consecutive failures.
+- While unseeded or while any loaded run is active, `nextDelay()` starts at 2 s, backs off
+  up to 15 s (`MAX_IDLE_POLL_INTERVAL_MS`) across unchanged timer polls (resetting to 2 s
+  on progress or manual action), and up to 30 s on consecutive failures.
 - Cleanup on unmount or `novelId` change aborts in-flight fetches, exits the loop, and
   resets state.
 

@@ -18,6 +18,7 @@ import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import { useAutoLabelPreview } from "@/autolabels/preview/useAutoLabelPreview";
 import {
 	createOpenChapterContentsSubscriber,
+	deriveAutoLabelPreviewTarget,
 	useOpenChapterContents,
 } from "../hooks/useOpenChapterContents";
 import { createChapterManager } from "../managers/chapterManager";
@@ -73,20 +74,27 @@ export function EditNovelPage() {
 		controllerGetters: NovelGetters;
 	} | null>(null);
 
-	const previewTarget = useMemo(() => {
-		if (!managers || editorState.data.empty || editorState.data.loading) return null;
-		const chapterId = Effect.runSync(
-			managers.controllerGetters.chapterServerId(editorState.data.chapterId),
+	const previewTarget = useMemo(
+		() =>
+			deriveAutoLabelPreviewTarget(
+				editorState.data,
+				managers?.controllerGetters ?? null,
+				openChapterContents.openChapterContentIds,
+			),
+		[managers, editorState.data, openChapterContents.openChapterContentIds],
+	);
+
+	const chapterNumByServerId = useMemo(() => {
+		if (!managers) return new Map<string, number>();
+		return new Map(
+			chapterState.chapterList.flatMap((chapter) => {
+				const servId = Effect.runSync(
+					managers.controllerGetters.chapterServerId(chapter.chapterId),
+				);
+				return servId === null ? [] : [[servId, chapter.chapterNum] as const];
+			}),
 		);
-		if (chapterId === null) return null;
-		const chapterContentId = openChapterContents.openChapterContentIds.get(chapterId) ?? null;
-		if (chapterContentId === null) return null;
-		return {
-			chapterId,
-			chapterContentId,
-			text: editorState.data.segmentManager.getText(),
-		};
-	}, [managers, editorState.data, openChapterContents.openChapterContentIds]);
+	}, [managers, chapterState.chapterList]);
 
 	const autoLabelPreview = useAutoLabelPreview(selectedAutoLabelRun, previewTarget);
 
@@ -277,14 +285,6 @@ export function EditNovelPage() {
 		currentChapterId === null
 			? null
 			: Effect.runSync(managers.controllerGetters.chapterContentServerId(currentChapterId));
-	const chapterNumByServerId = new Map(
-		chapterState.chapterList.flatMap((chapter) => {
-			const servId = Effect.runSync(
-				managers.controllerGetters.chapterServerId(chapter.chapterId),
-			);
-			return servId === null ? [] : [[servId, chapter.chapterNum] as const];
-		}),
-	);
 	// Opens a server chapter and highlights a range, only if it still has the given content version.
 	const gotoText: GotoText = (cServId, reference) => {
 		const pid = Effect.runSync(managers.controllerGetters.chapterIdFromServerId(cServId));

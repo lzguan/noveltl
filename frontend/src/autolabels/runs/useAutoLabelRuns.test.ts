@@ -10,7 +10,11 @@ import {
 	type AutoLabelProgress,
 	type AutoLabelRun,
 } from "@/api/models";
-import { AUTO_LABEL_RUN_POLL_INTERVAL_MS, useAutoLabelRuns } from "./useAutoLabelRuns";
+import {
+	AUTO_LABEL_RUN_POLL_INTERVAL_MS,
+	MAX_IDLE_POLL_INTERVAL_MS,
+	useAutoLabelRuns,
+} from "./useAutoLabelRuns";
 
 vi.mock("@/api/endpoints/default/default", () => ({
 	createAutolabelsAutoLabelsPost: vi.fn(),
@@ -240,4 +244,49 @@ test("refreshAll reloads the run list and re-fetches the selected run", async ()
 	expect(readRunAutoLabels).toHaveBeenCalledTimes(2);
 	expect(result.current.refreshing).toBe(false);
 	expect(result.current.runs.map((entry) => entry.run.runId)).toEqual(["run-b", "run-a"]);
+});
+
+test("backs off polling on unchanged responses and resets to base interval on progress", async () => {
+	const runA = makeRun("run-a", 1);
+	const processing = [makeAutoLabel("al-1", "run-a", "processing")];
+	const partialDone = [
+		makeAutoLabel("al-1", "run-a", "done"),
+		makeAutoLabel("al-2", "run-a", "processing"),
+	];
+	readRuns.mockResolvedValueOnce(runsResponse([runA]));
+	readRunAutoLabels
+		.mockResolvedValueOnce(autoLabelsResponse(processing)) // initial select load
+		.mockResolvedValueOnce(autoLabelsResponse(processing)) // poll 1 (2s): unchanged -> next 4s
+		.mockResolvedValueOnce(autoLabelsResponse(processing)) // poll 2 (4s): unchanged -> next 8s
+		.mockResolvedValueOnce(autoLabelsResponse(partialDone)) // poll 3 (8s): changed -> next 2s
+		.mockResolvedValueOnce(autoLabelsResponse(partialDone)); // poll 4 (2s)
+
+	const { result } = renderHook(() => useAutoLabelRuns({ novelId: "novel-1" }));
+	await advance(0);
+
+	act(() => {
+		result.current.selectRun("run-a");
+	});
+	await advance(0);
+	expect(readRunAutoLabels).toHaveBeenCalledTimes(1);
+
+	await advance(AUTO_LABEL_RUN_POLL_INTERVAL_MS);
+	expect(readRunAutoLabels).toHaveBeenCalledTimes(2);
+
+	// Next poll waits 4s (not 2s).
+	await advance(AUTO_LABEL_RUN_POLL_INTERVAL_MS);
+	expect(readRunAutoLabels).toHaveBeenCalledTimes(2);
+	await advance(AUTO_LABEL_RUN_POLL_INTERVAL_MS);
+	expect(readRunAutoLabels).toHaveBeenCalledTimes(3);
+
+	// Next poll waits 8s (capped at MAX_IDLE_POLL_INTERVAL_MS) and receives progress.
+	const thirdDelay = Math.min(AUTO_LABEL_RUN_POLL_INTERVAL_MS * 4, MAX_IDLE_POLL_INTERVAL_MS);
+	await advance(thirdDelay - 1);
+	expect(readRunAutoLabels).toHaveBeenCalledTimes(3);
+	await advance(1);
+	expect(readRunAutoLabels).toHaveBeenCalledTimes(4);
+
+	// Progress resets backoff to base 2s interval.
+	await advance(AUTO_LABEL_RUN_POLL_INTERVAL_MS);
+	expect(readRunAutoLabels).toHaveBeenCalledTimes(5);
 });

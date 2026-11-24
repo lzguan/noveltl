@@ -22,6 +22,7 @@ import {
 } from "./autoLabelRunsState";
 
 export const AUTO_LABEL_RUN_POLL_INTERVAL_MS = 2000;
+export const MAX_IDLE_POLL_INTERVAL_MS = 15_000;
 const MAX_POLL_BACKOFF_MS = 30_000;
 
 export type CreateAutoLabelRunResult =
@@ -71,18 +72,22 @@ export function useAutoLabelRuns({
 		let notify = noop;
 		let seeded = false;
 		let consecutiveFailures = 0;
+		let unchangedPolls = 0;
 
 		const actions: LoopActions = {
 			refreshAll() {
+				unchangedPolls = 0;
 				manualRefresh = true;
 				refreshListPending = true;
 				notify();
 			},
 			reloadRun(runId: string) {
+				unchangedPolls = 0;
 				pendingRunIds.add(runId);
 				notify();
 			},
 			wake() {
+				unchangedPolls = 0;
 				notify();
 			},
 		};
@@ -91,9 +96,15 @@ export function useAutoLabelRuns({
 
 		const nextDelay = (): number | null => {
 			if (seeded && !hasActiveRuns()) return null;
+			if (consecutiveFailures > 0) {
+				return Math.min(
+					AUTO_LABEL_RUN_POLL_INTERVAL_MS * 2 ** consecutiveFailures,
+					MAX_POLL_BACKOFF_MS,
+				);
+			}
 			return Math.min(
-				AUTO_LABEL_RUN_POLL_INTERVAL_MS * 2 ** consecutiveFailures,
-				MAX_POLL_BACKOFF_MS,
+				AUTO_LABEL_RUN_POLL_INTERVAL_MS * 2 ** unchangedPolls,
+				MAX_IDLE_POLL_INTERVAL_MS,
 			);
 		};
 
@@ -149,9 +160,11 @@ export function useAutoLabelRuns({
 			}
 		};
 
-		const fetchRunAutoLabels = async (runId: string): Promise<boolean> => {
+		const fetchRunAutoLabels = async (
+			runId: string,
+		): Promise<"changed" | "unchanged" | "failed"> => {
 			if (!stateRef.current.runs.some((entry) => entry.run.runId === runId)) {
-				return true;
+				return "unchanged";
 			}
 			try {
 				const resp = await readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet(
@@ -159,7 +172,7 @@ export function useAutoLabelRuns({
 					undefined,
 					{ signal: abort.signal },
 				);
-				if (abort.signal.aborted) return true;
+				if (abort.signal.aborted) return "unchanged";
 				if (resp.status !== 200) {
 					throw new Error(`Loading autolabels for run ${runId} failed: ${resp.status}`);
 				}
@@ -168,21 +181,22 @@ export function useAutoLabelRuns({
 				if (changed && next.selectedRunId === runId) {
 					notifySelectedFromEffect(toSelectedAutoLabelRun(next));
 				}
-				return true;
+				return changed ? "changed" : "unchanged";
 			} catch (error) {
-				if (abort.signal.aborted) return true;
+				if (abort.signal.aborted) return "unchanged";
 				const next = applyRunError(stateRef.current, runId);
 				const changed = commitState(next);
 				if (changed && next.selectedRunId === runId) {
 					notifySelectedFromEffect(toSelectedAutoLabelRun(next));
 				}
 				console.error(`Failed to load autolabels for run ${runId}:`, error);
-				return false;
+				return "failed";
 			}
 		};
 
 		const run = async () => {
 			while (!abort.signal.aborted) {
+				let wasTimerPoll = false;
 				if (!refreshListPending && pendingRunIds.size === 0) {
 					let wokenByTimer = false;
 					await sleep(nextDelay(), () => {
@@ -193,6 +207,7 @@ export function useAutoLabelRuns({
 					if (!seeded) {
 						refreshListPending = true;
 					} else {
+						wasTimerPoll = true;
 						for (const entry of stateRef.current.runs) {
 							if (isRunActive(entry)) pendingRunIds.add(entry.run.runId);
 						}
@@ -208,13 +223,26 @@ export function useAutoLabelRuns({
 					const runIds = Array.from(pendingRunIds);
 					pendingRunIds.clear();
 					let anyFailed = false;
+					let anyChanged = false;
 					for (const runId of runIds) {
 						if (abort.signal.aborted) return;
-						const ok = await fetchRunAutoLabels(runId);
-						if (!ok) anyFailed = true;
+						const outcome = await fetchRunAutoLabels(runId);
+						if (outcome === "failed") anyFailed = true;
+						else if (outcome === "changed") anyChanged = true;
 					}
 					if (!abort.signal.aborted) {
-						consecutiveFailures = anyFailed ? consecutiveFailures + 1 : 0;
+						if (anyFailed) {
+							consecutiveFailures += 1;
+							unchangedPolls = 0;
+						} else if (anyChanged) {
+							consecutiveFailures = 0;
+							unchangedPolls = 0;
+						} else if (wasTimerPoll) {
+							consecutiveFailures = 0;
+							unchangedPolls += 1;
+						} else {
+							consecutiveFailures = 0;
+						}
 					}
 				}
 			}

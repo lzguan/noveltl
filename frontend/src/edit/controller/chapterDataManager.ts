@@ -647,6 +647,17 @@ export const buildChapterDataManager = (
 									});
 								}
 								yield* finishTextRequest();
+								if (
+									!destroyed &&
+									text === syncedText &&
+									opQueue.tag !== "text" &&
+									pendingTextRequestCount === 0
+								) {
+									yield* raiseTriggerEvent({
+										eventType: "textSynced",
+										chapterId,
+									});
+								}
 							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
 					};
 					if (loadedLabelData.length === 0) {

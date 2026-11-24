@@ -82,7 +82,7 @@ async def _run_loader(
         await db.scalars(select(TranslationJobChapter.chapter_id).where(TranslationJobChapter.job_id == job_id))
     )
     store, dispatch = MemoryObjectStore(), AsyncMock()
-    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", session_factory)
+    monkeypatch.setattr("src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", session_factory)
     monkeypatch.setattr("src.translations.actions.load_inputs.get_async_object_store", lambda: store)
     monkeypatch.setattr(step_task(next_step), "kiq", dispatch)
 
@@ -184,7 +184,9 @@ async def test_loader_rejects_a_memory_group_from_another_novel(
         )
     ).one()
     store = MemoryObjectStore()
-    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", testing_async_session_local
+    )
     monkeypatch.setattr("src.translations.actions.load_inputs.get_async_object_store", lambda: store)
 
     with pytest.raises(ValueError, match="does not belong"):

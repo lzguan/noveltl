@@ -53,7 +53,7 @@ Autolabel inference dispatch still uses the Celery dispatcher. Remaining: slice 
   renewal (see chapter-translation notes); add a renew hook to `create_batch_job`
   if uploads approach the 300 s submit lease. Next: PR B.
 - Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
-  `de11687` in `translations/actions/celery_actions.py` and
+  `de11687` in `translations/actions/execution/celery_actions.py` and
   `translations/clients/sync_client.py`.
   Open question for slice 2: an async taskiq worker already runs many translation jobs in
   one process; decide whether the in-process `AsyncActionCallbacks` path stays (then a
@@ -179,6 +179,11 @@ the analytics store as a `reader_feedback.v1` kind.
 
 ## Smaller follow-ups
 
+- Dependency groups (user request, 2026-11-24): `celery[redis]`, `taskiq` and
+  `taskiq-redis` are all base `dependencies` in `backend/pyproject.toml`, so every
+  image installs both queues. After the translations taskiq cutover, move each into
+  the groups whose images use it (Celery: autolabel inference and filters workers;
+  taskiq: API, jobs, memory-agent and translations workers).
 - Bulk chapter upload: defer the import to the jobs worker; until then the parse
   runs in `asyncio.to_thread`. Return 422 via `RequestValidationError` with
   `e.errors(include_input=False, include_url=False)` instead of echoing the

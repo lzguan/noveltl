@@ -15,8 +15,8 @@ as optional context by translation prompts.
 | Action discovery and form metadata | [metadata.py](../../backend/src/translations/metadata.py) |
 | Job/stage/batch/task persistence and pinned chapters | [models.py](../../backend/src/translations/models.py), [tasks/jobs.py](../../backend/src/translations/tasks/jobs.py) |
 | Controls and dispatch reporting | [service.py](../../backend/src/translations/service.py) |
-| Worker callback contract, step specs, and wrappers | [actions.py](../../backend/src/translations/actions/actions.py), [celery_actions.py](../../backend/src/translations/actions/celery_actions.py) |
-| Claimed step execution and next-stage handoff | [runner.py](../../backend/src/translations/actions/runner.py) |
+| Worker callback contract, step specs, and wrappers | [actions.py](../../backend/src/translations/actions/actions.py), [celery_actions.py](../../backend/src/translations/actions/execution/celery_actions.py) |
+| Claimed step execution and next-stage handoff | [runner.py](../../backend/src/translations/actions/execution/runner.py) |
 | Lease ownership | [claims.py](../../backend/src/translations/tasks/claims.py) |
 | Normalized data, JSONL, output completeness | [records.py](../../backend/src/translations/records.py), [jsonl.py](../../backend/src/translations/jsonl.py), [validation.py](../../backend/src/translations/validation.py) |
 | Provider transport and response codecs | [clients/](../../backend/src/translations/clients/), [codecs/](../../backend/src/translations/codecs/) |
@@ -195,7 +195,7 @@ stays in `CeleryActionCallbacks`; `run_claimed_step` (claim, run, finish or
 fail; returns `unclaimed`/`advanced`/`pending`) and `ready_next_task` (mark the
 next stage's task READY) take a session factory and contain no dispatch.
 
-[async_actions.py](../../backend/src/translations/actions/async_actions.py)
+[async_actions.py](../../backend/src/translations/actions/execution/async_actions.py)
 (marked not audited, strictly for agent-eval use) implements `ActionCallbacks`
 in-process. Awaiting `entrypoint(task_id)` runs that batch's remaining stages to
 completion: steps are awaited through `run_claimed_step` behind a

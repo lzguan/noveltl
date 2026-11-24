@@ -71,7 +71,9 @@ def pipeline(
     test_db: Session, testing_async_session_local: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
 ) -> tuple[MemoryObjectStore, EchoClient]:
     store, client = MemoryObjectStore(), EchoClient()
-    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", testing_async_session_local
+    )
     for module in ("load_inputs", "prune_memories", "translate"):
         monkeypatch.setattr(f"src.translations.actions.{module}.get_async_object_store", lambda: store)
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)

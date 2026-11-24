@@ -1,11 +1,13 @@
+import asyncio
 import uuid
-from collections.abc import Callable, Coroutine
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from collections.abc import Callable
+from datetime import timedelta
 
+from celery import Celery
+from celery.app.task import Task
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from taskiq import AsyncBroker, AsyncTaskiqDecoratedTask, ScheduleSource
+from sqlalchemy.pool import NullPool
 
 from src.config import database_settings
 from src.translations.actions.actions import (
@@ -16,28 +18,19 @@ from src.translations.actions.actions import (
     ActionTaskContext,
     PollCallback,
 )
-from src.translations.actions.runner import ready_next_task, run_claimed_step
+from src.translations.actions.execution.runner import ready_next_task, run_claimed_step
 from src.translations.types import ActionName, TranslationTaskStatus
 
-# One event loop serves every step in a worker process, so its connections are pooled.
-_taskiq_engine = create_async_engine(database_settings.DB_URL, pool_size=20)
-TaskiqSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
-    _taskiq_engine, autoflush=False, expire_on_commit=False
+_celery_engine = create_async_engine(database_settings.DB_URL, poolclass=NullPool)
+CelerySessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    _celery_engine, autoflush=False, expire_on_commit=False
 )
 
-type _StepTask = AsyncTaskiqDecoratedTask[..., Coroutine[Any, Any, None]]
 
-
-class TaskiqActionCallbacks(ActionCallbacks):
-    def __init__(
-        self,
-        broker: AsyncBroker,
-        schedule_source: ScheduleSource,
-        callbacks_dict: dict[ActionName, ActionCallbacks],
-    ) -> None:
-        self.broker = broker
-        self.schedule_source = schedule_source
-        self._intermediate: list[_StepTask] = []
+class CeleryActionCallbacks(ActionCallbacks):
+    def __init__(self, celery_app: Celery, callbacks_dict: dict[ActionName, ActionCallbacks]) -> None:
+        self.celery_app = celery_app
+        self._intermediate: list[Task] = []
         self._steps: list[ActionStep] = []
         self._callbacks_dict = callbacks_dict
 
@@ -110,7 +103,7 @@ class TaskiqActionCallbacks(ActionCallbacks):
 
         async def run_step(x: uuid.UUID) -> None:
             outcome = await run_claimed_step(
-                TaskiqSessionLocal,
+                CelerySessionLocal,
                 x,
                 f,
                 expect=expect,
@@ -124,24 +117,24 @@ class TaskiqActionCallbacks(ActionCallbacks):
             if outcome == "pending":
                 await dispatch(x, delay=timedelta(seconds=interval_seconds))
             elif idx + 1 < len(self._intermediate):
-                await self._intermediate[idx + 1].kiq(str(x))
+                await asyncio.to_thread(self._intermediate[idx + 1].apply_async, (x,))
             else:
                 await self.exitpoint(x)
 
-        # Messages carry the task ID as a string; the payload must be JSON.
-        @self.broker.task(task_name=name)
-        async def taskiq_task(task_id: str) -> None:
-            await run_step(uuid.UUID(task_id))
+        @self.celery_app.task(name=name, shared=False)
+        def celery_task(x: uuid.UUID) -> None:
+            asyncio.run(run_step(x))
 
-        self._intermediate.append(taskiq_task)
+        self._intermediate.append(celery_task)
 
         async def dispatch(task_id: uuid.UUID, *, delay: timedelta | None = None) -> None:
-            # A deadline already passed means the gate is open; send at once.
-            if delay is None or delay <= timedelta(0):
-                await taskiq_task.kiq(str(task_id))
+            if delay is None:
+                await asyncio.to_thread(celery_task.apply_async, (task_id,))
             else:
-                # Never earlier than the deadline: the poll gate drops an early message.
-                await taskiq_task.schedule_by_time(self.schedule_source, datetime.now(UTC) + delay, str(task_id))
+                # A deadline already passed means the gate is open; fire at once.
+                await asyncio.to_thread(
+                    celery_task.apply_async, (task_id,), countdown=max(delay, timedelta(0)).total_seconds()
+                )
 
         self._steps.append(ActionStep(expect, during, finish, dispatch))
         return run_step
@@ -162,12 +155,12 @@ class TaskiqActionCallbacks(ActionCallbacks):
 
     async def entrypoint(self, x: uuid.UUID) -> None:
         if self._intermediate:
-            await self._intermediate[0].kiq(str(x))
+            await asyncio.to_thread(self._intermediate[0].apply_async, (x,))
         else:
             await self.exitpoint(x)
 
     async def exitpoint(self, x: uuid.UUID) -> None:
-        ready = await ready_next_task(TaskiqSessionLocal, x)
+        ready = await ready_next_task(CelerySessionLocal, x)
         if ready is None:
             return
         next_task_id, next_action = ready

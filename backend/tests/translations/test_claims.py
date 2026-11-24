@@ -11,7 +11,7 @@ from src.languages.models import Language
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Novel, SourceWork
 from src.translations.actions.actions import ActionTaskContext
-from src.translations.actions.celery_actions import CeleryActionCallbacks
+from src.translations.actions.execution.celery_actions import CeleryActionCallbacks
 from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
 from src.translations.tasks.claims import (
     POLL_GATE_SLACK,
@@ -158,7 +158,9 @@ async def test_wrapper_failure_rolls_back_and_blocks_retry(
     testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.celery_actions.CelerySessionLocal", testing_async_session_local
+    )
     app = Celery("claim-test", set_as_current=False)
     callbacks = CeleryActionCallbacks(app, {})
     calls = []
@@ -192,7 +194,9 @@ async def test_wrapper_commits_before_running_next_step(
     testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.celery_actions.CelerySessionLocal", testing_async_session_local
+    )
     app = Celery("claim-sequence-test", set_as_current=False, broker="memory://")
     app.conf.update(task_always_eager=True, task_eager_propagates=True)
     callbacks = CeleryActionCallbacks(app, {})
@@ -242,7 +246,9 @@ async def test_exitpoint_commits_ready_before_dispatch_and_can_retry(
     testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.celery_actions.CelerySessionLocal", testing_async_session_local
+    )
     app = Celery("exitpoint-test", set_as_current=False)
     calls: list[UUID] = []
 
@@ -288,7 +294,9 @@ async def test_exitpoint_does_not_advance_ineligible_tasks(
     next_status: State,
     failed: bool,
 ) -> None:
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.celery_actions.CelerySessionLocal", testing_async_session_local
+    )
     app = Celery("exitpoint-ineligible-test", set_as_current=False)
     try:
         async with testing_async_session_local.begin() as db:

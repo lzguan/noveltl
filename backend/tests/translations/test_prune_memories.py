@@ -158,7 +158,9 @@ async def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output
     loader.status, loader.output_file_id = State.COMPLETE, loaded.file_id
     task.status = State.READY
     await async_test_db.commit()
-    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", testing_async_session_local
+    )
     monkeypatch.setattr("src.translations.actions.prune_memories.get_async_object_store", lambda: store)
     client = PruningClient(response)
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)

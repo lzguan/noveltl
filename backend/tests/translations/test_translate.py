@@ -110,7 +110,9 @@ def worker(
     testing_async_session_local: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
 ) -> MemoryObjectStore:
     store = MemoryObjectStore()
-    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", testing_async_session_local
+    )
     monkeypatch.setattr("src.translations.actions.translate.get_async_object_store", lambda: store)
     return store
 

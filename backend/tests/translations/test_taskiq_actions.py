@@ -12,7 +12,7 @@ from taskiq import InMemoryBroker, ScheduledTask, ScheduleSource
 from taskiq_redis import ListRedisScheduleSource
 
 from src.translations.actions.actions import ActionTaskContext
-from src.translations.actions.taskiq_actions import TaskiqActionCallbacks
+from src.translations.actions.execution.taskiq_actions import TaskiqActionCallbacks
 from src.translations.models import TranslationTask
 from src.translations.types import TranslationTaskStatus as State
 from tests.translations.test_claims import next_task_id, task_id  # noqa: F401  fixtures
@@ -33,7 +33,9 @@ class RecordingSource(ScheduleSource):
 async def broker(
     testing_async_session_local: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
 ) -> AsyncGenerator[InMemoryBroker]:
-    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", testing_async_session_local
+    )
     # Kicks run the task in place, so a chain completes before kiq returns.
     broker = InMemoryBroker(await_inplace=True)
     await broker.startup()

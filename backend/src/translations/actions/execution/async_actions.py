@@ -20,7 +20,7 @@ from src.translations.actions.actions import (
     PollCallback,
     register_steps,
 )
-from src.translations.actions.runner import StepOutcome, ready_next_task, run_claimed_step
+from src.translations.actions.execution.runner import StepOutcome, ready_next_task, run_claimed_step
 from src.translations.types import ActionName, TranslationTaskStatus
 
 

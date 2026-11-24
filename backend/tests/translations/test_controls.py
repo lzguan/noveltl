@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.auth.utils import create_access_token
 from src.translations.actions import translate
+from src.translations.actions.execution.taskiq_actions import TaskiqActionCallbacks
 from src.translations.actions.registry import resume_step
-from src.translations.actions.taskiq_actions import TaskiqActionCallbacks
 from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
 from src.translations.schemas import TranslationJobCreate
 from src.translations.service import Control, control_translation_job
@@ -154,7 +154,9 @@ async def test_cancel_fences_inflight_exitpoint(
     current.status = State.COMPLETE
     await async_test_db.commit()
     current_id = current.task_id
-    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", testing_async_session_local
+    )
     queued = AsyncMock()
     monkeypatch.setattr(step_task("src.translations.actions.translate.prepare"), "kiq", queued)
     # Hold the next task's row lock so the exitpoint blocks inside its READY update.

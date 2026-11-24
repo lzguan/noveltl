@@ -18,14 +18,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { routeTo } from "@/routes";
-import {
-	ArrowRightIcon,
-	BookOpenIcon,
-	LibraryIcon,
-	PencilLineIcon,
-	PlusIcon,
-	UploadIcon,
-} from "lucide-react";
+import { BookOpenIcon, PencilLineIcon, PlusIcon, UploadIcon } from "lucide-react";
 import { CreateNovelDialog } from "../components/CreateNovelDialog";
 import { UploadChaptersDialog } from "../components/UploadChaptersDialog";
 
@@ -194,8 +187,8 @@ function EditDashboardPage() {
 								<EmptyHeader>
 									<EmptyTitle>No novels found</EmptyTitle>
 									<EmptyDescription>
-										You don&apos;t have any novels to edit yet. Browse source
-										works to find novels, or create a new one.
+										You don&apos;t have any novels to edit yet. Create a new one
+										to get started.
 									</EmptyDescription>
 								</EmptyHeader>
 								<EmptyContent>
@@ -220,14 +213,6 @@ function EditDashboardPage() {
 						)}
 					</CardContent>
 				</Card>
-
-				<Button asChild variant="outline" className="w-fit">
-					<Link to={routeTo.view.sourceworks()}>
-						<LibraryIcon data-icon="inline-start" />
-						Browse all source works
-						<ArrowRightIcon data-icon="inline-end" />
-					</Link>
-				</Button>
 
 				<CreateNovelDialog
 					languages={languages}

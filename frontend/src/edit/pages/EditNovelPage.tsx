@@ -299,6 +299,7 @@ export function EditNovelPage() {
 		<div className="relative h-full min-h-0">
 			<div className="flex h-full min-h-0 flex-col">
 				<ToolbarPanel
+					novelTitle={novel.novel.novelTitle}
 					mode={editorState.mode}
 					loading={!editorState.data.empty && editorState.data.loading}
 					onSetMode={editorState.setMode}

@@ -1,97 +1,100 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { readAutolabelByIdAutoLabelsAutoLabelIdGet } from "@/api/endpoints/default/default";
 import type { LabelBase } from "@/api/models";
-import { useSyncState } from "../utils/useSyncState";
+import type { SelectedAutoLabelRun } from "@/autolabels/runs/autoLabelRunsState";
+import { labelsToUtf16 } from "../utils/textPositions";
 
 export type AutoLabelPreview = readonly LabelBase[];
 
-export function useAutoLabelPreview() {
-	const [enabled, enabledRef, commitEnabled] = useSyncState(false);
-	const [loading, loadingRef, commitLoading] = useSyncState(false);
-	const [preview, previewRef, commitPreview] = useSyncState<AutoLabelPreview | null>(null);
-	const [openChapterContentIds, openChapterContentIdsRef, commitOpenChapterContentIds] =
-		useSyncState<ReadonlyMap<string, string | null>>(new Map());
+export type AutoLabelPreviewTarget = {
+	readonly chapterId: string;
+	readonly chapterContentId: string;
+	readonly text: string;
+};
 
-	const setEnabled = useCallback(
-		(next: boolean) => {
-			enabledRef.current = next;
-			commitEnabled();
+export function useAutoLabelPreview(
+	selectedRun: SelectedAutoLabelRun,
+	target: AutoLabelPreviewTarget | null,
+) {
+	const [enabled, setEnabledState] = useState(false);
+	const [attempt, setAttempt] = useState(0);
+	const [cache, setCache] = useState<ReadonlyMap<string, readonly LabelBase[]>>(() => new Map());
+	const [failedKey, setFailedKey] = useState<string | null>(null);
 
-			if (!next) {
-				loadingRef.current = false;
-				commitLoading();
-				previewRef.current = null;
-				commitPreview();
-			}
-		},
-		[loadingRef, commitLoading, previewRef, commitPreview, enabledRef, commitEnabled],
-	);
+	const setEnabled = useCallback((next: boolean) => {
+		setEnabledState(next);
+		if (next) setAttempt((count) => count + 1);
+	}, []);
 
-	const setLoading = useCallback(
-		(next: boolean) => {
-			if (next && !enabledRef.current) return;
+	const matchingAutoLabelId = useMemo(() => {
+		if (
+			!enabled ||
+			target === null ||
+			selectedRun.runId === null ||
+			selectedRun.status !== "ready"
+		) {
+			return null;
+		}
+		const matching = selectedRun.autolabels.find(
+			(al) =>
+				al.chapterId === target.chapterId &&
+				al.autoLabelMeta.chapterContentId === target.chapterContentId &&
+				al.autoLabelMeta.autoLabelStatus === "done",
+		);
+		return matching?.autoLabelMeta.autoLabelId ?? null;
+	}, [enabled, target, selectedRun]);
 
-			loadingRef.current = next;
-			commitLoading();
-			if (next) {
-				previewRef.current = null;
-				commitPreview();
-			}
-		},
-		[loadingRef, commitLoading, previewRef, commitPreview, enabledRef],
-	);
+	const cachedLabels = matchingAutoLabelId !== null ? cache.get(matchingAutoLabelId) : undefined;
+	const fetchKey = matchingAutoLabelId !== null ? `${matchingAutoLabelId}:${attempt}` : null;
+	const needsFetch = fetchKey !== null && cachedLabels === undefined && failedKey !== fetchKey;
 
-	const setPreview = useCallback(
-		(next: AutoLabelPreview | null) => {
-			if (next !== null && !enabledRef.current) return;
+	useEffect(() => {
+		if (!needsFetch || matchingAutoLabelId === null || fetchKey === null) return;
+		const abort = new AbortController();
+		const autoLabelId = matchingAutoLabelId;
+		const key = fetchKey;
 
-			const previewValue: AutoLabelPreview | null = next === null ? null : [...next];
-			loadingRef.current = false;
-			commitLoading();
-			previewRef.current = previewValue;
-			commitPreview();
-		},
-		[previewRef, commitPreview, enabledRef, loadingRef, commitLoading],
-	);
+		void readAutolabelByIdAutoLabelsAutoLabelIdGet(autoLabelId, { signal: abort.signal })
+			.then((resp) => {
+				if (abort.signal.aborted) return;
+				if (resp.status !== 200) {
+					setFailedKey(key);
+					return;
+				}
+				const labels = resp.data.autoLabelData ? [...resp.data.autoLabelData] : [];
+				setCache((prev) => {
+					const next = new Map(prev);
+					next.set(autoLabelId, labels);
+					return next;
+				});
+			})
+			.catch((err: unknown) => {
+				if (abort.signal.aborted) return;
+				setFailedKey(key);
+				console.error("Failed to load autolabel preview data:", err);
+			});
 
-	const setOpenChapterContentId = useCallback(
-		(chapterServId: string, chapterContentServId: string | null) => {
-			if (
-				openChapterContentIdsRef.current.has(chapterServId) &&
-				openChapterContentIdsRef.current.get(chapterServId) === chapterContentServId
-			) {
-				return;
-			}
-			const next = new Map(openChapterContentIdsRef.current);
-			next.set(chapterServId, chapterContentServId);
-			openChapterContentIdsRef.current = next;
-			commitOpenChapterContentIds();
-		},
-		[openChapterContentIdsRef, commitOpenChapterContentIds],
-	);
+		return () => {
+			abort.abort();
+		};
+	}, [needsFetch, matchingAutoLabelId, fetchKey]);
 
-	const removeOpenChapterContentId = useCallback(
-		(chapterServId: string) => {
-			if (!openChapterContentIdsRef.current.has(chapterServId)) return;
-			const next = new Map(openChapterContentIdsRef.current);
-			next.delete(chapterServId);
-			openChapterContentIdsRef.current = next;
-			commitOpenChapterContentIds();
-		},
-		[openChapterContentIdsRef, commitOpenChapterContentIds],
-	);
+	const preview = useMemo<AutoLabelPreview | null>(() => {
+		if (target === null || cachedLabels === undefined) return null;
+		return labelsToUtf16(target.text, cachedLabels);
+	}, [target, cachedLabels]);
+
+	const loading =
+		(enabled &&
+			target !== null &&
+			selectedRun.runId !== null &&
+			selectedRun.status === "loading") ||
+		needsFetch;
 
 	return {
 		enabled,
-		enabledRef,
 		loading,
-		loadingRef,
 		preview,
-		previewRef,
-		openChapterContentIds,
 		setEnabled,
-		setLoading,
-		setPreview,
-		setOpenChapterContentId,
-		removeOpenChapterContentId,
 	};
 }

@@ -6,6 +6,7 @@ import {
 	readNovelWithContributorsNovelsNovelIdWithContributorsGet,
 } from "@/api/endpoints/default/default";
 import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
+import type { SelectedAutoLabelRun } from "@/autolabels/runs/autoLabelRunsState";
 import { buildController } from "../controller/controller";
 import type { NovelData } from "../controller/novelDataManager";
 import { Prov } from "../controller/types/helperTypes";
@@ -19,7 +20,6 @@ import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
 import { createErrorManager } from "../managers/errorManager";
-import { createAutoLabelManager } from "../managers/autolabelManager";
 import { makeActiveGroupLabelSource } from "../labeling/activeGroupLabelSource";
 import type { LabelEditing, LabelSink } from "../labeling/types";
 import { AutoLabelPanel } from "../panels/autoLabels/AutoLabelPanel";
@@ -57,15 +57,33 @@ export function EditNovelPage() {
 	const editorState = useEditorState();
 	const chapterState = useChapters();
 	const trackedLabelGroups = useTrackedLabelGroups();
-	const autoLabelPreview = useAutoLabelPreview();
+	const [selectedAutoLabelRun, setSelectedAutoLabelRun] = useState<SelectedAutoLabelRun>({
+		runId: null,
+	});
 
 	const [managers, setManagers] = useState<{
 		chapterMgr: ReturnType<typeof createChapterManager>;
 		labelGroupMgr: ReturnType<typeof createLabelGroupManager>;
 		editorMgr: ReturnType<typeof createEditorManager>;
-		autoLabelMgr: ReturnType<typeof createAutoLabelManager>;
 		controllerGetters: NovelGetters;
 	} | null>(null);
+
+	const previewTarget = useMemo(() => {
+		if (!managers || editorState.data.empty || editorState.data.loading) return null;
+		const chapterId = Effect.runSync(
+			managers.controllerGetters.chapterServerId(editorState.data.chapterId),
+		);
+		if (chapterId === null) return null;
+		const chapterContentId = chapterState.openChapterContentIds.get(chapterId) ?? null;
+		if (chapterContentId === null) return null;
+		return {
+			chapterId,
+			chapterContentId,
+			text: editorState.data.segmentManager.getText(),
+		};
+	}, [managers, editorState.data, chapterState.openChapterContentIds]);
+
+	const autoLabelPreview = useAutoLabelPreview(selectedAutoLabelRun, previewTarget);
 
 	const labeling = useMemo<LabelEditing>(() => {
 		const source = makeActiveGroupLabelSource({
@@ -167,16 +185,9 @@ export function EditNovelPage() {
 			activeChapterIdRef: chapterState.activeChapterIdRef,
 			activeGroupIdRef: trackedLabelGroups.activeLabelGroupIdRef,
 		});
-		const autoLabelMgr = createAutoLabelManager({
-			controllerGetters: ctrl.getters,
-			autoLabelPreview,
-			dataRef: editorState.dataRef,
-		});
-
 		ctrl.subscribe(chapterMgr.handleControllerEvent);
 		ctrl.subscribe(labelGroupMgr.handleControllerEvent);
 		ctrl.subscribe(editorMgr.handleControllerEvent, 0);
-		ctrl.subscribe(autoLabelMgr.handleControllerEvent);
 		ctrl.subscribe(errorMgr.handleTriggerEvent);
 
 		// Seed chapters from controller
@@ -216,7 +227,6 @@ export function EditNovelPage() {
 			chapterMgr,
 			labelGroupMgr,
 			editorMgr,
-			autoLabelMgr,
 			controllerGetters: ctrl.getters,
 		});
 		// oxlint-disable-next-line react-hooks/exhaustive-deps
@@ -351,18 +361,14 @@ export function EditNovelPage() {
 												chapterNumByServerId={chapterNumByServerId}
 												currentChapterId={activeChapterServerId}
 												openChapterContentIds={
-													autoLabelPreview.openChapterContentIds
+													chapterState.openChapterContentIds
 												}
 												labelGroups={trackedLabelGroups.labelGroups}
 												setActive={managers.labelGroupMgr.setActive}
 												previewEnabled={autoLabelPreview.enabled}
 												previewLoading={autoLabelPreview.loading}
-												onSetPreviewEnabled={
-													managers.autoLabelMgr.setPreviewEnabled
-												}
-												onSelectedRunChange={
-													managers.autoLabelMgr.setSelectedRun
-												}
+												onSetPreviewEnabled={autoLabelPreview.setEnabled}
+												onSelectedRunChange={setSelectedAutoLabelRun}
 												activeId={trackedLabelGroups.activeLabelGroupId}
 											/>
 										),

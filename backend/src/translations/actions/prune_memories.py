@@ -6,7 +6,6 @@ from time import monotonic
 from src.files.access import fetch_file
 from src.files.dependencies import get_async_object_store
 from src.translations.actions.actions import ActionStepSpec, ActionTaskContext, PollSpec, StepSpec, register_steps
-from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
 from src.translations.actions.common.inputs import (
     group_by_chapter,
@@ -18,7 +17,8 @@ from src.translations.actions.common.memory_selections import apply_memory_selec
 from src.translations.actions.common.outputs import output_records
 from src.translations.actions.common.prompts import format_memories
 from src.translations.actions.registry import ACTION_CALLBACKS
-from src.translations.celery_app import app
+from src.translations.actions.taskiq_actions import TaskiqActionCallbacks
+from src.translations.broker import broker, schedule_source
 from src.translations.clients.batch_jobs import (
     BatchJobComplete,
     BatchJobFailed,
@@ -192,5 +192,5 @@ STEPS: tuple[ActionStepSpec, ...] = (
     ),
 )
 
-callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
+callbacks = TaskiqActionCallbacks(broker, schedule_source, ACTION_CALLBACKS)
 register_steps(callbacks, STEPS)

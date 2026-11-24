@@ -1,7 +1,7 @@
 import asyncio
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from threading import Event
-from unittest.mock import Mock
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -13,13 +13,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.auth.utils import create_access_token
 from src.translations.actions import translate
 from src.translations.actions.registry import resume_step
-from src.translations.celery_app import app
+from src.translations.actions.taskiq_actions import TaskiqActionCallbacks
 from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
 from src.translations.schemas import TranslationJobCreate
 from src.translations.service import Control, control_translation_job
 from src.translations.tasks.claims import TranslationClaimLostError, finish_claim
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
+from test_support.steps import step_task
 from test_support.test_data.scenarios import DatabaseScenario
 
 
@@ -99,7 +100,7 @@ async def test_cancel_fences_worker_and_retry_preserves_provider_output(
             await finish_claim(db, current.task_id, token, during=State.FINALIZING, finish=State.COMPLETE)
     assert not (await control_translation_job(async_test_db, user, job_id, "resume")).affected_batch_ids
 
-    # Celery's apply_async runs in a worker thread, so the observer reads synchronously.
+    # A blocking read is fine here: the test owns the loop while the kick is observed.
     def observe(*args: object, **kwargs: object) -> None:
         with testing_session_local() as db:
             task = db.get(TranslationTask, current.task_id)
@@ -108,11 +109,11 @@ async def test_cancel_fences_worker_and_retry_preserves_provider_output(
             assert task.provider_output_id == "output"
             assert next_task is not None and next_task.failed_at is None and next_task.status == State.WAITING
 
-    queued = Mock(side_effect=observe)
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.finalize"], "apply_async", queued)
+    queued = AsyncMock(side_effect=observe)
+    monkeypatch.setattr(step_task("src.translations.actions.translate.finalize"), "kiq", queued)
     retried = await control_translation_job(async_test_db, user, job_id, "retry", batch_id=current.batch_id)
     assert retried.dispatched_task_ids == [current.task_id]
-    queued.assert_called_once_with((current.task_id,))
+    queued.assert_called_once_with(str(current.task_id))
 
 
 async def test_resume_skips_live_claim_then_resumes_expired_poll_and_reports_broker_failure(
@@ -125,8 +126,8 @@ async def test_resume_skips_live_claim_then_resumes_expired_poll_and_reports_bro
     current.claim_token = uuid4()
     current.claim_expires_at = await async_test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=5)
     await async_test_db.commit()
-    queued = Mock(side_effect=ConnectionError("broker unavailable"))
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.poll"], "apply_async", queued)
+    queued = AsyncMock(side_effect=ConnectionError("broker unavailable"))
+    monkeypatch.setattr(step_task("src.translations.actions.translate.poll"), "kiq", queued)
     user = sample_scenario.users["admin"]
     for operation in ("resume", "retry"):
         assert not (await control_translation_job(async_test_db, user, job_id, operation)).affected_batch_ids
@@ -153,9 +154,9 @@ async def test_cancel_fences_inflight_exitpoint(
     current.status = State.COMPLETE
     await async_test_db.commit()
     current_id = current.task_id
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
-    queued = Mock()
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
+    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
+    queued = AsyncMock()
+    monkeypatch.setattr(step_task("src.translations.actions.translate.prepare"), "kiq", queued)
     # Hold the next task's row lock so the exitpoint blocks inside its READY update.
     await async_test_db.execute(
         update(TranslationTask).where(TranslationTask.task_id == following.task_id).values(error="pending cancel")
@@ -169,7 +170,9 @@ async def test_cancel_fences_inflight_exitpoint(
 
     event.listen(engine, "before_cursor_execute", observe)
     try:
-        worker = asyncio.create_task(translate.callbacks.exitpoint(current_id))
+        callbacks = translate.callbacks
+        assert isinstance(callbacks, TaskiqActionCallbacks)
+        worker = asyncio.create_task(callbacks.exitpoint(current_id))
         try:
             async with asyncio.timeout(5):
                 while not entered.is_set():
@@ -198,8 +201,8 @@ async def test_controls_isolate_batches_and_resume_later_stage(
     waiting = TranslationTask(batch_id=other_batch.batch_id, stage_id=second.stage_id, status=State.WAITING)
     async_test_db.add_all([completed, waiting])
     await async_test_db.commit()
-    queued = Mock()
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
+    queued = AsyncMock()
+    monkeypatch.setattr(step_task("src.translations.actions.translate.prepare"), "kiq", queued)
     user = sample_scenario.users["admin"]
     await control_translation_job(async_test_db, user, job_id, "cancel", batch_id=first.batch_id)
     resumed = await control_translation_job(async_test_db, user, job_id, "resume")
@@ -225,8 +228,8 @@ async def test_retry_preparation_discards_stale_provider_ids(
     task.failed_at = await async_test_db.scalar(select(func.clock_timestamp()))
     task.provider_batch_id, task.provider_output_id = "old-job", "old-output"
     await async_test_db.commit()
-    queued = Mock()
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
+    queued = AsyncMock()
+    monkeypatch.setattr(step_task("src.translations.actions.translate.prepare"), "kiq", queued)
     result = await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "retry")
     assert result.dispatched_task_ids == [task.task_id]
     await async_test_db.refresh(task)
@@ -253,8 +256,8 @@ def test_router_controls_and_permissions(
     assert read.status_code == 200, read.text
     batch_id = read.json()["batches"][0]["batchId"]
     task_id = read.json()["tasks"][0]["taskId"]
-    queued = Mock()
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
+    queued = AsyncMock()
+    monkeypatch.setattr(step_task("src.translations.actions.translate.prepare"), "kiq", queued)
     start = client.post(f"/translation-jobs/{job_id}/start", headers=headers)
     assert start.status_code == 200 and start.json()["dispatchedTaskIds"] == [task_id]
     for suffix in ("cancel-all", f"batches/{batch_id}/cancel"):
@@ -287,9 +290,9 @@ async def test_control_does_not_overwrite_concurrent_worker_claim(
     job_id, (task, *_) = await make_job(async_test_db, sample_scenario, loaded=not starting)
     task_id, token = task.task_id, uuid4()
     user = sample_scenario.users["admin"]
-    queued = Mock()
+    queued = AsyncMock()
     step, claimed = ("load_inputs.load", State.FINALIZING) if starting else ("translate.prepare", State.PREPARING)
-    monkeypatch.setattr(app.tasks[f"src.translations.actions.{step}"], "apply_async", queued)
+    monkeypatch.setattr(step_task(f"src.translations.actions.{step}"), "kiq", queued)
     await async_test_db.execute(
         update(TranslationTask)
         .where(TranslationTask.task_id == task_id)
@@ -339,25 +342,25 @@ async def test_recovery_schedules_poll_at_persisted_deadline(
     deadline = await async_test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=1)
     task.next_poll_at = deadline
     await async_test_db.commit()
-    queued = Mock()
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.poll"], "apply_async", queued)
+    queued = AsyncMock()
+    monkeypatch.setattr(step_task("src.translations.actions.translate.poll"), "schedule_by_time", queued)
     for _ in range(2):
         result = await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, operation)
         assert result.dispatched_task_ids == [task.task_id]
-        # A duration, never the deadline itself: the consuming worker releases
-        # the message against its own clock, not the database's.
-        args, kwargs = queued.call_args
-        assert args == ((task.task_id,),)
-        assert list(kwargs) == ["countdown"] and 0 < kwargs["countdown"] <= 60
+        # The remaining duration is added to the dispatcher's clock, never the database
+        # deadline itself: the scheduler releases the message against its own clock.
+        (_, when, scheduled_id), _ = queued.call_args
+        assert scheduled_id == str(task.task_id)
+        assert timedelta(0) < when - datetime.now(UTC) <= timedelta(seconds=60)
         await async_test_db.refresh(task)
         assert task.next_poll_at == deadline
 
     # If retry has to rebuild input, that old provider's deadline is irrelevant.
     task.provider_batch_id = None
     await async_test_db.commit()
-    prepare = Mock()
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", prepare)
+    prepare = AsyncMock()
+    monkeypatch.setattr(step_task("src.translations.actions.translate.prepare"), "kiq", prepare)
     await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "retry")
     await async_test_db.refresh(task)
     assert task.status == State.READY and task.next_poll_at is None
-    prepare.assert_called_once_with((task.task_id,))
+    prepare.assert_called_once_with(str(task.task_id))

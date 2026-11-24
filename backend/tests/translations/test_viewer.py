@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -8,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.auth.utils import create_access_token
-from src.translations.celery_app import app
 from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
 from src.translations.service import TranslationNotFoundError
 from src.translations.types import TranslationTaskStatus as State
 from src.translations.viewer import list_translation_jobs, read_translation_batches
+from test_support.steps import step_task
 from test_support.test_data.scenarios import DatabaseScenario
 
 
@@ -120,7 +121,9 @@ def test_viewer_routes_and_batch_control_scope(
     assert "claimToken" not in response.json()["items"][0]["tasks"][0]
     dispatched = []
     monkeypatch.setattr(
-        app.tasks["src.translations.actions.translate.prepare"], "apply_async", lambda args: dispatched.append(args[0])
+        step_task("src.translations.actions.translate.prepare"),
+        "kiq",
+        AsyncMock(side_effect=lambda task_id: dispatched.append(UUID(task_id))),
     )
     for operation in ("start", "resume"):
         result = client.post(f"{url}/{tasks[2][0].batch_id}/{operation}", headers=headers)

@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from unittest.mock import Mock
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pytest
@@ -15,7 +15,6 @@ from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.models import TermTranslation
 from src.memory.types import Creator, MemoryType, ReviewStatus
 from src.novels.models import Chapter, ChapterContent
-from src.translations.celery_app import app
 from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, ConventionsRecord, MemoriesRecord, TermsRecord, TranslationRecord
@@ -23,7 +22,7 @@ from src.translations.schemas import TranslationJobCreate
 from src.translations.task_names import LOAD_INPUTS_LOAD
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
-from test_support.steps import celery_step
+from test_support.steps import run_step, step_task
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
 
@@ -66,7 +65,7 @@ async def _run_loader(
     request: TranslationJobCreate,
     next_step: str,
     before_load: Callable[[], Awaitable[None]] | None = None,
-) -> tuple[list[TranslationRecord], list[UUID], TranslationTask, Mock]:
+) -> tuple[list[TranslationRecord], list[UUID], TranslationTask, AsyncMock]:
     job_id = await create_job(db, request)
     rows = (
         await db.execute(
@@ -82,14 +81,14 @@ async def _run_loader(
     chapter_ids = list(
         await db.scalars(select(TranslationJobChapter.chapter_id).where(TranslationJobChapter.job_id == job_id))
     )
-    store, dispatch = MemoryObjectStore(), Mock()
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", session_factory)
+    store, dispatch = MemoryObjectStore(), AsyncMock()
+    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", session_factory)
     monkeypatch.setattr("src.translations.actions.load_inputs.get_async_object_store", lambda: store)
-    monkeypatch.setattr(app.tasks[next_step], "apply_async", dispatch)
+    monkeypatch.setattr(step_task(next_step), "kiq", dispatch)
 
     if before_load is not None:
         await before_load()
-    await celery_step(LOAD_INPUTS_LOAD)(loader.task_id)
+    await run_step(LOAD_INPUTS_LOAD)(loader.task_id)
 
     await db.refresh(loader)
     await db.refresh(following)
@@ -132,7 +131,7 @@ async def test_loader_captures_every_enabled_stream_and_readies_the_next_stage(
         for record in records
     )
     assert following.status == State.READY
-    dispatch.assert_called_once_with((following.task_id,))
+    dispatch.assert_called_once_with(str(following.task_id))
 
 
 async def test_loader_captures_only_chapters_when_no_streams_are_enabled(
@@ -185,11 +184,11 @@ async def test_loader_rejects_a_memory_group_from_another_novel(
         )
     ).one()
     store = MemoryObjectStore()
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
     monkeypatch.setattr("src.translations.actions.load_inputs.get_async_object_store", lambda: store)
 
     with pytest.raises(ValueError, match="does not belong"):
-        await celery_step(LOAD_INPUTS_LOAD)(loader.task_id)
+        await run_step(LOAD_INPUTS_LOAD)(loader.task_id)
 
     await async_test_db.refresh(loader)
     assert loader.output_file_id is None and loader.failed_at is not None

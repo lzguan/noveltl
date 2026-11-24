@@ -1,7 +1,7 @@
 import json
 from collections.abc import AsyncIterable, AsyncIterator
 from io import BytesIO
-from unittest.mock import Mock
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import func, select
@@ -13,7 +13,6 @@ from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
 from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType
-from src.translations.celery_app import app
 from src.translations.clients.batch_jobs import BatchJobComplete, BatchJobId, BatchJobPoll, BatchOutputId
 from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
 from src.translations.jsonl import encode_translation_record, iter_translation_records
@@ -28,13 +27,13 @@ from src.translations.task_names import (
 )
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
-from test_support.steps import celery_step
+from test_support.steps import run_step, step_task
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
 
 # The registered Celery tasks: claim, run the step, then dispatch the next one.
 prepare, submit, poll, finalize = (
-    celery_step(name)
+    run_step(name)
     for name in (PRUNE_MEMORIES_PREPARE, PRUNE_MEMORIES_SUBMIT, PRUNE_MEMORIES_POLL, PRUNE_MEMORIES_FINALIZE)
 )
 
@@ -159,12 +158,12 @@ async def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output
     loader.status, loader.output_file_id = State.COMPLETE, loaded.file_id
     task.status = State.READY
     await async_test_db.commit()
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
     monkeypatch.setattr("src.translations.actions.prune_memories.get_async_object_store", lambda: store)
     client = PruningClient(response)
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)
     for name in ("submit", "poll", "finalize"):
-        monkeypatch.setattr(app.tasks[f"src.translations.actions.prune_memories.{name}"], "apply_async", Mock())
+        monkeypatch.setattr(step_task(f"src.translations.actions.prune_memories.{name}"), "kiq", AsyncMock())
 
     def check_dispatch(*args: object, **kwargs: object) -> None:
         with testing_session_local() as db:
@@ -173,8 +172,8 @@ async def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output
             assert completed is not None and completed.status == State.COMPLETE and completed.output_file_id is not None
             assert next_task is not None and next_task.status == State.READY
 
-    dispatch = Mock(side_effect=check_dispatch)
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", dispatch)
+    dispatch = AsyncMock(side_effect=check_dispatch)
+    monkeypatch.setattr(step_task("src.translations.actions.translate.prepare"), "kiq", dispatch)
     if response == "prepare_upload":
         store.upload_error = ConnectionError("upload interrupted")
         with pytest.raises(ConnectionError, match="upload interrupted"):
@@ -223,4 +222,4 @@ async def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output
     )
     records = list(iter_translation_records([store.objects[output.object_key]]))
     assert _by_key(records) == _by_key(chapters + selected)
-    dispatch.assert_called_once_with((following_id,))
+    dispatch.assert_called_once_with(str(following_id))

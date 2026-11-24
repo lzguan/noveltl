@@ -1,8 +1,8 @@
 import json
 from collections.abc import AsyncIterable, AsyncIterator
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
-from unittest.mock import Mock
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pytest
@@ -16,7 +16,6 @@ from src.memory.models import Memory, MemoryGroup
 from src.memory.plugins.conventions.types import ConventionCategory
 from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType
-from src.translations.celery_app import app
 from src.translations.clients.batch_jobs import (
     BatchJobComplete,
     BatchJobFailed,
@@ -43,14 +42,14 @@ from src.translations.task_names import TRANSLATE_FINALIZE, TRANSLATE_POLL, TRAN
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationDataKey
 from src.translations.types import TranslationTaskStatus as State
-from test_support.steps import celery_step
+from test_support.steps import run_step, step_task
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
 
 LOADED_TEXT = "Loaded chapter"
 # The registered Celery tasks: claim, run the step, then dispatch the next one.
 prepare, submit, poll, finalize = (
-    celery_step(name) for name in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE)
+    run_step(name) for name in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE)
 )
 
 
@@ -69,11 +68,14 @@ class RecordingCodec:
 
 
 @pytest.fixture(autouse=True)
-def queued_tasks(monkeypatch: pytest.MonkeyPatch) -> dict[str, Mock]:
-    # Observe dispatch without running background workers or waiting for countdowns.
-    queued = {name: Mock() for name in ("submit", "poll", "finalize")}
+def queued_tasks(monkeypatch: pytest.MonkeyPatch) -> dict[str, AsyncMock]:
+    # Observe dispatch without running background workers or waiting for scheduled polls.
+    # "poll_later" records polls handed to the scheduler instead of kicked.
+    queued = {name: AsyncMock() for name in ("submit", "poll", "finalize")}
     for name, dispatch in queued.items():
-        monkeypatch.setattr(app.tasks[f"src.translations.actions.translate.{name}"], "apply_async", dispatch)
+        monkeypatch.setattr(step_task(f"src.translations.actions.translate.{name}"), "kiq", dispatch)
+    queued["poll_later"] = AsyncMock()
+    monkeypatch.setattr(step_task(TRANSLATE_POLL), "schedule_by_time", queued["poll_later"])
     return queued
 
 
@@ -108,7 +110,7 @@ def worker(
     testing_async_session_local: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
 ) -> MemoryObjectStore:
     store = MemoryObjectStore()
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr("src.translations.actions.taskiq_actions.TaskiqSessionLocal", testing_async_session_local)
     monkeypatch.setattr("src.translations.actions.translate.get_async_object_store", lambda: store)
     return store
 
@@ -347,7 +349,7 @@ async def test_submission_and_polling_persist_progress_before_dispatch(
     monkeypatch: pytest.MonkeyPatch,
     worker: MemoryObjectStore,
     recording_codec: RecordingCodec,
-    queued_tasks: dict[str, Mock],
+    queued_tasks: dict[str, AsyncMock],
     failed: bool,
     with_memories: bool,
 ) -> None:
@@ -358,7 +360,7 @@ async def test_submission_and_polling_persist_progress_before_dispatch(
     client = FakeBatchClient()
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)
     await prepare(task_id)
-    queued_tasks["submit"].assert_called_once_with((task_id,))
+    queued_tasks["submit"].assert_called_once_with(str(task_id))
 
     def observe_poll_dispatch(*args: object, **kwargs: object) -> None:
         with testing_session_local() as db:
@@ -372,15 +374,21 @@ async def test_submission_and_polling_persist_progress_before_dispatch(
     await submit(task_id)
     await submit(task_id)  # Duplicate delivery must not submit twice.
     assert client.uploads == [b'{"encoded_by_adapter":true}\n' * requests]
-    queued_tasks["poll"].assert_called_once_with((task_id,))
+    queued_tasks["poll"].assert_called_once_with(str(task_id))
     queued_tasks["poll"].reset_mock()
+    before = datetime.now(UTC)
     await poll(task_id)
-    queued_tasks["poll"].assert_called_once_with((task_id,), countdown=60)
-    queued_tasks["poll"].reset_mock()
+    queued_tasks["poll"].assert_not_called()
+    (_, when, scheduled_id), _ = queued_tasks["poll_later"].call_args
+    assert scheduled_id == str(task_id) and before + timedelta(seconds=60) <= when <= datetime.now(UTC) + timedelta(
+        seconds=60
+    )
+    queued_tasks["poll_later"].reset_mock()
 
     # Early duplicate messages must neither call the provider nor reschedule.
     await poll(task_id)
     queued_tasks["poll"].assert_not_called()
+    queued_tasks["poll_later"].assert_not_called()
     assert client.polled == ["provider-job"]
     await async_test_db.execute(
         update(TranslationTask)
@@ -408,10 +416,11 @@ async def test_submission_and_polling_persist_progress_before_dispatch(
         assert task.next_poll_at is None
     assert client.polled == ["provider-job", "provider-job"]
     queued_tasks["poll"].assert_not_called()
+    queued_tasks["poll_later"].assert_not_called()
     if failed:
         queued_tasks["finalize"].assert_not_called()
     else:
-        queued_tasks["finalize"].assert_called_once_with((task_id,))
+        queued_tasks["finalize"].assert_called_once_with(str(task_id))
 
 
 @pytest.mark.parametrize("with_memories", [False, True])

@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
@@ -140,6 +141,7 @@ class LabelPromotionJob(Base):
         ForeignKey("users.user_id", name="fk_label_promotion_jobs_requested_by_users", ondelete="SET NULL"),
         nullable=True,
     )
+    skip_existing_labels: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
     status: Mapped[AutoLabelProgress] = mapped_column(
         Enum(
             AutoLabelProgress,

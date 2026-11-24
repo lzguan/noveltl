@@ -1314,10 +1314,13 @@ export const CreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostParam
   "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostBodySkipExistingLabelsDefault = true;
+
 export const CreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostBody = S.Struct({
   "chapterIds": S.optional(S.Union([S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null])),
   "end": S.optional(S.Union([S.Number, S.Null])),
   "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "skipExistingLabels": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostBodySkipExistingLabelsDefault))),
   "start": S.optional(S.Union([S.Number, S.Null]))
 }).annotate({ description: 'Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    run_id: UUID of the autolabel run whose results should be promoted.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include.' })
 
@@ -3768,6 +3771,7 @@ export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGet200ResponseItem =
   "message": S.Union([S.String, S.Null]),
   "promotionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "skipExistingLabels": S.Boolean,
   "status": S.Literals(['failed', 'pending', 'processing', 'done']).annotate({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })

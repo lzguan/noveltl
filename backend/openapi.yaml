@@ -796,6 +796,10 @@ components:
           format: uuid
           title: Runid
           type: string
+        skipExistingLabels:
+          default: true
+          title: Skipexistinglabels
+          type: boolean
         start:
           anyOf:
           - type: integer
@@ -1903,6 +1907,9 @@ components:
           format: uuid
           title: Runid
           type: string
+        skipExistingLabels:
+          title: Skipexistinglabels
+          type: boolean
         status:
           $ref: '#/components/schemas/AutoLabelProgress'
         updatedAt:
@@ -1913,6 +1920,7 @@ components:
       - promotionId
       - runId
       - labelGroupId
+      - skipExistingLabels
       - status
       - message
       - counts

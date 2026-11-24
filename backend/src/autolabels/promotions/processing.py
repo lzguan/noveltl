@@ -432,23 +432,49 @@ def _overlaps(labels: list[dict]) -> bool:
     return any(current["label_start"] < previous["label_end"] for previous, current in pairwise(ordered))
 
 
-def _promotion_statement(label_group_id: uuid.UUID, auto_label_ids: list[uuid.UUID]):
+def _ensure_label_datas_statement(label_group_id: uuid.UUID, auto_label_ids: list[uuid.UUID]):
     autolabel = autolabel_models.AutoLabel
-    in_batch = autolabel.auto_label_id.in_(auto_label_ids)
-    new_label_datas = (
+    return (
         pg_insert(label_models.LabelData)
         .from_select(
             ["label_group_id", "chapter_content_id"],
-            select(literal(label_group_id), autolabel.chapter_content_id).where(in_batch),
+            select(literal(label_group_id), autolabel.chapter_content_id).where(
+                autolabel.auto_label_id.in_(auto_label_ids)
+            ),
         )
         .on_conflict_do_nothing(constraint="one_label_group_per_chapter")
-        .returning(label_models.LabelData.label_data_id, label_models.LabelData.chapter_content_id)
-        .cte("new_label_datas")
     )
-    # The label insert must read the label datas from the CTE: a query on the table itself
-    # would not see rows inserted earlier in the same statement.
+
+
+def _promotion_statement(label_group_id: uuid.UUID, auto_label_ids: list[uuid.UUID], *, skip_existing_labels: bool):
+    autolabel = autolabel_models.AutoLabel
+    label_data = label_models.LabelData
+    existing_label = aliased(label_models.Label)
+
+    target_query = (
+        select(
+            autolabel.auto_label_id,
+            label_data.label_data_id,
+            autolabel.auto_label_data,
+        )
+        .join(
+            label_data,
+            and_(
+                label_data.label_group_id == label_group_id,
+                label_data.chapter_content_id == autolabel.chapter_content_id,
+            ),
+        )
+        .where(autolabel.auto_label_id.in_(auto_label_ids))
+    )
+    if skip_existing_labels:
+        has_existing_labels = (
+            select(existing_label.label_id).where(existing_label.label_data_id == label_data.label_data_id).exists()
+        )
+        target_query = target_query.where(~has_existing_labels)
+    target_label_datas = target_query.cte("target_label_datas")
+
     labels = (
-        func.jsonb_to_recordset(autolabel.auto_label_data)
+        func.jsonb_to_recordset(target_label_datas.c.auto_label_data)
         .table_valued(
             column("label_word", String),
             column("label_start", Integer),
@@ -459,6 +485,31 @@ def _promotion_statement(label_group_id: uuid.UUID, auto_label_ids: list[uuid.UU
         )
         .render_derived(name="l", with_types=True)
     )
+    label_rows = (
+        select(
+            target_label_datas.c.label_data_id,
+            labels.c.label_word,
+            labels.c.label_start,
+            labels.c.label_end,
+            func.coalesce(labels.c.label_entity_group, "MISC"),
+            func.coalesce(labels.c.label_score, 1.0),
+            func.coalesce(labels.c.label_dirty, true()),
+        )
+        .select_from(target_label_datas)
+        .join(labels, true())
+    )
+    if not skip_existing_labels:
+        overlapping_existing = (
+            select(existing_label.label_id)
+            .where(
+                existing_label.label_data_id == target_label_datas.c.label_data_id,
+                func.int4range(existing_label.label_start, existing_label.label_end, "[)").op("&&")(
+                    func.int4range(labels.c.label_start, labels.c.label_end, "[)")
+                ),
+            )
+            .exists()
+        )
+        label_rows = label_rows.where(~overlapping_existing)
     new_labels = (
         insert(label_models.Label)
         .from_select(
@@ -471,27 +522,11 @@ def _promotion_statement(label_group_id: uuid.UUID, auto_label_ids: list[uuid.UU
                 "label_score",
                 "label_dirty",
             ],
-            select(
-                new_label_datas.c.label_data_id,
-                labels.c.label_word,
-                labels.c.label_start,
-                labels.c.label_end,
-                func.coalesce(labels.c.label_entity_group, "MISC"),
-                func.coalesce(labels.c.label_score, 1.0),
-                func.coalesce(labels.c.label_dirty, true()),
-            )
-            .select_from(new_label_datas)
-            .join(autolabel, and_(autolabel.chapter_content_id == new_label_datas.c.chapter_content_id, in_batch))
-            .join(labels, true()),
+            label_rows,
         )
         .cte("new_labels")
     )
-    return (
-        select(autolabel.auto_label_id)
-        .select_from(new_label_datas)
-        .join(autolabel, and_(autolabel.chapter_content_id == new_label_datas.c.chapter_content_id, in_batch))
-        .add_cte(new_labels)
-    )
+    return select(target_label_datas.c.auto_label_id).add_cte(new_labels)
 
 
 async def _insert_items(
@@ -499,11 +534,14 @@ async def _insert_items(
     label_group_id: uuid.UUID,
     batch: list[uuid.UUID],
     outcomes: dict[uuid.UUID, _Outcome],
+    *,
+    skip_existing_labels: bool,
 ) -> None:
     try:
         async with db.begin_nested():
-            statement = _promotion_statement(label_group_id, batch)
-            created = set((await db.execute(statement)).scalars())
+            await db.execute(_ensure_label_datas_statement(label_group_id, batch))
+            statement = _promotion_statement(label_group_id, batch, skip_existing_labels=skip_existing_labels)
+            promoted = set((await db.execute(statement)).scalars())
     except (IntegrityError, DataError) as error:
         if len(batch) == 1:
             reason = (
@@ -514,16 +552,16 @@ async def _insert_items(
             outcomes[batch[0]] = (PromotionItemOutcome.FAILED, reason)
             return
         midpoint = len(batch) // 2
-        await _insert_items(db, label_group_id, batch[:midpoint], outcomes)
-        await _insert_items(db, label_group_id, batch[midpoint:], outcomes)
+        await _insert_items(db, label_group_id, batch[:midpoint], outcomes, skip_existing_labels=skip_existing_labels)
+        await _insert_items(db, label_group_id, batch[midpoint:], outcomes, skip_existing_labels=skip_existing_labels)
         return
     for auto_label_id in batch:
-        if auto_label_id in created:
+        if auto_label_id in promoted:
             outcomes[auto_label_id] = (PromotionItemOutcome.DONE, None)
         else:
             outcomes[auto_label_id] = (
                 PromotionItemOutcome.FAILED,
-                "The chapter already has label data in this label group.",
+                "The chapter already has labels in this label group.",
             )
 
 
@@ -565,6 +603,7 @@ async def process_promotion_job(
     if job is None:
         return False
     label_group_id = job.label_group_id
+    skip_existing_labels = job.skip_existing_labels
     started = perf_counter()
     item = autolabel_models.LabelPromotionJobItem
     try:
@@ -585,7 +624,7 @@ async def process_promotion_job(
             for missing in set(auto_label_ids) - set(valid) - outcomes.keys():
                 outcomes[missing] = (PromotionItemOutcome.FAILED, "The autolabel no longer exists.")
             if valid:
-                await _insert_items(db, label_group_id, valid, outcomes)
+                await _insert_items(db, label_group_id, valid, outcomes, skip_existing_labels=skip_existing_labels)
             await db.execute(
                 update(item),
                 [

@@ -13,9 +13,9 @@ from src.auth.utils import create_access_token
 from src.autolabels.constants import MAX_POLLED_PROMOTIONS, AutoLabelProgress
 from src.autolabels.models import AutoLabel, LabelPromotionJobItem
 from src.autolabels.promotions.processing import process_promotion_job
-from src.labels.models import LabelData
+from src.labels.models import Label, LabelData
 from src.novels.constants import Role, Visibility
-from src.novels.models import NovelContributor
+from src.novels.models import ChapterContent, NovelContributor
 from test_support.autolabels import RecordingPromotionDispatcher
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.autolabels.test_promotion_processing import _add_autolabelled_chapters
@@ -61,7 +61,7 @@ def test_creating_a_promotion_selects_items_and_enqueues_it(
     assert recording_promotion_dispatcher.promotions == [uuid.UUID(job["promotionId"])]
 
 
-async def test_chapters_with_label_data_are_not_selected_and_an_empty_job_finishes_at_once(
+async def test_skip_existing_labels_skips_labelled_chapters_but_promotes_empty_label_datas(
     client: TestClient,
     test_db: Session,
     async_test_db: AsyncSession,
@@ -69,21 +69,78 @@ async def test_chapters_with_label_data_are_not_selected_and_an_empty_job_finish
     recording_promotion_dispatcher: RecordingPromotionDispatcher,
 ) -> None:
     scenario = xianxia_autolabels_scenario
+    _add_autolabelled_chapters(test_db, scenario)
     group_id = scenario.label_groups["labels"].label_group_id
-    for chapter_content_id in test_db.scalars(
-        select(AutoLabel.chapter_content_id).where(AutoLabel.run_id == scenario.autolabel_runs["cluener"].run_id)
-    ):
-        test_db.add(LabelData(label_group_id=group_id, chapter_content_id=chapter_content_id))
+    content_ids = list(
+        test_db.scalars(
+            select(AutoLabel.chapter_content_id).where(AutoLabel.run_id == scenario.autolabel_runs["cluener"].run_id)
+        )
+    )
+    assert len(content_ids) >= 2
+    empty_content_id, labelled_content_id = content_ids[0], content_ids[1]
+    for chapter_content_id in content_ids:
+        label_data = LabelData(label_group_id=group_id, chapter_content_id=chapter_content_id)
+        test_db.add(label_data)
+        test_db.flush()
+        if chapter_content_id != empty_content_id:
+            content = test_db.get_one(ChapterContent, chapter_content_id)
+            test_db.add(
+                Label(
+                    label_data_id=label_data.label_data_id,
+                    label_word=content.chapter_content_text[0:1],
+                    label_start=0,
+                    label_end=1,
+                    label_entity_group="PER",
+                    label_score=1.0,
+                    label_dirty=True,
+                )
+            )
     test_db.commit()
 
+    # Default (skipExistingLabels=True): empty LabelData is selected, chapters with labels are skipped.
     response = _promote(client, scenario, scenario.users["owner"])
-
     assert response.status_code == status.HTTP_202_ACCEPTED
-    assert response.json()["itemCount"] == 0
+    assert response.json()["itemCount"] == 1
     promotion_id = uuid.UUID(response.json()["promotionId"])
     assert recording_promotion_dispatcher.promotions == [promotion_id]
     assert await process_promotion_job(async_test_db, promotion_id)
-    assert _list(client, scenario, scenario.users["owner"]).json()[0]["status"] == "done"
+    listed = _list(client, scenario, scenario.users["owner"]).json()[0]
+    assert listed["status"] == "done"
+    assert listed["skipExistingLabels"] is True
+
+    # Now every chapter has labels: default selects 0 items and finishes at once.
+    empty_job = _promote(client, scenario, scenario.users["owner"])
+    assert empty_job.status_code == status.HTTP_202_ACCEPTED
+    assert empty_job.json()["itemCount"] == 0
+    assert await process_promotion_job(async_test_db, uuid.UUID(empty_job.json()["promotionId"]))
+
+    # With skipExistingLabels=False: chapters with existing labels are selected too.
+    eager_job = _promote(client, scenario, scenario.users["owner"], skipExistingLabels=False)
+    assert eager_job.status_code == status.HTTP_202_ACCEPTED
+    assert eager_job.json()["itemCount"] == len(content_ids)
+    eager_promotion_id = uuid.UUID(eager_job.json()["promotionId"])
+    assert await process_promotion_job(async_test_db, eager_promotion_id)
+    eager_listed = next(
+        job
+        for job in _list(client, scenario, scenario.users["owner"]).json()
+        if job["promotionId"] == str(eager_promotion_id)
+    )
+    assert eager_listed["status"] == "done"
+    assert eager_listed["skipExistingLabels"] is False
+    assert eager_listed["counts"]["failed"] == 0
+    assert (
+        test_db.scalar(
+            select(Label)
+            .join(LabelData, LabelData.label_data_id == Label.label_data_id)
+            .where(
+                LabelData.label_group_id == group_id,
+                LabelData.chapter_content_id == labelled_content_id,
+                Label.label_start == 0,
+                Label.label_end == 1,
+            )
+        )
+        is not None
+    )
 
 
 def test_missing_groups_and_runs_are_not_found(

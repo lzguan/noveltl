@@ -9640,6 +9640,11 @@
               }
             ],
             "title": "End"
+          },
+          "skipExistingLabels": {
+            "type": "boolean",
+            "title": "Skipexistinglabels",
+            "default": true
           }
         },
         "type": "object",
@@ -11128,6 +11133,10 @@
             "format": "uuid",
             "title": "Labelgroupid"
           },
+          "skipExistingLabels": {
+            "type": "boolean",
+            "title": "Skipexistinglabels"
+          },
           "status": {
             "$ref": "#/components/schemas/AutoLabelProgress"
           },
@@ -11161,6 +11170,7 @@
           "promotionId",
           "runId",
           "labelGroupId",
+          "skipExistingLabels",
           "status",
           "message",
           "counts",

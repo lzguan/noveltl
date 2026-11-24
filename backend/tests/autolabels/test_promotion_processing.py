@@ -46,6 +46,7 @@ def _create_job(
     db: Session,
     scenario: DatabaseScenario,
     *,
+    skip_existing_labels: bool = True,
     claim_token: uuid.UUID | None = None,
     claim_expires_at: datetime | None = None,
 ) -> tuple[uuid.UUID, list[AutoLabel]]:
@@ -65,6 +66,7 @@ def _create_job(
             run_id=run_id,
             label_group_id=scenario.label_groups["labels"].label_group_id,
             requested_by=scenario.users["owner"].user_id,
+            skip_existing_labels=skip_existing_labels,
             status=AutoLabelProgress.PENDING if claim_token is None else AutoLabelProgress.PROCESSING,
             claim_token=claim_token,
             claim_expires_at=claim_expires_at,
@@ -142,7 +144,21 @@ async def test_items_that_cannot_be_promoted_fail_without_stopping_the_rest(
     test_db.execute(
         update(AutoLabel).where(AutoLabel.auto_label_id == mismatched.auto_label_id).values(auto_label_data=bad_labels)
     )
-    test_db.add(LabelData(label_group_id=label_group_id, chapter_content_id=already_labelled.chapter_content_id))
+    existing_data = LabelData(label_group_id=label_group_id, chapter_content_id=already_labelled.chapter_content_id)
+    test_db.add(existing_data)
+    test_db.flush()
+    existing_content = test_db.get_one(ChapterContent, already_labelled.chapter_content_id)
+    test_db.add(
+        Label(
+            label_data_id=existing_data.label_data_id,
+            label_word=existing_content.chapter_content_text[0:1],
+            label_start=0,
+            label_end=1,
+            label_entity_group="PER",
+            label_score=1.0,
+            label_dirty=True,
+        )
+    )
     test_db.commit()
 
     assert await process_promotion_job(async_test_db, promotion_id)
@@ -158,12 +174,66 @@ async def test_items_that_cannot_be_promoted_fail_without_stopping_the_rest(
     )
     assert outcomes.pop(already_labelled.auto_label_id) == (
         PromotionItemOutcome.FAILED,
-        "The chapter already has label data in this label group.",
+        "The chapter already has labels in this label group.",
     )
     assert set(outcomes.values()) <= {(PromotionItemOutcome.DONE, None)}
     assert _label_data_count(test_db, label_group_id, changed.chapter_content_id) == 0
     assert _label_data_count(test_db, label_group_id, mismatched.chapter_content_id) == 0
     assert test_db.get_one(LabelPromotionJob, promotion_id).status == AutoLabelProgress.DONE
+
+
+async def test_reuses_existing_empty_label_data_even_when_skip_existing_labels_is_true(
+    test_db: Session, async_test_db: AsyncSession, xianxia_autolabels_scenario: DatabaseScenario
+) -> None:
+    promotion_id, autolabels = _create_job(test_db, xianxia_autolabels_scenario, skip_existing_labels=True)
+    label_group_id = xianxia_autolabels_scenario.label_groups["labels"].label_group_id
+    target = autolabels[0]
+    existing_data = LabelData(label_group_id=label_group_id, chapter_content_id=target.chapter_content_id)
+    test_db.add(existing_data)
+    test_db.commit()
+    test_db.refresh(existing_data)
+
+    assert await process_promotion_job(async_test_db, promotion_id)
+
+    assert set(_outcomes(test_db, promotion_id).values()) == {(PromotionItemOutcome.DONE, None)}
+    labels = test_db.scalars(select(Label).where(Label.label_data_id == existing_data.label_data_id)).all()
+    assert len(labels) == len(target.auto_label_data or [])
+
+
+async def test_merges_non_overlapping_labels_into_existing_label_data_when_skip_existing_labels_is_false(
+    test_db: Session, async_test_db: AsyncSession, xianxia_autolabels_scenario: DatabaseScenario
+) -> None:
+    promotion_id, autolabels = _create_job(test_db, xianxia_autolabels_scenario, skip_existing_labels=False)
+    label_group_id = xianxia_autolabels_scenario.label_groups["labels"].label_group_id
+    target = next(al for al in autolabels if al.auto_label_data and len(al.auto_label_data) >= 2)
+    ordered = sorted(target.auto_label_data or [], key=lambda label: label["label_start"])
+    overlap_target = ordered[0]
+    non_overlap_target = ordered[1]
+
+    existing_data = LabelData(label_group_id=label_group_id, chapter_content_id=target.chapter_content_id)
+    test_db.add(existing_data)
+    test_db.flush()
+    manual_label = Label(
+        label_data_id=existing_data.label_data_id,
+        label_word=overlap_target["label_word"],
+        label_start=overlap_target["label_start"],
+        label_end=overlap_target["label_end"],
+        label_entity_group="MANUAL",
+        label_score=1.0,
+        label_dirty=True,
+    )
+    test_db.add(manual_label)
+    test_db.commit()
+
+    assert await process_promotion_job(async_test_db, promotion_id)
+
+    assert set(_outcomes(test_db, promotion_id).values()) == {(PromotionItemOutcome.DONE, None)}
+    db_labels = test_db.scalars(
+        select(Label).where(Label.label_data_id == existing_data.label_data_id).order_by(Label.label_start)
+    ).all()
+    by_span = {(label.label_start, label.label_end): label for label in db_labels}
+    assert by_span[(overlap_target["label_start"], overlap_target["label_end"])].label_entity_group == "MANUAL"
+    assert (non_overlap_target["label_start"], non_overlap_target["label_end"]) in by_span
 
 
 async def test_resumes_from_unprocessed_items(

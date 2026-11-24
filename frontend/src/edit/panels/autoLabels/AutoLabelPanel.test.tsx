@@ -87,6 +87,9 @@ describe("AutoLabelPanel", () => {
 
 		const dialog = await openPromoteDialog();
 		expect(dialog.getByRole("combobox", { name: "Label group" })).toHaveTextContent("Names");
+		expect(
+			dialog.getByRole("switch", { name: "Skip chapters with existing labels" }),
+		).toBeChecked();
 		fireEvent.change(dialog.getByLabelText("Start chapter"), { target: { value: "2" } });
 		fireEvent.click(dialog.getByRole("button", { name: "Promote" }));
 
@@ -95,8 +98,47 @@ describe("AutoLabelPanel", () => {
 			runId: RUN_B.runId,
 			start: 2,
 			end: null,
+			skipExistingLabels: true,
 		});
 		expect(setActive).toHaveBeenCalledWith(NAMES_ID);
+	});
+
+	it("allows opting into promoting into chapters that already have labels", async () => {
+		createPromotion.mockResolvedValueOnce({
+			status: 202,
+			data: { promotionId: "promo-2", itemCount: 3 },
+			headers: new Headers(),
+		});
+
+		render(
+			<AutoLabelPanel
+				novelId="novel-1"
+				labelGroupServerId={() => "lg-names"}
+				onLabelGroupPromoted={vi.fn()}
+				chapterNumByServerId={new Map()}
+				currentChapterId={null}
+				openChapterContentIds={new Map()}
+				labelGroups={LABEL_GROUPS}
+				activeId={NAMES_ID}
+				setActive={vi.fn()}
+				previewEnabled={false}
+				previewLoading={false}
+				onSetPreviewEnabled={vi.fn()}
+				onSelectedRunChange={vi.fn()}
+			/>,
+		);
+
+		const dialog = await openPromoteDialog();
+		fireEvent.click(dialog.getByRole("switch", { name: "Skip chapters with existing labels" }));
+		fireEvent.click(dialog.getByRole("button", { name: "Promote" }));
+
+		await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+		expect(createPromotion).toHaveBeenCalledWith("lg-names", {
+			runId: RUN_B.runId,
+			start: null,
+			end: null,
+			skipExistingLabels: false,
+		});
 	});
 
 	it("keeps the dialog open and shows an error when a promotion cannot start", async () => {

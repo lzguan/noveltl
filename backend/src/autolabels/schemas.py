@@ -136,6 +136,7 @@ class CreateLabelDataByAutoLabel(Model):
     chapter_ids: list[uuid.UUID] | None = None
     start: int | None = None
     end: int | None = None
+    skip_existing_labels: bool = True
 
 
 class CreateLabelDataByAutoLabelStatus(Model):
@@ -173,6 +174,7 @@ class LabelPromotionJob(Model):
     promotion_id: uuid.UUID
     run_id: uuid.UUID
     label_group_id: uuid.UUID
+    skip_existing_labels: bool
     status: AutoLabelProgress
     message: str | None
     counts: LabelPromotionCounts

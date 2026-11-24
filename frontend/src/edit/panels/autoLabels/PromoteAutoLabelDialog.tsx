@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -18,6 +19,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { AutoLabelRun } from "@/api/models";
 import { formatRunLabel, type ChapterFilter } from "@/autolabels/runs/autoLabelRunsState";
 import type { LGProvId } from "../../controller/types/idTypes";
@@ -42,7 +44,11 @@ export function PromoteAutoLabelDialog({
 	labelGroups: [LGProvId, LabelGroupView][];
 	defaultLabelGroupId: LGProvId | null;
 	submitting: boolean;
-	onPromote: (labelGroupId: LGProvId, filter: ChapterFilter) => Promise<string | null>;
+	onPromote: (
+		labelGroupId: LGProvId,
+		filter: ChapterFilter,
+		skipExistingLabels: boolean,
+	) => Promise<string | null>;
 	onClose: () => void;
 }) {
 	const [labelGroupId, setLabelGroupId] = useState<LGProvId | null>(
@@ -50,6 +56,7 @@ export function PromoteAutoLabelDialog({
 	);
 	const [start, setStart] = useState("");
 	const [end, setEnd] = useState("");
+	const [skipExistingLabels, setSkipExistingLabels] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	return (
@@ -115,6 +122,26 @@ export function PromoteAutoLabelDialog({
 							/>
 						</Field>
 					</div>
+					<div className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
+						<div className="flex flex-col gap-0.5">
+							<Label
+								htmlFor="promote-skip-existing-labels"
+								className="text-sm font-medium"
+							>
+								Skip chapters with existing labels
+							</Label>
+							<span className="text-xs text-muted-foreground">
+								When off, adds non-overlapping labels into chapters that already
+								have labels.
+							</span>
+						</div>
+						<Switch
+							id="promote-skip-existing-labels"
+							checked={skipExistingLabels}
+							disabled={submitting}
+							onCheckedChange={setSkipExistingLabels}
+						/>
+					</div>
 				</FieldGroup>
 				{error !== null && (
 					<p role="alert" className="text-xs text-destructive">
@@ -131,10 +158,14 @@ export function PromoteAutoLabelDialog({
 						onClick={() => {
 							if (labelGroupId === null) return;
 							setError(null);
-							void onPromote(labelGroupId, {
-								start: parseChapterNum(start),
-								end: parseChapterNum(end),
-							}).then(setError);
+							void onPromote(
+								labelGroupId,
+								{
+									start: parseChapterNum(start),
+									end: parseChapterNum(end),
+								},
+								skipExistingLabels,
+							).then(setError);
 						}}
 					>
 						{submitting ? "Starting..." : "Promote"}

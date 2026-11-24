@@ -101,6 +101,7 @@ export function AutoLabelPanel({
 		run: AutoLabelRun,
 		labelGroupId: LGProvId,
 		filter: ChapterFilter,
+		skipExistingLabels: boolean,
 	): Promise<string | null> => {
 		const labelGroupServId = labelGroupServerId(labelGroupId);
 		if (labelGroupServId === null) {
@@ -110,6 +111,7 @@ export function AutoLabelPanel({
 			runId: run.runId,
 			start: filter.start ?? null,
 			end: filter.end ?? null,
+			skipExistingLabels,
 		});
 		return result.ok ? null : QUEUE_ERRORS[result.reason];
 	};
@@ -182,8 +184,13 @@ export function AutoLabelPanel({
 						labelGroups={labelGroups}
 						defaultLabelGroupId={activeId}
 						submitting={promotions.submitting}
-						onPromote={async (labelGroupId, filter) => {
-							const error = await promote(promotingRun, labelGroupId, filter);
+						onPromote={async (labelGroupId, filter, skipExistingLabels) => {
+							const error = await promote(
+								promotingRun,
+								labelGroupId,
+								filter,
+								skipExistingLabels,
+							);
 							if (error !== null) return error;
 							// The chosen group becomes active so its promoted labels are shown.
 							setActive(labelGroupId);

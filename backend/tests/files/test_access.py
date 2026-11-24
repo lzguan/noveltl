@@ -110,7 +110,7 @@ async def test_failed_upload_does_not_add_a_file_or_rollback_the_caller(async_te
     assert list(async_test_db.new) == [existing]
 
 
-async def test_fetch_file_resolves_the_recorded_object_key(async_test_db: AsyncSession) -> None:
+async def test_fetch_file_reads_the_recorded_object_key(async_test_db: AsyncSession) -> None:
     store = MemoryObjectStore()
     content = b"batch output"
     stored_file = StoredFile(
@@ -126,5 +126,5 @@ async def test_fetch_file_resolves_the_recorded_object_key(async_test_db: AsyncS
     await async_test_db.flush()
     store.objects[stored_file.object_key] = content
 
-    assert b"".join(await alist(fetch_file(async_test_db, store, stored_file.file_id, chunk_size=3))) == content
+    assert b"".join(await alist(fetch_file(store, stored_file, chunk_size=3))) == content
     assert store.fetched_keys == [stored_file.object_key]

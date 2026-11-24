@@ -1,11 +1,11 @@
 from src.files.dependencies import get_async_object_store
 from src.translations.actions.actions import ActionStepSpec, ActionTaskContext, StepSpec, register_steps
-from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
 from src.translations.actions.common.inputs import iter_initial_records, stage_types
 from src.translations.actions.common.outputs import output_records
+from src.translations.actions.execution.taskiq_actions import TaskiqActionCallbacks
 from src.translations.actions.registry import ACTION_CALLBACKS
-from src.translations.celery_app import app
+from src.translations.broker import broker, schedule_source
 from src.translations.jsonl import encode_translation_record
 from src.translations.models import TranslationStage
 from src.translations.schemas import LoadInputsConfig
@@ -23,7 +23,7 @@ async def load(context: ActionTaskContext) -> None:
     loaded = iter_initial_records(context, stage, LoadInputsConfig.model_validate(stage.config).inputs)
     output = output_records(context, store, stage, loaded, await stage_types(context.db, stage))
     context.task.output_file_id = await store_lines(
-        context, store, (encode_translation_record(record) async for record in output), renew_seconds=_LEASE_SECONDS / 3
+        context, store, (encode_translation_record(record) async for record in output)
     )
 
 
@@ -38,5 +38,5 @@ STEPS: tuple[ActionStepSpec, ...] = (
     ),
 )
 
-callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
+callbacks = TaskiqActionCallbacks(broker, schedule_source, ACTION_CALLBACKS)
 register_steps(callbacks, STEPS)

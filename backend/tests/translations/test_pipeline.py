@@ -1,6 +1,6 @@
 import json
 from collections.abc import AsyncIterable, AsyncIterator
-from unittest.mock import Mock
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
@@ -15,7 +15,7 @@ from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.models import TermTranslation
 from src.memory.types import Creator, MemoryType
 from src.novels.models import ChapterContent
-from src.translations.celery_app import app
+from src.translations.broker import broker
 from src.translations.clients.batch_jobs import BatchJobComplete, BatchJobId, BatchJobPoll, BatchOutputId
 from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
 from src.translations.jsonl import iter_translation_records
@@ -35,7 +35,7 @@ from src.translations.task_names import (
 )
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
-from test_support.steps import celery_step
+from test_support.steps import run_step
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
 
@@ -71,13 +71,16 @@ def pipeline(
     test_db: Session, testing_async_session_local: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
 ) -> tuple[MemoryObjectStore, EchoClient]:
     store, client = MemoryObjectStore(), EchoClient()
-    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
+    monkeypatch.setattr(
+        "src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", testing_async_session_local
+    )
     for module in ("load_inputs", "prune_memories", "translate"):
         monkeypatch.setattr(f"src.translations.actions.{module}.get_async_object_store", lambda: store)
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)
-    for name, task in app.tasks.items():
-        if name.startswith("src.translations.actions."):
-            monkeypatch.setattr(task, "apply_async", Mock())
+    for task in broker.get_all_tasks().values():
+        if task.task_name.startswith("src.translations.actions."):
+            monkeypatch.setattr(task, "kiq", AsyncMock())
+            monkeypatch.setattr(task, "schedule_by_time", AsyncMock())
     return store, client
 
 
@@ -168,13 +171,13 @@ async def test_job_loads_prunes_and_translates_with_each_stage_carrying_the_full
     ]
     loader, pruning, translation, revision = await _tasks(async_test_db, sample_scenario, stages, inputs)
 
-    await celery_step(LOAD_INPUTS_LOAD)(loader.task_id)
+    await run_step(LOAD_INPUTS_LOAD)(loader.task_id)
     for step in (PRUNE_MEMORIES_PREPARE, PRUNE_MEMORIES_SUBMIT, PRUNE_MEMORIES_POLL, PRUNE_MEMORIES_FINALIZE):
-        await celery_step(step)(pruning.task_id)
+        await run_step(step)(pruning.task_id)
     for step in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE):
-        await celery_step(step)(translation.task_id)
+        await run_step(step)(translation.task_id)
     for step in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE):
-        await celery_step(step)(revision.task_id)
+        await run_step(step)(revision.task_id)
 
     loaded = await _output(async_test_db, store, loader)
     pruned = await _output(async_test_db, store, pruning)
@@ -229,9 +232,9 @@ async def test_translation_without_a_memories_stream_sends_only_the_chapter(
         async_test_db, sample_scenario, [{"action": "translate", "config": {"model": "qwen-plus"}}], {}
     )
 
-    await celery_step(LOAD_INPUTS_LOAD)(loader.task_id)
+    await run_step(LOAD_INPUTS_LOAD)(loader.task_id)
     for step in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE):
-        await celery_step(step)(translation.task_id)
+        await run_step(step)(translation.task_id)
 
     source = {record.chapter_id: record.payload for record in await _output(async_test_db, store, loader)}
     assert {request["body"]["messages"][1]["content"] for request in client.batches[0]} == set(source.values())

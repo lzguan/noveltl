@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.files.models import StoredFile
-from src.translations.actions.async_actions import build_async_registry
+from src.translations.actions.execution.async_actions import build_async_registry
 from src.translations.clients.batch_jobs import BatchJobId
 from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
 from src.translations.jsonl import iter_translation_records

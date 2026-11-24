@@ -18,7 +18,7 @@ from src.translations.actions.actions import (
     ActionTaskContext,
     PollCallback,
 )
-from src.translations.actions.runner import ready_next_task, run_claimed_step
+from src.translations.actions.execution.runner import ready_next_task, run_claimed_step
 from src.translations.types import ActionName, TranslationTaskStatus
 
 _celery_engine = create_async_engine(database_settings.DB_URL, poolclass=NullPool)

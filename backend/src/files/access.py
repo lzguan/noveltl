@@ -68,13 +68,11 @@ async def get_file(db: AsyncSession, file_id: uuid.UUID) -> StoredFile:
 
 
 async def fetch_file(
-    db: AsyncSession,
     store: AsyncObjectStore,
-    file_id: uuid.UUID,
+    stored_file: StoredFile,
     *,
     chunk_size: int = _COPY_CHUNK_SIZE,
 ) -> AsyncIterator[bytes]:
-    """Fetch a recorded file from object storage."""
-    stored_file = await get_file(db, file_id)
+    """Fetch a recorded file's content from object storage."""
     async for chunk in store.fetch(stored_file.object_key, chunk_size=chunk_size):
         yield chunk

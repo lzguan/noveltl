@@ -1,12 +1,10 @@
 """Prune persisted candidates through provider-neutral batch inference."""
 
 from collections.abc import AsyncIterator
-from time import monotonic
 
-from src.files.access import fetch_file
+from src.files.access import fetch_file, get_file
 from src.files.dependencies import get_async_object_store
 from src.translations.actions.actions import ActionStepSpec, ActionTaskContext, PollSpec, StepSpec, register_steps
-from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
 from src.translations.actions.common.inputs import (
     group_by_chapter,
@@ -17,8 +15,9 @@ from src.translations.actions.common.inputs import (
 from src.translations.actions.common.memory_selections import apply_memory_selections, parse_memory_selection
 from src.translations.actions.common.outputs import output_records
 from src.translations.actions.common.prompts import format_memories
+from src.translations.actions.execution.taskiq_actions import TaskiqActionCallbacks
 from src.translations.actions.registry import ACTION_CALLBACKS
-from src.translations.celery_app import app
+from src.translations.broker import broker, schedule_source
 from src.translations.clients.batch_jobs import (
     BatchJobComplete,
     BatchJobFailed,
@@ -46,6 +45,7 @@ _LEASE_SECONDS = 300
 
 async def _stage(context: ActionTaskContext) -> tuple[TranslationStage, PruneMemoriesConfig]:
     stage = await context.db.get(TranslationStage, context.task.stage_id)
+    await context.db.commit()
     if stage is None or stage.action != "prune_memories":
         raise ValueError("Pruning requires a prune_memories stage")
     return stage, PruneMemoriesConfig.model_validate(stage.config)
@@ -87,7 +87,7 @@ async def prepare(context: ActionTaskContext) -> None:
             )
             yield codec.encode_request(item)
 
-    context.task.request_file_id = await store_lines(context, store, requests(), renew_seconds=_LEASE_SECONDS / 3)
+    context.task.request_file_id = await store_lines(context, store, requests())
 
 
 async def submit(context: ActionTaskContext) -> None:
@@ -99,16 +99,9 @@ async def submit(context: ActionTaskContext) -> None:
     store = get_async_object_store()
     file_id = context.task.request_file_id
 
-    async def chunks() -> AsyncIterator[bytes]:
-        renew_at = monotonic() + _LEASE_SECONDS / 3
-        async for chunk in fetch_file(context.db, store, file_id):
-            if monotonic() >= renew_at:
-                await context.renew_lease()
-                renew_at = monotonic() + _LEASE_SECONDS / 3
-            yield chunk
-
-    await context.renew_lease()
-    job_id = await get_batch_client(config.model).create_batch_job(chunks())
+    stored_file = await get_file(context.db, file_id)
+    await context.db.commit()
+    job_id = await get_batch_client(config.model).create_batch_job(fetch_file(store, stored_file))
     if not job_id:
         raise ValueError("Batch client returned an empty job ID")
     context.task.provider_batch_id = job_id
@@ -140,20 +133,15 @@ async def finalize(context: ActionTaskContext) -> None:
     types = await stage_types(context.db, stage)
     output_id = BatchOutputId(context.task.provider_output_id)
 
-    async def chunks() -> AsyncIterator[bytes]:
-        renew_at = monotonic() + _LEASE_SECONDS / 3
-        async for chunk in client.fetch_batch_output(output_id):
-            if monotonic() >= renew_at:
-                await context.renew_lease()
-                renew_at = monotonic() + _LEASE_SECONDS / 3
-            yield chunk
-
     # The candidates the model indexed are the previous stage's records for the streams this stage rewrites.
     candidates = select_streams(resolve_inputs(context, store, stage, types.before), types.signature.outputs)
-    selections = (parse_memory_selection(codec.decode_result(line)) async for line in aiter_jsonl_lines(chunks()))
+    selections = (
+        parse_memory_selection(codec.decode_result(line))
+        async for line in aiter_jsonl_lines(client.fetch_batch_output(output_id))
+    )
     output = output_records(context, store, stage, apply_memory_selections(selections, candidates), types)
     context.task.output_file_id = await store_lines(
-        context, store, (encode_translation_record(record) async for record in output), renew_seconds=_LEASE_SECONDS / 3
+        context, store, (encode_translation_record(record) async for record in output)
     )
 
 
@@ -192,5 +180,5 @@ STEPS: tuple[ActionStepSpec, ...] = (
     ),
 )
 
-callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
+callbacks = TaskiqActionCallbacks(broker, schedule_source, ACTION_CALLBACKS)
 register_steps(callbacks, STEPS)

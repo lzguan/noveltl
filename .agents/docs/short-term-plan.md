@@ -49,11 +49,22 @@ Autolabel inference dispatch still uses the Celery dispatcher. Remaining: slice 
   unchanged (cooperative renewal between awaits).
 - Slice 2 PR A done on `feature/translations-async-steps` (2026-11-23): steps,
   clients, storage, inputs, `create_job` and all tests on async sessions;
-  `src/streaming.py` deleted. Known limit: the Qwen upload runs without lease
-  renewal (see chapter-translation notes); add a renew hook to `create_batch_job`
-  if uploads approach the 300 s submit lease. Next: PR B.
+  `src/streaming.py` deleted.
+- Slice 2 PR B on `feature/translations-taskiq`: taskiq worker and scheduler,
+  `celery` / `taskiq` dependency groups per image (only the API syncs both).
+  Next: load test and profile against the pooled engine.
+- Done in PR B (2026-11-24, user's design): steps no longer hold a connection or
+  transaction across I/O. The runner commits after loading the task; read helpers
+  commit after reading; writes are staged after the last read and flushed behind the
+  `finish_claim` fence. Mid-step lease renewal is gone (`renew_lease` removed); steps
+  must fit the 300 s lease, an overrun fails the fence. READ COMMITTED meant the old
+  long transaction gave no read consistency anyway. Long synchronous inference
+  (`qwen-flash-sync`) is not for production; if needed it goes to a separate worker
+  or service behind submit/poll. Not done, only discussed: a frozen task snapshot
+  plus returned result instead of the ORM row, and injecting the object store and
+  batch clients into the context.
 - Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
-  `de11687` in `translations/actions/celery_actions.py` and
+  `de11687` in `translations/actions/execution/celery_actions.py` and
   `translations/clients/sync_client.py`.
   Open question for slice 2: an async taskiq worker already runs many translation jobs in
   one process; decide whether the in-process `AsyncActionCallbacks` path stays (then a

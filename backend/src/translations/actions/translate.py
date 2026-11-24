@@ -2,12 +2,10 @@
 
 import json
 from collections.abc import AsyncIterator
-from time import monotonic
 
-from src.files.access import fetch_file
+from src.files.access import fetch_file, get_file
 from src.files.dependencies import get_async_object_store
 from src.translations.actions.actions import ActionStepSpec, ActionTaskContext, PollSpec, StepSpec, register_steps
-from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
 from src.translations.actions.common.inputs import (
     group_by_chapter,
@@ -17,8 +15,9 @@ from src.translations.actions.common.inputs import (
 )
 from src.translations.actions.common.outputs import output_records
 from src.translations.actions.common.prompts import format_memories
+from src.translations.actions.execution.taskiq_actions import TaskiqActionCallbacks
 from src.translations.actions.registry import ACTION_CALLBACKS
-from src.translations.celery_app import app
+from src.translations.broker import broker, schedule_source
 from src.translations.clients.batch_jobs import (
     BatchJobComplete,
     BatchJobFailed,
@@ -48,6 +47,7 @@ _FINALIZE_LEASE_SECONDS = 300
 
 async def _stage(context: ActionTaskContext) -> tuple[TranslationStage, TranslateConfig]:
     stage = await context.db.get(TranslationStage, context.task.stage_id)
+    await context.db.commit()
     if stage is None or stage.action != "translate":
         raise ValueError("Translation callbacks require a translate stage")
     return stage, TranslateConfig.model_validate(stage.config)
@@ -116,9 +116,7 @@ async def prepare(context: ActionTaskContext) -> None:
             )
             yield codec.encode_request(item)
 
-    context.task.request_file_id = await store_lines(
-        context, store, requests(), renew_seconds=_PREPARE_LEASE_SECONDS / 3
-    )
+    context.task.request_file_id = await store_lines(context, store, requests())
 
 
 async def submit(context: ActionTaskContext) -> None:
@@ -131,16 +129,9 @@ async def submit(context: ActionTaskContext) -> None:
     store = get_async_object_store()
     request_file_id = context.task.request_file_id
 
-    async def content() -> AsyncIterator[bytes]:
-        renew_at = monotonic() + _SUBMIT_LEASE_SECONDS / 3
-        async for chunk in fetch_file(context.db, store, request_file_id):
-            if monotonic() >= renew_at:
-                await context.renew_lease()
-                renew_at = monotonic() + _SUBMIT_LEASE_SECONDS / 3
-            yield chunk
-
-    await context.renew_lease()
-    job_id = await client.create_batch_job(content())
+    stored_file = await get_file(context.db, request_file_id)
+    await context.db.commit()
+    job_id = await client.create_batch_job(fetch_file(store, stored_file))
     if not job_id:
         raise ValueError("Batch client returned an empty job ID")
     context.task.provider_batch_id = job_id
@@ -172,16 +163,8 @@ async def finalize(context: ActionTaskContext) -> None:
     store = get_async_object_store()
     output_id = BatchOutputId(context.task.provider_output_id)
 
-    async def chunks() -> AsyncIterator[bytes]:
-        renew_at = monotonic() + _FINALIZE_LEASE_SECONDS / 3
-        async for chunk in client.fetch_batch_output(output_id):
-            if monotonic() >= renew_at:
-                await context.renew_lease()
-                renew_at = monotonic() + _FINALIZE_LEASE_SECONDS / 3
-            yield chunk
-
     async def records() -> AsyncIterator[ChapterRecord]:
-        async for line in aiter_jsonl_lines(chunks()):
+        async for line in aiter_jsonl_lines(client.fetch_batch_output(output_id)):
             result = codec.decode_result(line)
             if isinstance(result, BatchItemFailure):
                 raise ValueError(f"Translation result failed for {result.key}: {result.error}")
@@ -189,7 +172,7 @@ async def finalize(context: ActionTaskContext) -> None:
 
     output = output_records(context, store, stage, records(), await stage_types(context.db, stage))
     encoded = (encode_translation_record(record) async for record in output)
-    context.task.output_file_id = await store_lines(context, store, encoded, renew_seconds=_FINALIZE_LEASE_SECONDS / 3)
+    context.task.output_file_id = await store_lines(context, store, encoded)
 
 
 STEPS: tuple[ActionStepSpec, ...] = (
@@ -227,5 +210,5 @@ STEPS: tuple[ActionStepSpec, ...] = (
     ),
 )
 
-callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
+callbacks = TaskiqActionCallbacks(broker, schedule_source, ACTION_CALLBACKS)
 register_steps(callbacks, STEPS)

@@ -63,22 +63,6 @@ def _owned(task_id: UUID, token: UUID, during: TranslationTaskStatus):
     )
 
 
-async def renew_claim(
-    db: AsyncSession, task_id: UUID, token: UUID, *, during: TranslationTaskStatus, duration: timedelta
-) -> bool:
-    if duration <= timedelta(0):
-        raise ValueError("Claim duration must be positive")
-    return (
-        await db.scalar(
-            update(TranslationTask)
-            .where(_owned(task_id, token, during))
-            .values(claim_expires_at=func.clock_timestamp() + duration)
-            .returning(TranslationTask.task_id)
-        )
-        is not None
-    )
-
-
 async def finish_claim(
     db: AsyncSession,
     task_id: UUID,

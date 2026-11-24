@@ -18,6 +18,7 @@ services:
       - opencode-cli-config:/home/vscode/.local/share/opencode
       - codex-cli-config:/home/vscode/.codex
       - pi-agent-config:/home/vscode/.pi/agent
+      - antigravity-cli-config:/home/vscode/.gemini
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
     cap_add:
@@ -34,3 +35,4 @@ volumes:
   codex-cli-config:
   opencode-cli-config:
   pi-agent-config:
+  antigravity-cli-config:

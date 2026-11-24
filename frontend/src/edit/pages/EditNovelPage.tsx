@@ -15,7 +15,11 @@ import { generateRandomColor } from "@/edit/lib/text-model/builtin/colors";
 import { useEditorState } from "../hooks/useEditorState";
 import { useChapters } from "../hooks/useChapters";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
-import { useAutoLabelPreview } from "../hooks/useAutoLabelPreview";
+import { useAutoLabelPreview } from "@/autolabels/preview/useAutoLabelPreview";
+import {
+	createOpenChapterContentsSubscriber,
+	useOpenChapterContents,
+} from "../hooks/useOpenChapterContents";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
@@ -56,6 +60,7 @@ export function EditNovelPage() {
 
 	const editorState = useEditorState();
 	const chapterState = useChapters();
+	const openChapterContents = useOpenChapterContents();
 	const trackedLabelGroups = useTrackedLabelGroups();
 	const [selectedAutoLabelRun, setSelectedAutoLabelRun] = useState<SelectedAutoLabelRun>({
 		runId: null,
@@ -74,14 +79,14 @@ export function EditNovelPage() {
 			managers.controllerGetters.chapterServerId(editorState.data.chapterId),
 		);
 		if (chapterId === null) return null;
-		const chapterContentId = chapterState.openChapterContentIds.get(chapterId) ?? null;
+		const chapterContentId = openChapterContents.openChapterContentIds.get(chapterId) ?? null;
 		if (chapterContentId === null) return null;
 		return {
 			chapterId,
 			chapterContentId,
 			text: editorState.data.segmentManager.getText(),
 		};
-	}, [managers, editorState.data, chapterState.openChapterContentIds]);
+	}, [managers, editorState.data, openChapterContents.openChapterContentIds]);
 
 	const autoLabelPreview = useAutoLabelPreview(selectedAutoLabelRun, previewTarget);
 
@@ -188,6 +193,7 @@ export function EditNovelPage() {
 		ctrl.subscribe(chapterMgr.handleControllerEvent);
 		ctrl.subscribe(labelGroupMgr.handleControllerEvent);
 		ctrl.subscribe(editorMgr.handleControllerEvent, 0);
+		ctrl.subscribe(createOpenChapterContentsSubscriber(openChapterContents));
 		ctrl.subscribe(errorMgr.handleTriggerEvent);
 
 		// Seed chapters from controller
@@ -361,7 +367,7 @@ export function EditNovelPage() {
 												chapterNumByServerId={chapterNumByServerId}
 												currentChapterId={activeChapterServerId}
 												openChapterContentIds={
-													chapterState.openChapterContentIds
+													openChapterContents.openChapterContentIds
 												}
 												labelGroups={trackedLabelGroups.labelGroups}
 												setActive={managers.labelGroupMgr.setActive}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { readAutolabelByIdAutoLabelsAutoLabelIdGet } from "@/api/endpoints/default/default";
 import type { LabelBase } from "@/api/models";
 import type { SelectedAutoLabelRun } from "@/autolabels/runs/autoLabelRunsState";
-import { labelsToUtf16 } from "../utils/textPositions";
+import { labelsToUtf16 } from "@/edit/utils/textPositions";
 
 export type AutoLabelPreview = readonly LabelBase[];
 

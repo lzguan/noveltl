@@ -12,8 +12,6 @@ export function useChapters() {
 	const [tabs, tabsRef, commitTabs] = useSyncState<ChapterTab[]>([], copy);
 	const [activeChapterId, activeChapterIdRef, commitActiveChapterId] =
 		useSyncState<CProvId | null>(null);
-	const [openChapterContentIds, openChapterContentIdsRef, commitOpenChapterContentIds] =
-		useSyncState<ReadonlyMap<string, string | null>>(new Map());
 	const closingChapterIdsRef = useRef(new Set<CProvId>());
 
 	const addChapter = useCallback(
@@ -93,33 +91,6 @@ export function useChapters() {
 		[chapterListRef, commitChapterList, removeTab],
 	);
 
-	const setOpenChapterContentId = useCallback(
-		(chapterServId: string, chapterContentServId: string | null) => {
-			if (
-				openChapterContentIdsRef.current.has(chapterServId) &&
-				openChapterContentIdsRef.current.get(chapterServId) === chapterContentServId
-			) {
-				return;
-			}
-			const next = new Map(openChapterContentIdsRef.current);
-			next.set(chapterServId, chapterContentServId);
-			openChapterContentIdsRef.current = next;
-			commitOpenChapterContentIds();
-		},
-		[openChapterContentIdsRef, commitOpenChapterContentIds],
-	);
-
-	const removeOpenChapterContentId = useCallback(
-		(chapterServId: string) => {
-			if (!openChapterContentIdsRef.current.has(chapterServId)) return;
-			const next = new Map(openChapterContentIdsRef.current);
-			next.delete(chapterServId);
-			openChapterContentIdsRef.current = next;
-			commitOpenChapterContentIds();
-		},
-		[openChapterContentIdsRef, commitOpenChapterContentIds],
-	);
-
 	return {
 		chapterList,
 		chapterListRef,
@@ -133,9 +104,6 @@ export function useChapters() {
 		activeChapterId,
 		activeChapterIdRef,
 		updateActive,
-		openChapterContentIds,
-		setOpenChapterContentId,
-		removeOpenChapterContentId,
 		closingChapterIdsRef,
 	};
 }

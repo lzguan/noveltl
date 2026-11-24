@@ -14,6 +14,7 @@ they describe changes.
 | Find worker entry points or change object storage | [Background services and files](background-services.md) |
 | Change memory-job configuration, ordering, claims, or retries | [Memory jobs](memory-jobs.md) |
 | Change term naming, translation storage, or glossary review UI | [Term translations](term-translations.md) |
+| Change frontend autolabel runs, promotion polling, or preview wiring | [Autolabels UI](autolabels-ui.md) |
 | Investigate naming quality or choose a regression case | [Naming observations](naming-observations.md) |
 | Change translation conventions, their naming use, or the conventions agent | [Translation conventions](translation-conventions.md) |
 | Plan chapter-translation wiring, windowed schedules, job chaining, or story arcs | [Memory workflow follow-ups](memory-workflow-followups.md) |

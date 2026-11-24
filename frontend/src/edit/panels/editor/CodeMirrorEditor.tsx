@@ -26,7 +26,7 @@ import { LabelContextMenu } from "../../labeling/LabelContextMenu";
 import { AddLabelForm } from "../../labeling/AddLabelForm";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import type { AddTarget, EditorLabel, LabelEditing } from "../../labeling/types";
-import type { AutoLabelPreview } from "../../hooks/useAutoLabelPreview";
+import type { AutoLabelPreview } from "@/autolabels/preview/useAutoLabelPreview";
 
 type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 

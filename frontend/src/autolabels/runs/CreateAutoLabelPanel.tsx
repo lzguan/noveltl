@@ -13,11 +13,11 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { ChapterFilter } from "../../controller/types/controllerTypes";
-import type { AutoLabelManager } from "../../managers/autolabelManager";
+import type { ChapterFilter } from "./autoLabelRunsState";
 import {
 	AutoLabelParamsForm,
 	type AutoLabelParamModel,
+	type AutoLabelParams,
 	type AutoLabelParamsValue,
 	autoLabelParamModels,
 	createAutoLabelParams,
@@ -40,9 +40,14 @@ function makeChapterFilter(start: string, end: string): ChapterFilter {
 
 export function CreateAutoLabelPanel({
 	onCreateRun,
+	submitting = false,
 	disabled,
 }: {
-	onCreateRun: AutoLabelManager["createRun"];
+	onCreateRun: (
+		params: AutoLabelParams,
+		filter: ChapterFilter,
+	) => Promise<string | null> | string | null;
+	submitting?: boolean;
 	disabled?: boolean;
 }) {
 	const [params, setParams] = useState<AutoLabelParamsValue>(null);
@@ -51,6 +56,9 @@ export function CreateAutoLabelPanel({
 	const [advancedOpen, setAdvancedOpen] = useState(false);
 	const [start, setStart] = useState("");
 	const [end, setEnd] = useState("");
+	const [error, setError] = useState<string | null>(null);
+
+	const controlsDisabled = Boolean(disabled) || submitting;
 
 	const reset = () => {
 		setParams(null);
@@ -59,6 +67,7 @@ export function CreateAutoLabelPanel({
 		setAdvancedOpen(false);
 		setStart("");
 		setEnd("");
+		setError(null);
 	};
 
 	return (
@@ -69,10 +78,11 @@ export function CreateAutoLabelPanel({
 				</Label>
 				<Select
 					value={selectedModel?.name ?? ""}
-					disabled={disabled}
+					disabled={controlsDisabled}
 					onValueChange={(modelName) => {
 						setAdvancedOpen(false);
 						setParamsValid(true);
+						setError(null);
 						const model = autoLabelParamModels.find(
 							(candidate) => candidate.name === modelName,
 						);
@@ -109,7 +119,7 @@ export function CreateAutoLabelPanel({
 						placeholder="Start"
 						aria-label="Start chapter"
 						value={start}
-						disabled={disabled}
+						disabled={controlsDisabled}
 						onChange={(event) => setStart(event.target.value)}
 					/>
 					<span className="text-xs text-muted-foreground">to</span>
@@ -119,7 +129,7 @@ export function CreateAutoLabelPanel({
 						placeholder="End"
 						aria-label="End chapter"
 						value={end}
-						disabled={disabled}
+						disabled={controlsDisabled}
 						onChange={(event) => setEnd(event.target.value)}
 					/>
 				</div>
@@ -137,7 +147,9 @@ export function CreateAutoLabelPanel({
 						variant="ghost"
 						className="w-full justify-start"
 						disabled={
-							disabled || !selectedModel || !modelHasAdvancedSettings(selectedModel)
+							controlsDisabled ||
+							!selectedModel ||
+							!modelHasAdvancedSettings(selectedModel)
 						}
 					>
 						<ChevronRight
@@ -155,27 +167,47 @@ export function CreateAutoLabelPanel({
 							value={params}
 							onChange={setParams}
 							onValidityChange={setParamsValid}
-							disabled={disabled}
+							disabled={controlsDisabled}
 						/>
 					)}
 				</CollapsibleContent>
 			</Collapsible>
 
+			{error !== null && (
+				<p role="alert" className="text-xs text-destructive">
+					{error}
+				</p>
+			)}
+
 			<div className="flex justify-end gap-1">
-				<Button type="button" size="xs" variant="ghost" onClick={reset} disabled={disabled}>
+				<Button
+					type="button"
+					size="xs"
+					variant="ghost"
+					onClick={reset}
+					disabled={controlsDisabled}
+				>
 					Cancel
 				</Button>
 				<Button
 					type="button"
 					size="xs"
-					disabled={disabled || params === null || !paramsValid}
+					disabled={controlsDisabled || params === null || !paramsValid}
 					onClick={() => {
-						if (!params || !paramsValid) return;
-						onCreateRun(params, makeChapterFilter(start, end));
-						reset();
+						if (!params || !paramsValid || controlsDisabled) return;
+						setError(null);
+						void Promise.resolve(
+							onCreateRun(params, makeChapterFilter(start, end)),
+						).then((createError) => {
+							if (createError !== null) {
+								setError(createError);
+								return;
+							}
+							reset();
+						});
 					}}
 				>
-					Create
+					{submitting ? "Creating..." : "Create"}
 				</Button>
 			</div>
 		</section>

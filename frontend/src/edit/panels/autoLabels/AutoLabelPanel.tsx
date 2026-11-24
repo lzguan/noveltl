@@ -14,7 +14,7 @@ import type { AutoLabelRunView, useAutoLabelState } from "../../hooks/useAutoLab
 import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
 import type { AutoLabelManager } from "../../managers/autolabelManager";
 import { AutoLabelRunsPanel } from "./AutoLabelRunsPanel";
-import { CreateAutoLabelPanel } from "./CreateAutoLabelPanel";
+import { CreateAutoLabelPanel } from "@/autolabels/runs/CreateAutoLabelPanel";
 import { formatRunLabel } from "./runLabels";
 
 const QUEUE_ERRORS: Record<Exclude<QueuePromotionResult, { ok: true }>["reason"], string> = {
@@ -172,6 +172,7 @@ export function AutoLabelPanel({
 					onCreateRun={(params, filter) => {
 						autoLabelManager.createRun(params, filter);
 						setView("runs");
+						return null;
 					}}
 					disabled={autoLabels.refreshing}
 				/>

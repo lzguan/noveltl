@@ -18,14 +18,14 @@ async function selectModel(modelName: "cluener" | "do_nothing") {
 
 describe("CreateAutoLabelPanel", () => {
 	it("disables creation until a model is selected", () => {
-		render(<CreateAutoLabelPanel onCreateRun={vi.fn()} />);
+		render(<CreateAutoLabelPanel onCreateRun={vi.fn(() => null)} />);
 
 		expect(screen.getByRole("button", { name: "Advanced Settings" })).toBeDisabled();
 		expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
 	});
 
 	it("submits generated defaults and the chapter range", async () => {
-		const onCreateRun = vi.fn();
+		const onCreateRun = vi.fn(async () => null);
 		render(<CreateAutoLabelPanel onCreateRun={onCreateRun} />);
 
 		await selectModel("cluener");
@@ -54,7 +54,7 @@ describe("CreateAutoLabelPanel", () => {
 	});
 
 	it("disables creation while advanced parameters are invalid", async () => {
-		render(<CreateAutoLabelPanel onCreateRun={vi.fn()} />);
+		render(<CreateAutoLabelPanel onCreateRun={vi.fn(() => null)} />);
 
 		await selectModel("cluener");
 		fireEvent.click(screen.getByRole("button", { name: "Advanced Settings" }));
@@ -66,7 +66,7 @@ describe("CreateAutoLabelPanel", () => {
 	});
 
 	it("creates models without advanced fields from their generated schema branch", async () => {
-		const onCreateRun = vi.fn();
+		const onCreateRun = vi.fn(async () => null);
 		render(<CreateAutoLabelPanel onCreateRun={onCreateRun} />);
 
 		await selectModel("do_nothing");
@@ -77,5 +77,22 @@ describe("CreateAutoLabelPanel", () => {
 			{ modelName: "do_nothing" },
 			{ start: undefined, end: undefined },
 		);
+	});
+
+	it("keeps form inputs and displays an alert when creation fails", async () => {
+		const onCreateRun = vi.fn(async () => "Could not start the autolabel run.");
+		render(<CreateAutoLabelPanel onCreateRun={onCreateRun} />);
+
+		await selectModel("do_nothing");
+		fireEvent.change(screen.getByRole("textbox", { name: "Start chapter" }), {
+			target: { value: "3" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"Could not start the autolabel run.",
+		);
+		expect(screen.getByRole("textbox", { name: "Start chapter" })).toHaveValue("3");
+		expect(screen.getByRole("combobox", { name: "Model" })).toHaveTextContent("do_nothing");
 	});
 });

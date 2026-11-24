@@ -26,7 +26,9 @@ function statusVariant(status: AutoLabelProgress) {
 
 function countDone(entry: AutoLabelRunEntry): string {
 	if (entry.status !== "ready") return "-";
-	const done = entry.autolabels.filter((al) => al.autoLabelMeta.autoLabelStatus === "done").length;
+	const done = entry.autolabels.filter(
+		(al) => al.autoLabelMeta.autoLabelStatus === "done",
+	).length;
 	return `${done}/${entry.autolabels.length}`;
 }
 

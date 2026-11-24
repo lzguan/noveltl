@@ -145,10 +145,7 @@ export function applyRunCreated(
 	};
 }
 
-export function applyRunLoading(
-	previous: AutoLabelRunsState,
-	runId: string,
-): AutoLabelRunsState {
+export function applyRunLoading(previous: AutoLabelRunsState, runId: string): AutoLabelRunsState {
 	const idx = previous.runs.findIndex((entry) => entry.run.runId === runId);
 	if (idx === -1) return previous;
 	const current = previous.runs[idx];

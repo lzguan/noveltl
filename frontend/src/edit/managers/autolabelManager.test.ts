@@ -55,10 +55,8 @@ function makeSetup(text = "😀Alice") {
 		labelGroupIds: unusedGetter,
 		chapterIds: unusedGetter,
 		chapterIdFromServerId: unusedGetter,
-		chapterServerId: (id) =>
-			Effect.succeed(id === CHAPTER_PROV_ID ? CHAPTER_SERV_ID : null),
-		chapterContentServerId: (id) =>
-			Effect.succeed(id === CHAPTER_PROV_ID ? CC_SERV_ID : null),
+		chapterServerId: (id) => Effect.succeed(id === CHAPTER_PROV_ID ? CHAPTER_SERV_ID : null),
+		chapterContentServerId: (id) => Effect.succeed(id === CHAPTER_PROV_ID ? CC_SERV_ID : null),
 		chapterContentIdFromServerId: unusedGetter,
 		labelIdFromServerId: unusedGetter,
 		labelGroupIdFromServerId: unusedGetter,

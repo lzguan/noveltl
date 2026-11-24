@@ -7,6 +7,7 @@ import uuid
 from typing import Annotated, Literal, assert_never
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile, status
+from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -770,8 +771,6 @@ async def create_chapters_by_upload(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Insufficient permissions to perform this action."
         ) from e
     except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid request data: {e.errors()}"
-        ) from e
+        raise RequestValidationError(e.errors(include_input=False, include_url=False)) from e
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Chapter title is too long.") from e

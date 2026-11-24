@@ -18,6 +18,8 @@ from src.novels.permissions import (
 )
 from src.schemas import Model
 
+UPLOAD_BATCH_SIZE = 1000
+
 
 class ChapterUpload(Model):
     chapter_num: int
@@ -53,21 +55,48 @@ async def upload_v1(
         column("chapter_title", VARCHAR(MAX_CHAPTER_TITLE_LEN)),
         column("chapter_is_public", Boolean),
     )
-    data = [
-        (
-            novel_id,
-            u.chapter_num,
-            u.chapter_title if u.chapter_title is not None else f"Chapter {u.chapter_num}",
-            u.chapter_is_public,
-        )
-        for u in request.chapters
-    ]
-    vals = select(values(*cols).data(data).alias("vals"))
-    vals = chapter_mod_access_insert(vals, current_user, novel_id)
-    stmt = insert(Chapter).from_select(cols, vals).returning(Chapter)
+    cols2 = (
+        column("chapter_id", postgresql.UUID),
+        column("chapter_content_text", Text),
+        column("chapter_content_version", Integer),
+    )
+
+    inserted_chapters: list[Chapter] = []
     try:
-        result = await db.execute(stmt)
-        result_scalars = result.scalars().all()
+        for start_idx in range(0, len(request.chapters), UPLOAD_BATCH_SIZE):
+            batch = request.chapters[start_idx : start_idx + UPLOAD_BATCH_SIZE]
+            data = [
+                (
+                    novel_id,
+                    u.chapter_num,
+                    u.chapter_title if u.chapter_title is not None else f"Chapter {u.chapter_num}",
+                    u.chapter_is_public,
+                )
+                for u in batch
+            ]
+            vals = select(values(*cols).data(data).alias("vals"))
+            vals = chapter_mod_access_insert(vals, current_user, novel_id)
+            stmt = insert(Chapter).from_select(cols, vals).returning(Chapter)
+            result = await db.execute(stmt)
+            batch_chapters = list(result.scalars().all())
+            if len(batch_chapters) != len(batch):
+                await db.rollback()
+                raise InsufficientPermissionsException("You do not have permission to upload chapters to this novel.")
+
+            num_content_dict = {u.chapter_num: u.chapter_content_text for u in batch}
+            num_id_dict: dict[int, Chapter] = {chapter.chapter_num: chapter for chapter in batch_chapters}
+            vals2 = select(
+                values(*cols2)
+                .data([(num_id_dict[num].chapter_id, num_content_dict[num], 1) for num in num_id_dict])
+                .alias("vals2")
+            )
+            stmt2 = insert(ChapterContent).from_select(cols2, vals2)
+            await db.execute(stmt2)
+            inserted_chapters.extend(batch_chapters)
+
+        await db.commit()
+    except InsufficientPermissionsException:
+        raise
     except IntegrityError as e:
         await db.rollback()
         if isinstance(e.orig, ForeignKeyViolation):
@@ -78,33 +107,8 @@ async def upload_v1(
     except DataError as e:
         await db.rollback()
         raise ValueError("Chapter title is too long") from e
-    except Exception as e:
+    except Exception:
         await db.rollback()
-        raise e
+        raise
 
-    if len(result_scalars) != len(request.chapters):
-        raise InsufficientPermissionsException("You do not have permission to upload chapters to this novel.")
-
-    num_content_dict = {u.chapter_num: u.chapter_content_text for u in request.chapters}
-    num_id_dict: dict[int, Chapter] = {chapter.chapter_num: chapter for chapter in result_scalars}
-
-    cols2 = (
-        column("chapter_id", postgresql.UUID),
-        column("chapter_content_text", Text),
-        column("chapter_content_version", Integer),
-    )
-    vals = select(
-        values(*cols2)
-        .data([(num_id_dict[num].chapter_id, num_content_dict[num], 1) for num in num_id_dict])
-        .alias("vals2")
-    )
-    stmt2 = insert(ChapterContent).from_select(cols2, vals)
-
-    try:
-        await db.execute(stmt2)
-        await db.commit()
-    except Exception as e:
-        await db.rollback()
-        raise e
-
-    return result_scalars
+    return inserted_chapters

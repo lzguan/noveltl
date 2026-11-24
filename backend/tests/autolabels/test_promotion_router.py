@@ -13,8 +13,9 @@ from src.auth.utils import create_access_token
 from src.autolabels.constants import MAX_POLLED_PROMOTIONS, AutoLabelProgress
 from src.autolabels.models import AutoLabel, LabelPromotionJobItem
 from src.autolabels.promotions.processing import process_promotion_job
-from src.labels.constants import LabelRole
-from src.labels.models import LabelContributor, LabelData
+from src.labels.models import LabelData
+from src.novels.constants import Role, Visibility
+from src.novels.models import NovelContributor
 from test_support.autolabels import RecordingPromotionDispatcher
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.autolabels.test_promotion_processing import _add_autolabelled_chapters
@@ -153,6 +154,10 @@ async def test_listing_reports_progress_counts_and_failures(
     outsider = User(user_name="outsider", user_hashed_password="unused", user_type=UserType.USER)
     test_db.add(outsider)
     test_db.commit()
+    public_failures = client.get(f"/label-promotions/{promotion_id}/failures", headers=_headers(outsider))
+    assert len(public_failures.json()) == 1
+    scenario.novels["novel"].novel_visibility = Visibility.PRIVATE
+    test_db.commit()
     hidden = client.get(f"/label-promotions/{promotion_id}/failures", headers=_headers(outsider))
     assert hidden.json() == []
 
@@ -185,7 +190,7 @@ def test_listing_by_promotion_ids_returns_only_those_jobs(
     assert too_many.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
-def test_label_group_viewers_cannot_promote(
+def test_novel_viewers_cannot_promote(
     client: TestClient,
     test_db: Session,
     xianxia_autolabels_scenario: DatabaseScenario,
@@ -194,12 +199,12 @@ def test_label_group_viewers_cannot_promote(
     scenario = xianxia_autolabels_scenario
     owner = scenario.users["owner"]
     contributor = test_db.execute(
-        select(LabelContributor).where(
-            LabelContributor.label_group_id == scenario.label_groups["labels"].label_group_id,
-            LabelContributor.user_id == owner.user_id,
+        select(NovelContributor).where(
+            NovelContributor.novel_id == scenario.novels["novel"].novel_id,
+            NovelContributor.user_id == owner.user_id,
         )
     ).scalar_one()
-    contributor.label_contributor_role = LabelRole.VIEWER
+    contributor.contributor_role = Role.VIEWER
     test_db.commit()
 
     response = _promote(client, scenario, owner)

@@ -7,7 +7,8 @@ from sqlalchemy.sql.elements import ColumnElement
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.filters.models import Grouping, Instance, Workflow, WorkflowLabelGroup, WorkflowNovel
-from src.labels.models import LabelContributor
+from src.labels.models import LabelGroup
+from src.labels.permissions import label_group_mod_access_select
 from src.novels.constants import Role
 from src.novels.models import NovelContributor
 
@@ -19,13 +20,13 @@ def workflow_access_condition(
     """Build the non-admin access condition for a workflow.
 
     A workflow must have at least one associated novel. The user must be an
-    owner or editor of every associated novel and a contributor to every
+    owner or editor of every associated novel and have read access to every
     associated label group.
     """
     workflow_novel = aliased(WorkflowNovel)
     novel_contributor = aliased(NovelContributor)
     workflow_label_group = aliased(WorkflowLabelGroup)
-    label_contributor = aliased(LabelContributor)
+    label_group = aliased(LabelGroup)
 
     has_novel_scope = exists(
         select(1)
@@ -50,11 +51,15 @@ def workflow_access_condition(
     )
 
     can_access_label_group = exists(
-        select(1)
-        .select_from(label_contributor)
-        .where(label_contributor.label_group_id == workflow_label_group.label_group_id)
-        .where(label_contributor.user_id == current_user.user_id)
-    ).correlate(workflow_label_group)
+        label_group_mod_access_select(
+            select(1)
+            .select_from(label_group)
+            .where(label_group.label_group_id == workflow_label_group.label_group_id)
+            .correlate(workflow_label_group),
+            current_user,
+            label_group,
+        )
+    )
     has_inaccessible_label_group = exists(
         select(1)
         .select_from(workflow_label_group)

@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
-from src.labels.constants import LabelRole
-from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
+from src.labels.models import Label, LabelData, LabelGroup
+from src.novels.constants import Role
+from src.novels.models import NovelContributor
 from test_support.test_data.scenarios import DatabaseScenario
 
 
@@ -180,21 +181,6 @@ class TestReadEditChapterData:
         test_db.add_all([extra_group_with_data, extra_group_without_data])
         test_db.commit()
 
-        extra_contributors = [
-            LabelContributor(
-                label_group_id=extra_group_with_data.label_group_id,
-                user_id=actor.user_id,
-                label_contributor_role=LabelRole.OWNER,
-            ),
-            LabelContributor(
-                label_group_id=extra_group_without_data.label_group_id,
-                user_id=actor.user_id,
-                label_contributor_role=LabelRole.OWNER,
-            ),
-        ]
-        test_db.add_all(extra_contributors)
-        test_db.commit()
-
         extra_label_data = LabelData(
             label_group_id=extra_group_with_data.label_group_id,
             chapter_content_id=content.chapter_content_id,
@@ -292,14 +278,6 @@ class TestReadEditChapterLabelData:
         new_group = LabelGroup(label_group_name="ReloadAutoCreate", novel_id=novel.novel_id)
         test_db.add(new_group)
         test_db.commit()
-        test_db.add(
-            LabelContributor(
-                label_group_id=new_group.label_group_id,
-                user_id=actor.user_id,
-                label_contributor_role=LabelRole.OWNER,
-            )
-        )
-        test_db.commit()
 
         # Verify no LabelData exists yet
         assert (
@@ -344,7 +322,6 @@ class TestReadEditChapterLabelData:
         editing_scenario: DatabaseScenario,
     ) -> None:
         """A viewer should not trigger auto-create — the group is silently excluded."""
-        actor = _editing_user(editing_scenario, "owner")
         viewer = _editing_user(editing_scenario, "other")
         chapter = editing_scenario.chapters["chapter"]
         content = editing_scenario.contents["content_v1"]
@@ -352,20 +329,11 @@ class TestReadEditChapterLabelData:
 
         new_group = LabelGroup(label_group_name="ViewerNoCreate", novel_id=novel.novel_id)
         test_db.add(new_group)
-        test_db.commit()
-        # Owner creates the group so it exists, then add viewer
         test_db.add(
-            LabelContributor(
-                label_group_id=new_group.label_group_id,
-                user_id=actor.user_id,
-                label_contributor_role=LabelRole.OWNER,
-            )
-        )
-        test_db.add(
-            LabelContributor(
-                label_group_id=new_group.label_group_id,
+            NovelContributor(
+                novel_id=novel.novel_id,
                 user_id=viewer.user_id,
-                label_contributor_role=LabelRole.VIEWER,
+                contributor_role=Role.VIEWER,
             )
         )
         test_db.commit()
@@ -408,14 +376,6 @@ class TestReadEditChapterLabelData:
 
         new_group = LabelGroup(label_group_name="MixedAutoCreate", novel_id=novel.novel_id)
         test_db.add(new_group)
-        test_db.commit()
-        test_db.add(
-            LabelContributor(
-                label_group_id=new_group.label_group_id,
-                user_id=actor.user_id,
-                label_contributor_role=LabelRole.OWNER,
-            )
-        )
         test_db.commit()
 
         response = client.post(

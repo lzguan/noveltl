@@ -153,6 +153,8 @@ def label_access_scenario(test_db: Session, no_hash: PasswordHash) -> DatabaseSc
     builder.user("owner", "lp_alice", "pass1")
     builder.user("collaborator", "lp_bob", "pass2")
     builder.user("outsider", "lp_charlie", "pass3")
+    builder.user("editor", "lp_editor", "pass4")
+    builder.user("viewer", "lp_viewer", "pass5")
     builder.user("admin", "lp_admin", "adminpass", UserType.ADMIN)
     builder.source_work("labels", "LP Source Work")
     builder.novel("public", title="LP Public Novel", language="en", source_work="labels")
@@ -164,7 +166,11 @@ def label_access_scenario(test_db: Session, no_hash: PasswordHash) -> DatabaseSc
         visibility=Visibility.PRIVATE,
     )
     builder.contributor("public_owner", novel="public", user="owner", role=Role.OWNER)
+    builder.contributor("public_editor", novel="public", user="editor", role=Role.EDITOR)
+    builder.contributor("public_viewer", novel="public", user="viewer", role=Role.VIEWER)
     builder.contributor("private_owner", novel="private", user="owner", role=Role.OWNER)
+    builder.contributor("private_editor", novel="private", user="editor", role=Role.EDITOR)
+    builder.contributor("private_viewer", novel="private", user="viewer", role=Role.VIEWER)
     builder.chapter("public", novel="public", number=1, title="Chapter 1", is_public=True)
     builder.content(
         "public_v1",
@@ -213,6 +219,7 @@ def label_access_scenario(test_db: Session, no_hash: PasswordHash) -> DatabaseSc
     )
     builder.label("editor_test", label_data="with_editor_data", word="test", start=8, end=12, score=0.95)
     builder.label("viewer_test", label_data="with_viewer_data", word="test", start=8, end=12, score=0.95)
+    builder.label("private_test", label_data="private_data", word="test", start=8, end=12, score=0.95)
     return builder.finish()
 
 

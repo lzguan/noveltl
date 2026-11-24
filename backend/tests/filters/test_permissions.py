@@ -155,10 +155,57 @@ class TestWorkflowSelectPermissions:
         workflow = add_workflow(
             test_db,
             novels=[label_access_scenario.novels["public"]],
-            label_groups=[label_access_scenario.label_groups["owner_only"]],
+            label_groups=[label_access_scenario.label_groups["private"]],
         )
 
         assert select_workflow(test_db, label_access_scenario, workflow, "collaborator") is None
+
+    def test_novel_editor_can_select_workflow_without_label_contributor(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ) -> None:
+        add_novel_contributor(
+            test_db,
+            label_access_scenario,
+            user="collaborator",
+            novel="public",
+            role=Role.EDITOR,
+        )
+        workflow = add_workflow(
+            test_db,
+            novels=[label_access_scenario.novels["public"]],
+            label_groups=[label_access_scenario.label_groups["owner_only"]],
+        )
+
+        assert select_workflow(test_db, label_access_scenario, workflow, "collaborator") is not None
+
+    def test_novel_viewer_on_private_novel_satisfies_label_group_read_access(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ) -> None:
+        add_novel_contributor(
+            test_db,
+            label_access_scenario,
+            user="collaborator",
+            novel="public",
+            role=Role.EDITOR,
+        )
+        add_novel_contributor(
+            test_db,
+            label_access_scenario,
+            user="collaborator",
+            novel="private",
+            role=Role.VIEWER,
+        )
+        workflow = add_workflow(
+            test_db,
+            novels=[label_access_scenario.novels["public"]],
+            label_groups=[label_access_scenario.label_groups["private"]],
+        )
+
+        assert select_workflow(test_db, label_access_scenario, workflow, "collaborator") is not None
 
     def test_access_is_required_for_every_associated_novel(
         self,

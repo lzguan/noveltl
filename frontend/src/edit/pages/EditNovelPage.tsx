@@ -317,6 +317,7 @@ export function EditNovelPage() {
 							currentChapterId={currentChapterId}
 							onSwitchChapter={managers.chapterMgr.switchChapter}
 							onAddChapter={managers.chapterMgr.addChapter}
+							onChaptersVisibilityUpdated={chapterState.setChaptersVisibility}
 							labelGroups={trackedLabelGroups.labelGroups}
 							chapterOpen={!editorState.data.empty && !editorState.data.loading}
 							onToggleVisibility={managers.labelGroupMgr.toggleVisibility}

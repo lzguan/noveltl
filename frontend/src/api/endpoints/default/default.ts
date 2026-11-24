@@ -107,6 +107,7 @@ import type {
   UpdateChapter,
   UpdateChapterContent,
   UpdateChapterContentChaptersChapterIdContentPatchParams,
+  UpdateChaptersVisibility,
   UpdateGlossaryTerm,
   UpdateLabelDataStream,
   UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams,
@@ -115,6 +116,7 @@ import type {
   UpdateNovel,
   UpdateReviewStatus,
   UpdateSourceWork,
+  UpdatedChaptersVisibility,
   User
 } from '../../models';
 
@@ -4842,6 +4844,73 @@ return customFetch<createChapterNovelsNovelIdChaptersPostResponse>(getCreateChap
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createChapter)
+  }
+);}
+
+
+export type actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse200 = {
+  data: UpdatedChaptersVisibility
+  status: 200
+}
+
+export type actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse401 = {
+  data: DetailHTTPErrorResponse
+  status: 401
+}
+
+export type actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponseSuccess = (actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse200) & {
+  headers: Headers;
+};
+export type actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponseError = (actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse401 | actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse404 | actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse422) & {
+  headers: Headers;
+};
+
+export type actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse = (actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponseSuccess | actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponseError)
+
+export const getActionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostUrl = (novelId: string,) => {
+
+
+
+
+  return `/api/novels/${novelId}/chapters/visibility`
+}
+
+/**
+ * @summary Action Update Chapters Visibility
+ */
+export const actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPost = async (novelId: string,
+    updateChaptersVisibility: UpdateChaptersVisibility, options?: Parameters<typeof customFetch>[1]): Promise<actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostResponse>(getActionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostUrl(novelId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateChaptersVisibility)
   }
 );}
 

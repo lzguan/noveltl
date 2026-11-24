@@ -4049,6 +4049,25 @@ components:
       - chapterContentId
       title: UpdateChapterContent
       type: object
+    UpdateChaptersVisibility:
+      properties:
+        end:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End
+        isPublic:
+          title: Ispublic
+          type: boolean
+        start:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start
+      required:
+      - isPublic
+      title: UpdateChaptersVisibility
+      type: object
     UpdateGlossaryTerm:
       properties:
         term:
@@ -4234,6 +4253,21 @@ components:
           - type: 'null'
           title: Sourceworktitle
       title: UpdateSourceWork
+      type: object
+    UpdatedChaptersVisibility:
+      properties:
+        isPublic:
+          title: Ispublic
+          type: boolean
+        updatedChapterNums:
+          items:
+            type: integer
+          title: Updatedchapternums
+          type: array
+      required:
+      - updatedChapterNums
+      - isPublic
+      title: UpdatedChaptersVisibility
       type: object
     User:
       description: "Pydantic model for user information.\n\nAttributes:\n    user_id:\
@@ -8833,6 +8867,51 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Chapter
+  /novels/{novelId}/chapters/visibility:
+    post:
+      operationId: action_update_chapters_visibility_novels__novelId__chapters_visibility_post
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateChaptersVisibility'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatedChaptersVisibility'
+          description: Successful Response
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Insufficient permissions.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Novel not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Action Update Chapters Visibility
   /novels/{novelId}/label-promotions:
     get:
       description: 'List a novel''s label promotion jobs: active ones first, then

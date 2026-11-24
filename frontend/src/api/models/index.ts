@@ -299,6 +299,8 @@ export * from './translationTaskStatus';
 export * from './updateChapter';
 export * from './updateChapterContent';
 export * from './updateChapterContentChaptersChapterIdContentPatchParams';
+export * from './updateChaptersVisibility';
+export * from './updatedChaptersVisibility';
 export * from './updateGlossaryTerm';
 export * from './updateInstanceRequest';
 export * from './updateInstanceRequestFields';

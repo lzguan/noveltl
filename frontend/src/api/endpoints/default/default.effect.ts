@@ -3738,6 +3738,44 @@ export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
 })
 
 /**
+ * @summary Action Update Chapters Visibility
+ */
+export const ActionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostParams = S.Struct({
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const ActionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPostBody = S.Struct({
+  "end": S.optional(S.Union([S.Number, S.Null])),
+  "isPublic": S.Boolean,
+  "start": S.optional(S.Union([S.Number, S.Null]))
+})
+
+export const ActionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPost200Response = S.Struct({
+  "isPublic": S.Boolean,
+  "updatedChapterNums": S.Array(S.Number)
+})
+
+export const ActionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPost401Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const ActionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPost404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const ActionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * List a novel's label promotion jobs: active ones first, then the most recently updated.
  *
  * With `promotionIds`, return only those jobs; ids that are missing or not readable are omitted.

@@ -1,4 +1,5 @@
 import { useCallback, useRef } from "react";
+import { Prov } from "../controller/types/helperTypes";
 import type { CProvId, ProvChapter } from "../controller/types/idTypes";
 import { copy, useSyncState } from "../utils/useSyncState";
 
@@ -91,11 +92,35 @@ export function useChapters() {
 		[chapterListRef, commitChapterList, removeTab],
 	);
 
+	const setChaptersVisibility = useCallback(
+		(chapterNums: readonly number[], isPublic: boolean) => {
+			if (chapterNums.length === 0) return;
+			const targetNums = new Set(chapterNums);
+			let changed = false;
+			chapterListRef.current = chapterListRef.current.map((chapter) => {
+				if (!targetNums.has(chapter.chapterNum) || chapter.chapterIsPublic === isPublic) {
+					return chapter;
+				}
+				changed = true;
+				return Prov({
+					chapterId: chapter.chapterId,
+					chapterNum: chapter.chapterNum,
+					chapterTitle: chapter.chapterTitle,
+					chapterIsPublic: isPublic,
+					novelId: chapter.novelId,
+				});
+			});
+			if (changed) commitChapterList();
+		},
+		[chapterListRef, commitChapterList],
+	);
+
 	return {
 		chapterList,
 		chapterListRef,
 		addChapter,
 		setChapter,
+		setChaptersVisibility,
 		removeChapter,
 		tabs,
 		tabsRef,

@@ -1,21 +1,27 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Globe, Lock, Plus } from "lucide-react";
 import type { CProvId, ProvChapter } from "../../controller/types/idTypes";
+import { BulkChapterVisibilityDialog } from "./BulkChapterVisibilityDialog";
 
 export function ChapterPanel({
+	novelId,
 	chapters,
 	currentChapterId,
 	onSwitchChapter,
 	onAddChapter,
+	onChaptersVisibilityUpdated,
 }: {
+	novelId: string;
 	chapters: ProvChapter[];
 	currentChapterId: CProvId | null;
 	onSwitchChapter: (id: CProvId) => void;
 	onAddChapter: (num: number, title: string, isPublic: boolean) => void;
+	onChaptersVisibilityUpdated: (chapterNums: readonly number[], isPublic: boolean) => void;
 }) {
 	const [showAdd, setShowAdd] = useState(false);
+	const [showVisibility, setShowVisibility] = useState(false);
 	const [newNum, setNewNum] = useState("");
 	const [newTitle, setNewTitle] = useState("");
 
@@ -30,12 +36,25 @@ export function ChapterPanel({
 
 	return (
 		<div className="flex flex-col gap-1 p-2">
-			<div className="flex items-center gap-2 px-1.5 py-1">
+			<div className="flex items-center gap-1 px-1.5 py-1">
 				<span className="text-xs font-medium text-muted-foreground flex-1">Chapters</span>
 				<Button
 					variant="ghost"
 					size="icon-sm"
 					className="h-5 w-5"
+					aria-label="Manage chapter visibility"
+					title="Manage chapter visibility"
+					disabled={chapters.length === 0}
+					onClick={() => setShowVisibility(true)}
+				>
+					<Globe className="h-3 w-3" />
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					className="h-5 w-5"
+					aria-label="Add chapter"
+					title="Add chapter"
 					onClick={() => setShowAdd(!showAdd)}
 				>
 					<Plus className="h-3 w-3" />
@@ -73,18 +92,39 @@ export function ChapterPanel({
 			{chapters.map((c) => (
 				<div
 					key={c.chapterId}
-					className={`px-1.5 py-1 rounded cursor-pointer text-xs ${
+					className={`flex items-center gap-1.5 px-1.5 py-1 rounded cursor-pointer text-xs ${
 						c.chapterId === currentChapterId
 							? "bg-accent font-medium"
 							: "hover:bg-accent/50 text-muted-foreground"
 					}`}
 					onClick={() => onSwitchChapter(c.chapterId)}
 				>
-					Ch.{c.chapterNum}: {c.chapterTitle}
+					<span className="min-w-0 flex-1 truncate">
+						Ch.{c.chapterNum}: {c.chapterTitle}
+					</span>
+					{c.chapterIsPublic ? (
+						<Globe
+							className="h-3 w-3 shrink-0 text-muted-foreground/70"
+							aria-label="Public"
+						/>
+					) : (
+						<Lock
+							className="h-3 w-3 shrink-0 text-muted-foreground/40"
+							aria-label="Private"
+						/>
+					)}
 				</div>
 			))}
 			{chapters.length === 0 && (
 				<div className="px-1.5 py-1 text-xs text-muted-foreground">No chapters yet.</div>
+			)}
+			{showVisibility && (
+				<BulkChapterVisibilityDialog
+					novelId={novelId}
+					chapters={chapters}
+					onUpdated={onChaptersVisibilityUpdated}
+					onClose={() => setShowVisibility(false)}
+				/>
 			)}
 		</div>
 	);

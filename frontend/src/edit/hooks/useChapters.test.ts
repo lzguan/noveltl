@@ -60,4 +60,35 @@ describe("useChapters", () => {
 		expect(result.current.tabs.map((tab) => tab.chapterId)).toEqual([CHAPTER_A]);
 		expect(result.current.activeChapterId).toBe(CHAPTER_A);
 	});
+
+	it("updates visibility only for targeted chapter numbers", () => {
+		const { result } = renderHook(() => useChapters());
+
+		act(() => {
+			result.current.addChapter(chapter(CHAPTER_A, 1));
+			result.current.addChapter(chapter(CHAPTER_B, 2));
+			result.current.addChapter(chapter(CHAPTER_C, 3));
+			result.current.setChaptersVisibility([1, 3], true);
+		});
+
+		expect(
+			result.current.chapterList.map((item) => [item.chapterNum, item.chapterIsPublic]),
+		).toEqual([
+			[1, true],
+			[2, false],
+			[3, true],
+		]);
+
+		act(() => {
+			result.current.setChaptersVisibility([3], false);
+		});
+
+		expect(
+			result.current.chapterList.map((item) => [item.chapterNum, item.chapterIsPublic]),
+		).toEqual([
+			[1, true],
+			[2, false],
+			[3, false],
+		]);
+	});
 });

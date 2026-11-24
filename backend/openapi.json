@@ -1168,6 +1168,81 @@
         }
       }
     },
+    "/novels/{novelId}/chapters/visibility": {
+      "post": {
+        "summary": "Action Update Chapters Visibility",
+        "operationId": "action_update_chapters_visibility_novels__novelId__chapters_visibility_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateChaptersVisibility"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatedChaptersVisibility"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Insufficient permissions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Novel not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/chapters/{chapterId}/content": {
       "get": {
         "summary": "Read Chapter Content",
@@ -14064,6 +14139,41 @@
         "title": "UpdateChapterContent",
         "description": "Pydantic schema to validate data for updating the text content of a chapter. The chapter_id is expected to be passed via the URL path.\n\nAttributes:\n    text_ops: A list of text operations (insertions or deletions) to apply to the existing text content.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text."
       },
+      "UpdateChaptersVisibility": {
+        "properties": {
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "isPublic": {
+            "type": "boolean",
+            "title": "Ispublic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "isPublic"
+        ],
+        "title": "UpdateChaptersVisibility"
+      },
       "UpdateGlossaryTerm": {
         "properties": {
           "term": {
@@ -14351,6 +14461,27 @@
         "type": "object",
         "title": "UpdateSourceWork",
         "description": "Pydantic schema to validate forms for updating a source work.\n\nAttributes:\n    source_work_title: Updated title. If None, do not update.\n    source_work_description: Updated description. If None, do not update."
+      },
+      "UpdatedChaptersVisibility": {
+        "properties": {
+          "updatedChapterNums": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Updatedchapternums"
+          },
+          "isPublic": {
+            "type": "boolean",
+            "title": "Ispublic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "updatedChapterNums",
+          "isPublic"
+        ],
+        "title": "UpdatedChaptersVisibility"
       },
       "User": {
         "properties": {

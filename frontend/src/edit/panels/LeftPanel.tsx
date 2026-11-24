@@ -13,6 +13,7 @@ export function LeftPanel({
 	currentChapterId,
 	onSwitchChapter,
 	onAddChapter,
+	onChaptersVisibilityUpdated,
 	labelGroups,
 	chapterOpen,
 	onToggleVisibility,
@@ -27,6 +28,7 @@ export function LeftPanel({
 	currentChapterId: CProvId | null;
 	onSwitchChapter: (id: CProvId) => void;
 	onAddChapter: (num: number, title: string, isPublic: boolean) => void;
+	onChaptersVisibilityUpdated: (chapterNums: readonly number[], isPublic: boolean) => void;
 	labelGroups: [LGProvId, LabelGroupView][];
 	chapterOpen: boolean;
 	onToggleVisibility: (id: LGProvId) => void;
@@ -54,10 +56,12 @@ export function LeftPanel({
 			</TabsList>
 			<TabsContent value="chapters" className="overflow-y-auto">
 				<ChapterPanel
+					novelId={novelId}
 					chapters={chapters}
 					currentChapterId={currentChapterId}
 					onSwitchChapter={onSwitchChapter}
 					onAddChapter={onAddChapter}
+					onChaptersVisibilityUpdated={onChaptersVisibilityUpdated}
 				/>
 			</TabsContent>
 			<TabsContent value="label-groups" className="overflow-y-auto">

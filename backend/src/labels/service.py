@@ -7,10 +7,11 @@ import uuid
 from collections.abc import Sequence
 
 from psycopg.errors import ForeignKeyViolation, StringDataRightTruncation, UniqueViolation
-from sqlalchemy import func, insert, literal, select, update
+from sqlalchemy import and_, func, insert, literal, select, update
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.auth.constants import UserType
 from src.auth.models import User
 from src.exceptions import DataTooLongException, NotFoundException
 from src.labels import models, schemas
@@ -31,9 +32,16 @@ from src.labels.permissions import (
 )
 from src.labels.utils import apply_operation
 from src.novels import models as novel_models
+from src.novels.constants import Role
 from src.novels.exceptions import NovelNotFoundException
 
 logger = logging.getLogger(__name__)
+
+_NOVEL_ROLE_TO_LABEL_ROLE: dict[Role, LabelRole] = {
+    Role.OWNER: LabelRole.OWNER,
+    Role.EDITOR: LabelRole.EDITOR,
+    Role.VIEWER: LabelRole.VIEWER,
+}
 
 
 async def query_label_groups(db: AsyncSession, current_user: User, novel_id: uuid.UUID) -> Sequence[models.LabelGroup]:
@@ -56,7 +64,7 @@ async def query_label_groups_with_contributor_info(
     db: AsyncSession, current_user: User, novel_id: uuid.UUID
 ) -> Sequence[schemas.LabelGroupWithRole]:
     """
-    Queries all label groups that belong to current_user, along with the role of the user in each label group.
+    Queries all label groups accessible to current_user for a novel, along with the user's derived role.
 
     Args:
         db: Database that we query from.
@@ -64,18 +72,28 @@ async def query_label_groups_with_contributor_info(
         novel_id: id of novel to query label groups for.
     """
     q = (
-        select(models.LabelGroup, models.LabelContributor.label_contributor_role)
-        .join(models.LabelContributor, models.LabelContributor.label_group_id == models.LabelGroup.label_group_id)
+        select(models.LabelGroup, novel_models.NovelContributor.contributor_role)
+        .outerjoin(
+            novel_models.NovelContributor,
+            and_(
+                novel_models.NovelContributor.novel_id == models.LabelGroup.novel_id,
+                novel_models.NovelContributor.user_id == current_user.user_id,
+            ),
+        )
         .where(models.LabelGroup.novel_id == novel_id)
-        .where(models.LabelContributor.user_id == current_user.user_id)
     )
     q = label_group_mod_access_select(q, current_user)
     result = await db.execute(q)
     result_rows = result.all()
     out: list[schemas.LabelGroupWithRole] = []
-    for lg, r in result_rows:
+    for lg, contributor_role in result_rows:
         label_group: models.LabelGroup = lg
-        role: LabelRole = r
+        if current_user.user_type == UserType.ADMIN:
+            role = LabelRole.OWNER
+        elif contributor_role is not None:
+            role = _NOVEL_ROLE_TO_LABEL_ROLE[contributor_role]
+        else:
+            role = LabelRole.VIEWER
         out.append(schemas.LabelGroupWithRole(label_group=label_group, role=role))
 
     return out
@@ -132,7 +150,7 @@ async def query_label_datas(
             .scalar_subquery()
         )
     )
-    q = label_group_mod_access_select(q, current_user)
+    q = label_data_mod_access_select(q, current_user)
     if start is not None:
         q = q.where(novel_models.Chapter.chapter_num >= start)
     if end is not None:
@@ -248,14 +266,6 @@ async def insert_label_group(
     try:
         result = await db.execute(stmt)
         label_group = result.scalar_one()
-        stmt = insert(models.LabelContributor).values(
-            {
-                "label_group_id": label_group.label_group_id,
-                "user_id": current_user.user_id,
-                "label_contributor_role": LabelRole.OWNER,
-            }
-        )
-        await db.execute(stmt)
         await db.commit()
     except IntegrityError as e:
         await db.rollback()

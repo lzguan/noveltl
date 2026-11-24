@@ -166,6 +166,23 @@ services:
     profiles:
       - manual
 
+  # Sends delayed translation polls to the queue when due. Run exactly one.
+  translations-scheduler:
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-translations-worker:${IMAGE_TAG:-latest}
+    pull_policy: always
+    command: ["uv", "run", "--no-sync", "taskiq", "scheduler", "src.translations.broker:scheduler", "--update-interval", "5"]
+    depends_on:
+      - redis
+    environment:
+      <<: [*db-env, *redis-env]
+      UV_COMPILE_BYTECODE: "0"
+      SECRET_KEY: ${SECRET_KEY} # shared config validates this on startup
+    volumes:
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+    profiles:
+      - manual
+
   backend:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-backend-dev:${DEV_IMAGE_TAG:-latest}
     pull_policy: always

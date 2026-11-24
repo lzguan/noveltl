@@ -15,7 +15,7 @@ as optional context by translation prompts.
 | Action discovery and form metadata | [metadata.py](../../backend/src/translations/metadata.py) |
 | Job/stage/batch/task persistence and pinned chapters | [models.py](../../backend/src/translations/models.py), [tasks/jobs.py](../../backend/src/translations/tasks/jobs.py) |
 | Controls and dispatch reporting | [service.py](../../backend/src/translations/service.py) |
-| Worker callback contract, step specs, and wrappers | [actions.py](../../backend/src/translations/actions/actions.py), [celery_actions.py](../../backend/src/translations/actions/execution/celery_actions.py) |
+| Worker callback contract, step specs, and wrappers | [actions.py](../../backend/src/translations/actions/actions.py), [execution/](../../backend/src/translations/actions/execution/) |
 | Claimed step execution and next-stage handoff | [runner.py](../../backend/src/translations/actions/execution/runner.py) |
 | Lease ownership | [claims.py](../../backend/src/translations/tasks/claims.py) |
 | Normalized data, JSONL, output completeness | [records.py](../../backend/src/translations/records.py), [jsonl.py](../../backend/src/translations/jsonl.py), [validation.py](../../backend/src/translations/validation.py) |
@@ -33,19 +33,36 @@ Step bodies are async: `ActionTaskContext.db` is an `AsyncSession`,
 memory selection are async-generator pipelines (`src/lib/aiter.py` holds
 `achain`, `azip_longest`, `agroupby`, `as_async_iter`). `iter_batch_memories`
 streams with `db.stream(...)`; nothing else may query that session until the
-stream closes. Batch clients are async and open their HTTP client per operation,
-because Celery runs each step in its own `asyncio.run` loop on a `NullPool`
-engine (`CelerySessionLocal`); blocking `apply_async` runs in `asyncio.to_thread`.
+stream closes. Batch clients are async and open their HTTP client per operation
+(the Celery path runs each step in its own `asyncio.run` loop).
 OpenRouter streams its upload body, so `content()` keeps renewing during the
 upload. Qwen spools `content()` to a temp file first (the SDK reads files
 synchronously), then uploads in one await with no renewal: that upload must fit
 within the submit lease.
 
-Tests run Celery tasks through `test_support/steps.py` (`celery_step`), which calls
-the task in `asyncio.to_thread` because its `asyncio.run` cannot nest in the test loop. Mock side effects
-on `apply_async` run in a worker thread, so they read with the sync session. Scenario
-fixture rows belong to the sync `test_db`; load them into `async_test_db` before
-editing.
+Steps run on taskiq ([broker.py](../../backend/src/translations/broker.py),
+[taskiq_actions.py](../../backend/src/translations/actions/execution/taskiq_actions.py)):
+queue `translations` on `TRANSLATIONS_DATABASE`, messages carry the task ID as a
+string, one worker process with `--max-async-tasks 16` on a pooled engine of
+16+16 connections. A step holds its transaction connection for the whole callback,
+provider I/O included, and `renew_lease` takes a second one, so the pool is 2x the
+task limit; raising the task limit needs a bigger pool or steps that release the
+connection while awaiting providers. Pending polls go through `schedule_by_time`
+into a `ListRedisScheduleSource` (prefix `translations-schedules`); the
+`translations-scheduler` compose service (worker image, `taskiq scheduler
+--update-interval 5`, run exactly one) sends them when due. The list source reads
+only the current minute's bucket per reload; a schedule written into a minute
+after its last reload is delivered because every reload also rereads past buckets
+(pinned by `test_schedule_source_rereads_past_minutes_on_every_reload`). Never
+send a poll early: the claim gate drops it and the chain ends. Each action module
+constructs `TaskiqActionCallbacks(broker, schedule_source, ACTION_CALLBACKS)`;
+[celery_actions.py](../../backend/src/translations/actions/execution/celery_actions.py)
+is kept (switch those three lines and the worker image CMD). Cutover from Celery:
+drain pending Celery translation messages first, or `resume` affected jobs.
+
+Tests patch `kiq` / `schedule_by_time` on `test_support/steps.py`'s `step_task(name)`
+and run a step's body in place with `run_step(name)`. Scenario fixture rows belong
+to the sync `test_db`; load them into `async_test_db` before editing.
 
 ## Streams, signatures, and full-state artifacts
 
@@ -188,10 +205,10 @@ Each action module defines public step callbacks (`translate.prepare(context)`
 etc.) and exports them as a `STEPS` tuple of `StepSpec`/`PollSpec` (task name,
 expect/during/finish states, lease, poll interval). The module registers the
 tuple on its `callbacks` with `register_steps`, so another `ActionCallbacks`
-implementation can register the same specs. The Celery tasks are not bound to
-module names: reach one by its registered name, e.g.
-`app.tasks[TRANSLATE_PREPARE](task_id)` with names from `task_names.py`. Dispatch
-stays in `CeleryActionCallbacks`; `run_claimed_step` (claim, run, finish or
+implementation can register the same specs. Task names are constants in
+`task_names.py` (the dotted paths of the original modules; keep them stable,
+queued messages use them). Dispatch stays in the callbacks classes;
+`run_claimed_step` (claim, run, finish or
 fail; returns `unclaimed`/`advanced`/`pending`) and `ready_next_task` (mark the
 next stage's task READY) take a session factory and contain no dispatch.
 

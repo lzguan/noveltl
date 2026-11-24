@@ -972,19 +972,16 @@ wheels = [
 name = "noveltl-dev"
 version = "0.1.0"
 source = { editable = "." }
-default-groups = ["agent", "backend", "dev", "tagent", "worker"]
+default-groups = ["agent", "backend", "celery", "dev", "tagent", "taskiq", "worker"]
 dependencies = [
     { name = "aiobotocore" },
     { name = "alembic" },
     { name = "boto3" },
-    { name = "celery", extra = ["redis"] },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "redis", extra = ["hiredis"] },
     { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "taskiq" },
-    { name = "taskiq-redis" },
 ]
 
 [package.dev-dependencies]
@@ -998,6 +995,9 @@ backend = [
     { name = "pyjwt" },
     { name = "python-multipart" },
     { name = "uvicorn" },
+]
+celery = [
+    { name = "celery", extra = ["redis"] },
 ]
 dev = [
     { name = "celery-types" },
@@ -1014,6 +1014,10 @@ tagent = [
     { name = "httpx2" },
     { name = "openai" },
 ]
+taskiq = [
+    { name = "taskiq" },
+    { name = "taskiq-redis" },
+]
 worker = [
     { name = "hf" },
     { name = "torch", version = "2.15.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
@@ -1026,14 +1030,11 @@ requires-dist = [
     { name = "aiobotocore", specifier = ">=3.10.0" },
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "boto3", specifier = ">=1.43.93" },
-    { name = "celery", extras = ["redis"], specifier = ">=5.6.3" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
     { name = "pydantic", specifier = ">=2.14.0" },
     { name = "pydantic-settings", specifier = ">=2.16.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=6.4.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.6" },
-    { name = "taskiq", specifier = ">=0.13.0" },
-    { name = "taskiq-redis", specifier = ">=1.2.4" },
 ]
 
 [package.metadata.requires-dev]
@@ -1046,6 +1047,7 @@ backend = [
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
+celery = [{ name = "celery", extras = ["redis"], specifier = ">=5.6.3" }]
 dev = [
     { name = "celery-types", specifier = ">=0.26.0" },
     { name = "coverage", specifier = ">=7.0.0" },
@@ -1060,6 +1062,10 @@ dev = [
 tagent = [
     { name = "httpx2", specifier = ">=2.16.0" },
     { name = "openai", specifier = ">=3.42.0" },
+]
+taskiq = [
+    { name = "taskiq", specifier = ">=0.13.0" },
+    { name = "taskiq-redis", specifier = ">=1.2.4" },
 ]
 worker = [
     { name = "hf", specifier = ">=2.4.0" },

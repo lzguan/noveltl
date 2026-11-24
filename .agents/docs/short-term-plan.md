@@ -51,7 +51,15 @@ Autolabel inference dispatch still uses the Celery dispatcher. Remaining: slice 
   clients, storage, inputs, `create_job` and all tests on async sessions;
   `src/streaming.py` deleted. Known limit: the Qwen upload runs without lease
   renewal (see chapter-translation notes); add a renew hook to `create_batch_job`
-  if uploads approach the 300 s submit lease. Next: PR B.
+  if uploads approach the 300 s submit lease.
+- Slice 2 PR B on `feature/translations-taskiq`: taskiq worker and scheduler,
+  `celery` / `taskiq` dependency groups per image (only the API syncs both).
+  Next: load test and profile against the pooled engine.
+- Future option (2026-11-24): release the step's connection while awaiting provider
+  I/O. Today `run_claimed_step` keeps one transaction open across the callback, so
+  concurrency per worker is bounded by connections (2 per step), long idle-in-
+  transaction sessions hold back vacuum, and PgBouncer transaction pooling would
+  not help. Needs a step-contract change (the wrapper owns the transaction).
 - Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
   `de11687` in `translations/actions/execution/celery_actions.py` and
   `translations/clients/sync_client.py`.
@@ -179,11 +187,6 @@ the analytics store as a `reader_feedback.v1` kind.
 
 ## Smaller follow-ups
 
-- Dependency groups (user request, 2026-11-24): `celery[redis]`, `taskiq` and
-  `taskiq-redis` are all base `dependencies` in `backend/pyproject.toml`, so every
-  image installs both queues. After the translations taskiq cutover, move each into
-  the groups whose images use it (Celery: autolabel inference and filters workers;
-  taskiq: API, jobs, memory-agent and translations workers).
 - Bulk chapter upload: defer the import to the jobs worker; until then the parse
   runs in `asyncio.to_thread`. Return 422 via `RequestValidationError` with
   `e.errors(include_input=False, include_url=False)` instead of echoing the

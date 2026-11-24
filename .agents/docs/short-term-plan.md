@@ -47,20 +47,17 @@ Autolabel inference dispatch still uses the Celery dispatcher. Remaining: slice 
   (`RedisScheduleSource` + `taskiq scheduler` service), broker on `TRANSLATIONS_DATABASE`,
   Celery still selectable, in-process `AsyncActionCallbacks` kept. Lease semantics
   unchanged (cooperative renewal between awaits).
-- End of slice 2 PR A: if nothing uses `buffered_reader` / `IterReader`
-  (`src/streaming.py`) by then, delete them and `tests/test_streaming.py`. The Qwen
-  upload, their last caller, now spools to a temp file (user decision, 2026-11-23).
+- Slice 2 PR A done on `feature/translations-async-steps` (2026-11-23): steps,
+  clients, storage, inputs, `create_job` and all tests on async sessions;
+  `src/streaming.py` deleted. Known limit: the Qwen upload runs without lease
+  renewal (see chapter-translation notes); add a renew hook to `create_batch_job`
+  if uploads approach the 300 s submit lease. Next: PR B.
 - Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
   `de11687` in `translations/actions/celery_actions.py` and
   `translations/clients/sync_client.py`.
   Open question for slice 2: an async taskiq worker already runs many translation jobs in
   one process; decide whether the in-process `AsyncActionCallbacks` path stays (then a
   shared translation kernel is needed) or the worker becomes the only runner.
-- When the translations worker moves to async sessions (slice 2), fold
-  `conventions_statement` back into `read_conventions`
-  (`src/memory/plugins/conventions/access.py`) and have
-  `src/translations/actions/common/inputs.py` await `read_conventions` directly. The
-  helper exists only because that worker is still sync (user request, 2026-11-23).
 - Future option (discussed 2026-11-23, not needed now): per-tool sessions. Replace the
   shared `MemAgentDeps.db` with a session factory; `tool_transaction` opens one session
   per call. Removes shared-session hazards and would allow parallel tool calls, but needs

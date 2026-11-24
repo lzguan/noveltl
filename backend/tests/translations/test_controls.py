@@ -1,8 +1,6 @@
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Event
-from time import monotonic, sleep
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
@@ -25,8 +23,10 @@ from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
 
 
-def make_job(db: Session, scenario: DatabaseScenario, *, loaded: bool = True) -> tuple[UUID, list[TranslationTask]]:
-    job_id = create_job(
+async def make_job(
+    db: AsyncSession, scenario: DatabaseScenario, *, loaded: bool = True
+) -> tuple[UUID, list[TranslationTask]]:
+    job_id = await create_job(
         db,
         TranslationJobCreate.model_validate(
             {
@@ -37,7 +37,7 @@ def make_job(db: Session, scenario: DatabaseScenario, *, loaded: bool = True) ->
         ),
     )
     tasks = list(
-        db.scalars(
+        await db.scalars(
             select(TranslationTask)
             .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
             .where(TranslationStage.job_id == job_id)
@@ -48,7 +48,7 @@ def make_job(db: Session, scenario: DatabaseScenario, *, loaded: bool = True) ->
         # Most tests exercise controls on the user's stages, so the loader has already finished.
         loader, *tasks = tasks
         loader.status, tasks[0].status = State.COMPLETE, State.READY
-        db.commit()
+        await db.commit()
     return job_id, tasks
 
 
@@ -74,30 +74,32 @@ def test_registered_steps_resolve_recovery_boundaries(state: State, expected: St
 
 
 async def test_cancel_fences_worker_and_retry_preserves_provider_output(
-    test_db: Session,
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    job_id, (current, following) = make_job(test_db, sample_scenario)
+    job_id, (current, following) = await make_job(async_test_db, sample_scenario)
     user = sample_scenario.users["admin"]
     token = uuid4()
     current.status, current.provider_batch_id, current.provider_output_id = State.FINALIZING, "provider", "output"
     current.claim_token = token
-    current.claim_expires_at = test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=5)
-    test_db.commit()
+    current.claim_expires_at = await async_test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=5)
+    await async_test_db.commit()
     # The operator can cancel a live worker. Its token must no longer commit.
     cancelled = await control_translation_job(async_test_db, user, job_id, "cancel", batch_id=current.batch_id)
     assert cancelled.affected_batch_ids == [current.batch_id]
-    test_db.refresh(current)
-    test_db.refresh(following)
+    await async_test_db.refresh(current)
+    await async_test_db.refresh(following)
     assert current.claim_token is None and current.status == State.FINALIZING and current.failed_at is not None
     assert following.failed_at is not None and following.status == State.WAITING
-    with testing_session_local.begin() as db, pytest.raises(TranslationClaimLostError):
-        finish_claim(db, current.task_id, token, during=State.FINALIZING, finish=State.COMPLETE)
+    async with testing_async_session_local.begin() as db:
+        with pytest.raises(TranslationClaimLostError):
+            await finish_claim(db, current.task_id, token, during=State.FINALIZING, finish=State.COMPLETE)
     assert not (await control_translation_job(async_test_db, user, job_id, "resume")).affected_batch_ids
 
+    # Celery's apply_async runs in a worker thread, so the observer reads synchronously.
     def observe(*args: object, **kwargs: object) -> None:
         with testing_session_local() as db:
             task = db.get(TranslationTask, current.task_id)
@@ -114,27 +116,26 @@ async def test_cancel_fences_worker_and_retry_preserves_provider_output(
 
 
 async def test_resume_skips_live_claim_then_resumes_expired_poll_and_reports_broker_failure(
-    test_db: Session,
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    job_id, (current, _) = make_job(test_db, sample_scenario)
+    job_id, (current, _) = await make_job(async_test_db, sample_scenario)
     current.status, current.provider_batch_id = State.PROCESSING, "provider"
     current.claim_token = uuid4()
-    current.claim_expires_at = test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=5)
-    test_db.commit()
+    current.claim_expires_at = await async_test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=5)
+    await async_test_db.commit()
     queued = Mock(side_effect=ConnectionError("broker unavailable"))
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.poll"], "apply_async", queued)
     user = sample_scenario.users["admin"]
     for operation in ("resume", "retry"):
         assert not (await control_translation_job(async_test_db, user, job_id, operation)).affected_batch_ids
     queued.assert_not_called()
-    current.claim_expires_at = test_db.scalar(select(func.clock_timestamp())) - timedelta(seconds=1)
-    test_db.commit()
+    current.claim_expires_at = await async_test_db.scalar(select(func.clock_timestamp())) - timedelta(seconds=1)
+    await async_test_db.commit()
     result = await control_translation_job(async_test_db, user, job_id, "resume")
     assert result.dispatch_failed_task_ids == [current.task_id] and not result.dispatched_task_ids
-    test_db.refresh(current)
+    await async_test_db.refresh(current)
     assert current.claim_token is None and current.failed_at is None and current.status == State.PROCESSING
     queued.side_effect = None
     assert (await control_translation_job(async_test_db, user, job_id, "resume")).dispatched_task_ids == [
@@ -143,24 +144,24 @@ async def test_resume_skips_live_claim_then_resumes_expired_poll_and_reports_bro
 
 
 async def test_cancel_fences_inflight_exitpoint(
-    test_db: Session,
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    job_id, (current, following) = make_job(test_db, sample_scenario)
+    job_id, (current, following) = await make_job(async_test_db, sample_scenario)
     current.status = State.COMPLETE
-    test_db.commit()
+    await async_test_db.commit()
     current_id = current.task_id
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
+    monkeypatch.setattr("src.translations.actions.celery_actions.CelerySessionLocal", testing_async_session_local)
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
+    # Hold the next task's row lock so the exitpoint blocks inside its READY update.
     await async_test_db.execute(
         update(TranslationTask).where(TranslationTask.task_id == following.task_id).values(error="pending cancel")
     )
     entered = Event()
-    engine = testing_session_local.kw["bind"]
+    engine = testing_async_session_local.kw["bind"].sync_engine
 
     def observe(conn, cursor, statement, parameters, context, executemany):
         if statement.startswith("UPDATE translation_tasks") and parameters.get("status") == State.READY:
@@ -168,68 +169,67 @@ async def test_cancel_fences_inflight_exitpoint(
 
     event.listen(engine, "before_cursor_execute", observe)
     try:
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            worker = pool.submit(translate.callbacks.exitpoint, current_id)
-            try:
-                assert entered.wait(5)
-                await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "cancel")
-            finally:
-                await async_test_db.rollback()  # Release the lock even if the test fails.
-            worker.result(timeout=5)
+        worker = asyncio.create_task(translate.callbacks.exitpoint(current_id))
+        try:
+            async with asyncio.timeout(5):
+                while not entered.is_set():
+                    await asyncio.sleep(0.01)
+            await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "cancel")
+        finally:
+            await async_test_db.rollback()  # Release the lock even if the test fails.
+        await asyncio.wait_for(worker, 5)
     finally:
         event.remove(engine, "before_cursor_execute", observe)
-    test_db.refresh(following)
+    await async_test_db.refresh(following)
     assert following.status == State.WAITING and following.failed_at is not None
     queued.assert_not_called()
 
 
 async def test_controls_isolate_batches_and_resume_later_stage(
-    test_db: Session,
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    job_id, (first, second) = make_job(test_db, sample_scenario)
+    job_id, (first, second) = await make_job(async_test_db, sample_scenario)
     other_batch = TranslationBatch(job_id=job_id, batch_num=1)
-    test_db.add(other_batch)
-    test_db.flush()
+    async_test_db.add(other_batch)
+    await async_test_db.flush()
     completed = TranslationTask(batch_id=other_batch.batch_id, stage_id=first.stage_id, status=State.COMPLETE)
     waiting = TranslationTask(batch_id=other_batch.batch_id, stage_id=second.stage_id, status=State.WAITING)
-    test_db.add_all([completed, waiting])
-    test_db.commit()
+    async_test_db.add_all([completed, waiting])
+    await async_test_db.commit()
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
     user = sample_scenario.users["admin"]
     await control_translation_job(async_test_db, user, job_id, "cancel", batch_id=first.batch_id)
     resumed = await control_translation_job(async_test_db, user, job_id, "resume")
     assert resumed.dispatched_task_ids == [waiting.task_id]
-    test_db.refresh(waiting)
+    await async_test_db.refresh(waiting)
     assert waiting.status == State.READY and waiting.failed_at is None
-    test_db.refresh(first)
+    await async_test_db.refresh(first)
     assert first.failed_at is not None
     waiting.status = State.COMPLETE
-    test_db.commit()
+    await async_test_db.commit()
     retried = await control_translation_job(async_test_db, user, job_id, "retry")
     assert retried.dispatched_task_ids == [first.task_id]
     assert retried.affected_batch_ids == [first.batch_id]
 
 
 async def test_retry_preparation_discards_stale_provider_ids(
-    test_db: Session,
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    job_id, (task, _) = make_job(test_db, sample_scenario)
+    job_id, (task, _) = await make_job(async_test_db, sample_scenario)
     task.status = State.PREPARING
-    task.failed_at = test_db.scalar(select(func.clock_timestamp()))
+    task.failed_at = await async_test_db.scalar(select(func.clock_timestamp()))
     task.provider_batch_id, task.provider_output_id = "old-job", "old-output"
-    test_db.commit()
+    await async_test_db.commit()
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
     result = await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "retry")
     assert result.dispatched_task_ids == [task.task_id]
-    test_db.refresh(task)
+    await async_test_db.refresh(task)
     assert task.status == State.READY and task.provider_batch_id is None and task.provider_output_id is None
 
 
@@ -273,8 +273,8 @@ def test_router_controls_and_permissions(
 
 
 @pytest.mark.parametrize("operation", ["start", "resume", "retry"])
-def test_control_does_not_overwrite_concurrent_worker_claim(
-    test_db: Session,
+async def test_control_does_not_overwrite_concurrent_worker_claim(
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
@@ -284,13 +284,13 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
     # recheck ownership after waiting, so the worker keeps its lease and work.
     # Start only dispatches a batch's first stage, which is the loader.
     starting = operation == "start"
-    job_id, (task, *_) = make_job(test_db, sample_scenario, loaded=not starting)
+    job_id, (task, *_) = await make_job(async_test_db, sample_scenario, loaded=not starting)
     task_id, token = task.task_id, uuid4()
     user = sample_scenario.users["admin"]
     queued = Mock()
     step, claimed = ("load_inputs.load", State.FINALIZING) if starting else ("translate.prepare", State.PREPARING)
     monkeypatch.setattr(app.tasks[f"src.translations.actions.{step}"], "apply_async", queued)
-    test_db.execute(
+    await async_test_db.execute(
         update(TranslationTask)
         .where(TranslationTask.task_id == task_id)
         .values(
@@ -299,36 +299,33 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
             claim_expires_at=func.clock_timestamp() + timedelta(minutes=5),
         )
     )
-    started = Event()
     backend_pids: list[int] = []
 
     async def control():
         async with testing_async_session_local() as db:
             backend_pids.append(await db.scalar(select(func.pg_backend_pid())))
-            started.set()
             return await control_translation_job(db, user, job_id, operation)
 
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(lambda: asyncio.run(control()))
-        try:
-            assert started.wait(5)
-            deadline = monotonic() + 5
-            while not test_db.scalar(select(func.cardinality(func.pg_blocking_pids(backend_pids[0])) > 0)):
-                assert monotonic() < deadline, "Control did not reach the contested UPDATE"
-                sleep(0.01)
-            test_db.commit()
-        finally:
-            test_db.rollback()
-        result = future.result(timeout=5)
+    controlling = asyncio.create_task(control())
+    try:
+        async with asyncio.timeout(5):
+            while not backend_pids:
+                await asyncio.sleep(0.01)
+            blocked = select(func.cardinality(func.pg_blocking_pids(backend_pids[0])) > 0)
+            while not await async_test_db.scalar(blocked):
+                await asyncio.sleep(0.01)
+        await async_test_db.commit()
+    finally:
+        await async_test_db.rollback()
+    result = await asyncio.wait_for(controlling, 5)
     assert result.dispatched_task_ids == []
-    test_db.refresh(task)
+    await async_test_db.refresh(task)
     assert task.status == claimed and task.claim_token == token
     queued.assert_not_called()
 
 
 @pytest.mark.parametrize("operation", ["resume", "retry"])
 async def test_recovery_schedules_poll_at_persisted_deadline(
-    test_db: Session,
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
@@ -336,12 +333,12 @@ async def test_recovery_schedules_poll_at_persisted_deadline(
 ) -> None:
     # Job controls provide recovery after lost queue delivery; the replacement
     # must survive until the deadline without bypassing the polling interval.
-    job_id, (task, _) = make_job(test_db, sample_scenario)
+    job_id, (task, _) = await make_job(async_test_db, sample_scenario)
     task.status = State.PROCESSING
     task.provider_batch_id = "provider-job"
-    deadline = test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=1)
+    deadline = await async_test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=1)
     task.next_poll_at = deadline
-    test_db.commit()
+    await async_test_db.commit()
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.poll"], "apply_async", queued)
     for _ in range(2):
@@ -352,15 +349,15 @@ async def test_recovery_schedules_poll_at_persisted_deadline(
         args, kwargs = queued.call_args
         assert args == ((task.task_id,),)
         assert list(kwargs) == ["countdown"] and 0 < kwargs["countdown"] <= 60
-        test_db.refresh(task)
+        await async_test_db.refresh(task)
         assert task.next_poll_at == deadline
 
     # If retry has to rebuild input, that old provider's deadline is irrelevant.
     task.provider_batch_id = None
-    test_db.commit()
+    await async_test_db.commit()
     prepare = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", prepare)
     await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, "retry")
-    test_db.refresh(task)
+    await async_test_db.refresh(task)
     assert task.status == State.READY and task.next_poll_at is None
     prepare.assert_called_once_with((task.task_id,))

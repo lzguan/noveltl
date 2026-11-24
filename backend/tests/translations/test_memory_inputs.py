@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from sqlalchemy import event, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.memory.models import Memory, MemoryGroup
@@ -10,11 +11,13 @@ from src.translations.actions.common.memory_inputs import iter_batch_memories
 from src.translations.models import TranslationBatch
 from src.translations.schemas import TranslationJobCreate
 from src.translations.tasks.jobs import create_job
+from test_support.aiter import alist
 from test_support.test_data.scenarios import DatabaseScenario
 
 
-def test_batch_candidates_respect_boundaries_filters_and_use_one_query(
+async def test_batch_candidates_respect_boundaries_filters_and_use_one_query(
     test_db: Session,
+    async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
 ) -> None:
     # Preparation needs stable chapter-local indices and all chapters, even when
@@ -59,8 +62,10 @@ def test_batch_candidates_respect_boundaries_filters_and_use_one_query(
             )
         )
     test_db.commit()
-    job_id = create_job(
-        test_db,
+    group_id = group.memory_group_id
+    foreign_group_id = foreign_group.memory_group_id
+    job_id = await create_job(
+        async_test_db,
         TranslationJobCreate.model_validate(
             {
                 "novel_id": novel.novel_id,
@@ -70,32 +75,35 @@ def test_batch_candidates_respect_boundaries_filters_and_use_one_query(
             }
         ),
     )
-    batch_id = test_db.scalars(select(TranslationBatch.batch_id).where(TranslationBatch.job_id == job_id)).one()
-    group_id = group.memory_group_id
+    batch_id = (
+        await async_test_db.scalars(select(TranslationBatch.batch_id).where(TranslationBatch.job_id == job_id))
+    ).one()
     chapter_ids = [chapter.chapter_id, second.chapter_id]
     statements: list[str] = []
 
     def record_query(conn, cursor, statement, parameters, context, executemany):
         statements.append(statement)
 
-    connection = test_db.connection()
+    connection = (await async_test_db.connection()).sync_connection
     event.listen(connection, "before_cursor_execute", record_query)
     try:
-        records = list(iter_batch_memories(test_db, job_id=job_id, batch_id=batch_id, memory_group_id=group_id))
+        records = await alist(
+            iter_batch_memories(async_test_db, job_id=job_id, batch_id=batch_id, memory_group_id=group_id)
+        )
     finally:
         event.remove(connection, "before_cursor_execute", record_query)
     assert len(statements) == 1
     assert [record.chapter_id for record in records] == chapter_ids
     assert [[m.memory_content for m in record.payload] for record in records] == [["prior"], ["same", "prior"]]
-    included = list(
+    included = await alist(
         iter_batch_memories(
-            test_db, job_id=job_id, batch_id=batch_id, memory_group_id=group_id, exclude_current_chapter=False
+            async_test_db, job_id=job_id, batch_id=batch_id, memory_group_id=group_id, exclude_current_chapter=False
         )
     )
     assert [m.memory_content for m in included[0].payload] == ["same", "prior"]
-    filtered = list(
+    filtered = await alist(
         iter_batch_memories(
-            test_db,
+            async_test_db,
             job_id=job_id,
             batch_id=batch_id,
             memory_group_id=group_id,
@@ -104,13 +112,15 @@ def test_batch_candidates_respect_boundaries_filters_and_use_one_query(
         )
     )
     assert [[m.memory_content for m in r.payload] for r in filtered] == [[], ["same"]]
-    empty = list(
-        iter_batch_memories(test_db, job_id=job_id, batch_id=batch_id, memory_group_id=group_id, memory_types=[])
+    empty = await alist(
+        iter_batch_memories(async_test_db, job_id=job_id, batch_id=batch_id, memory_group_id=group_id, memory_types=[])
     )
     assert len(empty) == 2 and all(not r.payload for r in empty)
-    assert list(iter_batch_memories(test_db, job_id=job_id, batch_id=uuid4(), memory_group_id=group_id)) == []
+    assert (
+        await alist(iter_batch_memories(async_test_db, job_id=job_id, batch_id=uuid4(), memory_group_id=group_id)) == []
+    )
 
-    foreign = list(
-        iter_batch_memories(test_db, job_id=job_id, batch_id=batch_id, memory_group_id=foreign_group.memory_group_id)
+    foreign = await alist(
+        iter_batch_memories(async_test_db, job_id=job_id, batch_id=batch_id, memory_group_id=foreign_group_id)
     )
     assert len(foreign) == 2 and all(not r.payload for r in foreign)

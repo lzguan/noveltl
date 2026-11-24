@@ -1,15 +1,17 @@
 import hashlib
 import uuid
-from collections.abc import Generator, Iterator
-from contextlib import contextmanager
+from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import asynccontextmanager
 from io import BytesIO
 
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.files.access import create_file, fetch_file
+from src.files.async_storage import AsyncObjectWriter
 from src.files.models import StoredFile
-from src.files.storage import ObjectWriter, UploadResult
+from src.files.storage import UploadResult
+from test_support.aiter import alist
 
 
 class MemoryWriter:
@@ -24,7 +26,7 @@ class MemoryWriter:
             raise RuntimeError("upload is incomplete")
         return self._result
 
-    def write(self, data: str | bytes) -> int:
+    async def write(self, data: str | bytes) -> int:
         encoded = data.encode() if isinstance(data, str) else data
         return self.content.write(encoded)
 
@@ -38,14 +40,14 @@ class MemoryObjectStore:
         self.objects: dict[str, bytes] = {}
         self.fetched_keys: list[str] = []
 
-    @contextmanager
-    def create(
+    @asynccontextmanager
+    async def create(
         self,
         key: str,
         *,
         content_type: str,
         content_encoding: str | None = None,
-    ) -> Generator[ObjectWriter]:
+    ) -> AsyncGenerator[AsyncObjectWriter]:
         writer = MemoryWriter(key)
         yield writer
         if self.upload_error is not None:
@@ -53,19 +55,19 @@ class MemoryObjectStore:
         self.objects[key] = writer.content.getvalue()
         writer.complete()
 
-    def fetch(self, key: str, *, chunk_size: int = 1024 * 1024) -> Iterator[bytes]:
+    async def fetch(self, key: str, *, chunk_size: int = 1024 * 1024) -> AsyncIterator[bytes]:
         self.fetched_keys.append(key)
         content = self.objects[key]
         for offset in range(0, len(content), chunk_size):
             yield content[offset : offset + chunk_size]
 
 
-def test_create_file_uploads_before_adding_uncommitted_metadata(test_db: Session) -> None:
+async def test_create_file_uploads_before_adding_uncommitted_metadata(async_test_db: AsyncSession) -> None:
     store = MemoryObjectStore()
     content = b'{"custom_id":"chapter-1"}\n'
 
-    stored_file = create_file(
-        test_db,
+    stored_file = await create_file(
+        async_test_db,
         store,
         BytesIO(content),
         storage_name="default",
@@ -75,13 +77,13 @@ def test_create_file_uploads_before_adding_uncommitted_metadata(test_db: Session
     )
 
     assert store.objects[stored_file.object_key] == content
-    assert stored_file in test_db.new
+    assert stored_file in async_test_db.new
     assert stored_file.byte_size == len(content)
     assert stored_file.sha256 == hashlib.sha256(content).hexdigest()
     assert stored_file.etag == "test-etag"
 
 
-def test_failed_upload_does_not_add_a_file_or_rollback_the_caller(test_db: Session) -> None:
+async def test_failed_upload_does_not_add_a_file_or_rollback_the_caller(async_test_db: AsyncSession) -> None:
     existing = StoredFile(
         file_id=uuid.uuid4(),
         storage_name="default",
@@ -91,12 +93,12 @@ def test_failed_upload_does_not_add_a_file_or_rollback_the_caller(test_db: Sessi
         byte_size=0,
         sha256=hashlib.sha256(b"").hexdigest(),
     )
-    test_db.add(existing)
+    async_test_db.add(existing)
     store = MemoryObjectStore(upload_error=RuntimeError("object store unavailable"))
 
     with pytest.raises(RuntimeError, match="object store unavailable"):
-        create_file(
-            test_db,
+        await create_file(
+            async_test_db,
             store,
             BytesIO(b"batch input"),
             storage_name="default",
@@ -105,10 +107,10 @@ def test_failed_upload_does_not_add_a_file_or_rollback_the_caller(test_db: Sessi
             content_type="application/jsonl",
         )
 
-    assert list(test_db.new) == [existing]
+    assert list(async_test_db.new) == [existing]
 
 
-def test_fetch_file_resolves_the_recorded_object_key(test_db: Session) -> None:
+async def test_fetch_file_resolves_the_recorded_object_key(async_test_db: AsyncSession) -> None:
     store = MemoryObjectStore()
     content = b"batch output"
     stored_file = StoredFile(
@@ -120,9 +122,9 @@ def test_fetch_file_resolves_the_recorded_object_key(test_db: Session) -> None:
         byte_size=len(content),
         sha256=hashlib.sha256(content).hexdigest(),
     )
-    test_db.add(stored_file)
-    test_db.flush()
+    async_test_db.add(stored_file)
+    await async_test_db.flush()
     store.objects[stored_file.object_key] = content
 
-    assert b"".join(fetch_file(test_db, store, stored_file.file_id, chunk_size=3)) == content
+    assert b"".join(await alist(fetch_file(async_test_db, store, stored_file.file_id, chunk_size=3))) == content
     assert store.fetched_keys == [stored_file.object_key]

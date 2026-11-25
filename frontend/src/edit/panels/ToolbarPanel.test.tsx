@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { updateNovelNovelsNovelIdPatch } from "@/api/endpoints/default/default";
 import { Visibility } from "@/api/models";
@@ -8,6 +9,28 @@ vi.mock("@/api/endpoints/default/default", () => ({
 }));
 
 const updateNovel = vi.mocked(updateNovelNovelsNovelIdPatch);
+
+function renderToolbar(overrides: Partial<ComponentProps<typeof ToolbarPanel>> = {}) {
+	return render(
+		<ToolbarPanel
+			novelId="novel-1"
+			novelTitle="Test Novel"
+			novelVisibility={Visibility.NUMBER_0}
+			publicChapterCount={2}
+			totalChapterCount={5}
+			currentChapterNum={null}
+			hasPreviousChapter={false}
+			hasNextChapter={false}
+			mode="view"
+			loading={false}
+			onPreviousChapter={vi.fn()}
+			onNextChapter={vi.fn()}
+			onSetMode={vi.fn()}
+			onVisibilityUpdated={vi.fn()}
+			{...overrides}
+		/>,
+	);
+}
 
 beforeEach(() => {
 	updateNovel.mockReset();
@@ -29,19 +52,7 @@ describe("ToolbarPanel", () => {
 			headers: new Headers(),
 		});
 
-		render(
-			<ToolbarPanel
-				novelId="novel-1"
-				novelTitle="Test Novel"
-				novelVisibility={Visibility.NUMBER_0}
-				publicChapterCount={2}
-				totalChapterCount={5}
-				mode="view"
-				loading={false}
-				onSetMode={vi.fn()}
-				onVisibilityUpdated={onVisibilityUpdated}
-			/>,
-		);
+		renderToolbar({ onVisibilityUpdated });
 
 		fireEvent.click(screen.getByRole("button", { name: "Novel visibility: Private" }));
 		const dialog = within(await screen.findByRole("dialog"));
@@ -74,19 +85,11 @@ describe("ToolbarPanel", () => {
 			headers: new Headers(),
 		});
 
-		render(
-			<ToolbarPanel
-				novelId="novel-1"
-				novelTitle="Test Novel"
-				novelVisibility={Visibility.NUMBER_0}
-				publicChapterCount={0}
-				totalChapterCount={3}
-				mode="view"
-				loading={false}
-				onSetMode={vi.fn()}
-				onVisibilityUpdated={onVisibilityUpdated}
-			/>,
-		);
+		renderToolbar({
+			publicChapterCount: 0,
+			totalChapterCount: 3,
+			onVisibilityUpdated,
+		});
 
 		fireEvent.click(screen.getByRole("button", { name: "Novel visibility: Private" }));
 		const dialog = within(await screen.findByRole("dialog"));
@@ -98,5 +101,93 @@ describe("ToolbarPanel", () => {
 		);
 		expect(screen.getByRole("dialog")).toBeInTheDocument();
 		expect(onVisibilityUpdated).not.toHaveBeenCalled();
+	});
+
+	it("disables chapter navigation and shows a placeholder when no chapter is open", () => {
+		const onPreviousChapter = vi.fn();
+		const onNextChapter = vi.fn();
+
+		renderToolbar({
+			currentChapterNum: null,
+			hasPreviousChapter: true,
+			hasNextChapter: true,
+			onPreviousChapter,
+			onNextChapter,
+		});
+
+		const nav = within(screen.getByRole("group", { name: "Chapter navigation" }));
+		const prevButton = nav.getByRole("button", { name: "Previous chapter" });
+		const nextButton = nav.getByRole("button", { name: "Next chapter" });
+
+		expect(nav.getByText("—")).toBeVisible();
+		expect(prevButton).toBeDisabled();
+		expect(nextButton).toBeDisabled();
+
+		fireEvent.click(prevButton);
+		fireEvent.click(nextButton);
+		expect(onPreviousChapter).not.toHaveBeenCalled();
+		expect(onNextChapter).not.toHaveBeenCalled();
+	});
+
+	it("shows the current chapter number and navigates to previous and next chapters", () => {
+		const onPreviousChapter = vi.fn();
+		const onNextChapter = vi.fn();
+
+		renderToolbar({
+			currentChapterNum: 2,
+			hasPreviousChapter: true,
+			hasNextChapter: true,
+			onPreviousChapter,
+			onNextChapter,
+		});
+
+		const nav = within(screen.getByRole("group", { name: "Chapter navigation" }));
+		const prevButton = nav.getByRole("button", { name: "Previous chapter" });
+		const nextButton = nav.getByRole("button", { name: "Next chapter" });
+
+		expect(nav.getByText("Ch. 2")).toBeVisible();
+		expect(prevButton).toBeEnabled();
+		expect(nextButton).toBeEnabled();
+
+		fireEvent.click(prevButton);
+		fireEvent.click(nextButton);
+		expect(onPreviousChapter).toHaveBeenCalledTimes(1);
+		expect(onNextChapter).toHaveBeenCalledTimes(1);
+	});
+
+	it("disables previous on the first chapter and next on the last chapter", () => {
+		const { rerender } = renderToolbar({
+			currentChapterNum: 0,
+			hasPreviousChapter: false,
+			hasNextChapter: true,
+		});
+
+		const nav = within(screen.getByRole("group", { name: "Chapter navigation" }));
+		expect(nav.getByText("Ch. 0")).toBeVisible();
+		expect(nav.getByRole("button", { name: "Previous chapter" })).toBeDisabled();
+		expect(nav.getByRole("button", { name: "Next chapter" })).toBeEnabled();
+
+		rerender(
+			<ToolbarPanel
+				novelId="novel-1"
+				novelTitle="Test Novel"
+				novelVisibility={Visibility.NUMBER_0}
+				publicChapterCount={2}
+				totalChapterCount={5}
+				currentChapterNum={5}
+				hasPreviousChapter={true}
+				hasNextChapter={false}
+				mode="view"
+				loading={false}
+				onPreviousChapter={vi.fn()}
+				onNextChapter={vi.fn()}
+				onSetMode={vi.fn()}
+				onVisibilityUpdated={vi.fn()}
+			/>,
+		);
+
+		expect(nav.getByText("Ch. 5")).toBeVisible();
+		expect(nav.getByRole("button", { name: "Previous chapter" })).toBeEnabled();
+		expect(nav.getByRole("button", { name: "Next chapter" })).toBeDisabled();
 	});
 });

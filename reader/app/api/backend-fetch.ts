@@ -1,4 +1,4 @@
-const DEFAULT_BACKEND_URL = "http://backend:8000";
+const DEFAULT_BACKEND_URL = "http://reader-api:8001";
 const TIMEOUT_MS = 10_000;
 
 export class BackendError extends Error {

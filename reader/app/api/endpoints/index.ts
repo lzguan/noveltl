@@ -1,1 +1,1 @@
-export * from './default/default';
+export * from './public/public';

@@ -12,9 +12,9 @@ export async function loader() {
 				novels: novels
 					.map((novel) => ({
 						novelId: novel.novelId,
-						novelTitle: novel.novelTitle,
-						novelAuthor: novel.novelAuthor ?? null,
-						novelDescription: novel.novelDescription ?? null,
+						novelTitle: novel.title,
+						novelAuthor: novel.author ?? null,
+						novelDescription: novel.description ?? null,
 					}))
 					.sort((a, b) => a.novelTitle.localeCompare(b.novelTitle)),
 			},

@@ -78,9 +78,9 @@ export function ChapterPanel({
 					variant={editingVisibility ? "secondary" : "ghost"}
 					size="icon-sm"
 					className="h-5 w-5"
-					aria-label="Edit chapter visibility"
+					aria-label="Manage chapter visibility"
 					aria-pressed={editingVisibility}
-					title="Edit chapter visibility"
+					title="Manage chapter visibility"
 					disabled={chapters.length === 0}
 					onClick={() => {
 						setEditingVisibility((prev) => !prev);

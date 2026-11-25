@@ -55,7 +55,7 @@ describe("ChapterPanel", () => {
 			screen.queryByRole("button", { name: "Make chapter 2 public" }),
 		).not.toBeInTheDocument();
 
-		fireEvent.click(screen.getByRole("button", { name: "Edit chapter visibility" }));
+		fireEvent.click(screen.getByRole("button", { name: "Manage chapter visibility" }));
 		fireEvent.click(screen.getByRole("button", { name: "Make chapter 2 public" }));
 
 		await waitFor(() => expect(onUpdated).toHaveBeenCalledWith([2], true));
@@ -91,7 +91,7 @@ describe("ChapterPanel", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: "Edit chapter visibility" }));
+		fireEvent.click(screen.getByRole("button", { name: "Manage chapter visibility" }));
 		fireEvent.click(screen.getByRole("button", { name: "Bulk edit…" }));
 		const dialog = within(await screen.findByRole("dialog"));
 		expect(dialog.getByText("Matches 3 of 3 chapters (1 public, 2 private).")).toBeVisible();
@@ -130,7 +130,7 @@ describe("ChapterPanel", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: "Edit chapter visibility" }));
+		fireEvent.click(screen.getByRole("button", { name: "Manage chapter visibility" }));
 		fireEvent.click(screen.getByRole("button", { name: "Bulk edit…" }));
 		const dialog = within(await screen.findByRole("dialog"));
 

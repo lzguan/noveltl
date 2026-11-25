@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Eye, Pencil, Tag, type LucideIcon } from "lucide-react";
+import { memo, useState, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight, Eye, Pencil, Tag, type LucideIcon } from "lucide-react";
 import type { Visibility } from "@/api/models";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,7 @@ const MODES: { mode: EditorMode; label: string; icon: LucideIcon }[] = [
 	{ mode: "label", label: "Label", icon: Tag },
 ];
 
-export function ToolbarPanel({
+export const ToolbarPanel = memo(function ToolbarPanel({
 	brand,
 	trailing,
 	novelId,
@@ -21,8 +21,13 @@ export function ToolbarPanel({
 	novelVisibility,
 	publicChapterCount,
 	totalChapterCount,
+	currentChapterNum,
+	hasPreviousChapter,
+	hasNextChapter,
 	mode,
 	loading,
+	onPreviousChapter,
+	onNextChapter,
 	onSetMode,
 	onVisibilityUpdated,
 }: {
@@ -33,14 +38,21 @@ export function ToolbarPanel({
 	novelVisibility: Visibility;
 	publicChapterCount: number;
 	totalChapterCount: number;
+	currentChapterNum: number | null;
+	hasPreviousChapter: boolean;
+	hasNextChapter: boolean;
 	mode: EditorMode;
 	loading: boolean;
+	onPreviousChapter: () => void;
+	onNextChapter: () => void;
 	onSetMode: (m: EditorMode) => void;
 	onVisibilityUpdated: (visibility: Visibility) => void;
 }) {
 	const [showVisibility, setShowVisibility] = useState(false);
 	const visibilityMeta = getVisibilityMeta(novelVisibility);
 	const VisibilityIcon = visibilityMeta.icon;
+	const canGoPrevious = currentChapterNum !== null && hasPreviousChapter;
+	const canGoNext = currentChapterNum !== null && hasNextChapter;
 
 	return (
 		<header className="flex h-11 min-w-0 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur">
@@ -59,6 +71,49 @@ export function ToolbarPanel({
 				{novelTitle}
 			</h1>
 			{loading && <Skeleton className="h-4 w-16 shrink-0" />}
+			<div
+				role="group"
+				aria-label="Chapter navigation"
+				className="inline-flex h-7 shrink-0 items-center rounded-md border bg-background shadow-xs"
+			>
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-xs"
+					className="h-full w-7 rounded-r-none border-r"
+					aria-label="Previous chapter"
+					title="Previous chapter"
+					disabled={!canGoPrevious}
+					onClick={onPreviousChapter}
+				>
+					<ChevronLeft className="size-3.5" aria-hidden="true" />
+				</Button>
+				<span
+					className={cn(
+						"min-w-14 px-2 text-center text-xs font-medium tabular-nums select-none",
+						currentChapterNum === null && "text-muted-foreground",
+					)}
+					title={
+						currentChapterNum === null
+							? "No chapter open"
+							: `Chapter ${currentChapterNum}`
+					}
+				>
+					{currentChapterNum === null ? "—" : `Ch. ${currentChapterNum}`}
+				</span>
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-xs"
+					className="h-full w-7 rounded-l-none border-l"
+					aria-label="Next chapter"
+					title="Next chapter"
+					disabled={!canGoNext}
+					onClick={onNextChapter}
+				>
+					<ChevronRight className="size-3.5" aria-hidden="true" />
+				</Button>
+			</div>
 			<Button
 				type="button"
 				variant="outline"
@@ -115,4 +170,4 @@ export function ToolbarPanel({
 			)}
 		</header>
 	);
-}
+});

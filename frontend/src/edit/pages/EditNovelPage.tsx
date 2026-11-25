@@ -261,11 +261,30 @@ export function EditNovelPage() {
 	}, []);
 
 	const currentChapterId = chapterState.activeChapterId;
-	const activeChapterNum =
-		currentChapterId === null
-			? null
-			: (chapterState.chapterList.find((chapter) => chapter.chapterId === currentChapterId)
-					?.chapterNum ?? null);
+	const { activeChapterNum, prevChapterId, nextChapterId } = useMemo(() => {
+		if (currentChapterId === null) {
+			return { activeChapterNum: null, prevChapterId: null, nextChapterId: null };
+		}
+		const index = chapterState.chapterList.findIndex(
+			(chapter) => chapter.chapterId === currentChapterId,
+		);
+		if (index === -1) {
+			return { activeChapterNum: null, prevChapterId: null, nextChapterId: null };
+		}
+		return {
+			activeChapterNum: chapterState.chapterList[index].chapterNum,
+			prevChapterId: chapterState.chapterList[index - 1]?.chapterId ?? null,
+			nextChapterId: chapterState.chapterList[index + 1]?.chapterId ?? null,
+		};
+	}, [chapterState.chapterList, currentChapterId]);
+	const handlePreviousChapter = useCallback(() => {
+		if (!managers || prevChapterId === null) return;
+		managers.chapterMgr.switchChapter(prevChapterId);
+	}, [managers, prevChapterId]);
+	const handleNextChapter = useCallback(() => {
+		if (!managers || nextChapterId === null) return;
+		managers.chapterMgr.switchChapter(nextChapterId);
+	}, [managers, nextChapterId]);
 	const activeChapterServerId =
 		currentChapterId === null || !managers
 			? null
@@ -386,21 +405,25 @@ export function EditNovelPage() {
 		chapterNumbers,
 	]);
 
-	const brandLink = (
-		<Link
-			to={routeTo.edit.dashboard()}
-			className="shrink-0 text-sm font-semibold tracking-tight hover:opacity-80"
-		>
-			NovelTL
-		</Link>
+	const brandLink = useMemo(
+		() => (
+			<Link
+				to={routeTo.edit.dashboard()}
+				className="shrink-0 text-sm font-semibold tracking-tight hover:opacity-80"
+			>
+				NovelTL
+			</Link>
+		),
+		[],
 	);
+	const trailingMenu = useMemo(() => <UserMenu />, []);
 
 	if (error) {
 		return (
 			<div className="flex h-screen flex-col bg-background">
 				<header className="flex h-11 shrink-0 items-center justify-between border-b px-3">
 					{brandLink}
-					<UserMenu />
+					{trailingMenu}
 				</header>
 				<div className="flex flex-1 items-center justify-center text-sm text-destructive">
 					{String(error)}
@@ -414,7 +437,7 @@ export function EditNovelPage() {
 			<div className="flex h-screen flex-col bg-background">
 				<header className="flex h-11 shrink-0 items-center justify-between border-b px-3">
 					{brandLink}
-					<UserMenu />
+					{trailingMenu}
 				</header>
 				<div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
 					Loading...
@@ -427,14 +450,19 @@ export function EditNovelPage() {
 		<div className="relative flex h-screen min-h-0 flex-col bg-background">
 			<ToolbarPanel
 				brand={brandLink}
-				trailing={<UserMenu />}
+				trailing={trailingMenu}
 				novelId={novel.novel.novelId}
 				novelTitle={novel.novel.novelTitle}
 				novelVisibility={novelVisibility ?? novel.novel.novelVisibility}
 				publicChapterCount={publicChapterCount}
 				totalChapterCount={chapterState.chapterList.length}
+				currentChapterNum={activeChapterNum}
+				hasPreviousChapter={prevChapterId !== null}
+				hasNextChapter={nextChapterId !== null}
 				mode={editorState.mode}
 				loading={!editorState.data.empty && editorState.data.loading}
+				onPreviousChapter={handlePreviousChapter}
+				onNextChapter={handleNextChapter}
 				onSetMode={editorState.setMode}
 				onVisibilityUpdated={setNovelVisibility}
 			/>

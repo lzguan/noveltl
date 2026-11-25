@@ -154,7 +154,12 @@ export type TriggerEvent =
 	| { eventType: "chapterClosed"; chapterId: CProvId }
 	| { eventType: "chapterOpenFailed"; chapterId: CProvId }
 	| { eventType: "labelDataReloading"; chapterId: CProvId; labelGroupId: LGProvId }
-	| { eventType: "labelDataOutdated"; chapterId: CProvId; labelGroupId: LGProvId }
+	| {
+			eventType: "labelDataOutdated";
+			reason: "reloadRequested" | "textChanged";
+			chapterId: CProvId;
+			labelGroupId: LGProvId;
+	  }
 	| {
 			eventType: "labelDataLoaded";
 			chapterId: CProvId;

@@ -72,9 +72,6 @@ function AppShell() {
 						>
 							NovelTL
 						</Link>
-						<span className="text-sm text-muted-foreground truncate hidden sm:block">
-							Edit chapters and manage translation labels.
-						</span>
 					</div>
 
 					<div className="flex items-center gap-2 flex-wrap">

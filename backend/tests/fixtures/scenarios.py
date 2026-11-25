@@ -11,12 +11,14 @@ from sqlalchemy.orm import Session
 
 from src.auth.constants import UserType
 from src.autolabels.models import AutoLabelRun
-from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
+from src.autolabels.promotions.processing import process_promotion_job
 from src.autolabels.schemas import CreateLabelDataByAutoLabel
+from src.autolabels.service import create_promotion_job, query_promotion_failures
 from src.datasets import Catalog, NovelDataset, load_config
 from src.datasets.materializer import materialize_latest_autolabels
 from src.labels.models import Label, LabelData
 from src.novels.constants import Role, Visibility
+from test_support.autolabels import RecordingPromotionDispatcher
 from test_support.test_data.scenarios import DatabaseScenario, PasswordHash, ScenarioBuilder
 
 
@@ -448,13 +450,21 @@ async def xianxia_labels_scenario(
     async_test_db: AsyncSession,
 ) -> DatabaseScenario:
     scenario = xianxia_autolabels_scenario
-    result = await insert_label_datas_by_autolabels(
+    created = await create_promotion_job(
         async_test_db,
         scenario.users["owner"],
+        RecordingPromotionDispatcher(),
         scenario.label_groups["labels"].label_group_id,
         CreateLabelDataByAutoLabel(run_id=scenario.autolabel_runs["cluener"].run_id),
     )
-    assert not result.errors
+    assert created.item_count == len(scenario.autolabels)
+    assert await process_promotion_job(async_test_db, created.promotion_id)
+    assert (
+        await query_promotion_failures(
+            async_test_db, scenario.users["owner"], created.promotion_id, limit=1, offset=0
+        )
+        == []
+    )
     label_datas = test_db.execute(
         select(LabelData).where(LabelData.label_group_id == scenario.label_groups["labels"].label_group_id)
     ).scalars()

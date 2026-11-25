@@ -139,19 +139,6 @@ class CreateLabelDataByAutoLabel(Model):
     skip_existing_labels: bool = True
 
 
-class CreateLabelDataByAutoLabelStatus(Model):
-    """
-    Return message for CreateLabelDataByAutoLabel.
-
-    Attributes:
-        success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.
-        errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.
-    """
-
-    success: list[tuple[uuid.UUID, uuid.UUID]]
-    errors: list[tuple[uuid.UUID, uuid.UUID, str]]
-
-
 class CreatedLabelPromotion(Model):
     promotion_id: uuid.UUID
     item_count: int

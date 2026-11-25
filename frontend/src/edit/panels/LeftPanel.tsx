@@ -4,9 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChapterPanel } from "./chapters/ChapterPanel";
 import { LabelGroupPanel } from "./labelGroups/LabelGroupPanel";
 import { TermSearchPanel, type GotoText } from "./termSearch/TermSearchPanel";
-import { useState } from "react";
+import { memo, useState } from "react";
 
-export function LeftPanel({
+export const LeftPanel = memo(function LeftPanel({
 	novelId,
 	gotoText,
 	chapters,
@@ -86,4 +86,4 @@ export function LeftPanel({
 			</TabsContent>
 		</Tabs>
 	);
-}
+});

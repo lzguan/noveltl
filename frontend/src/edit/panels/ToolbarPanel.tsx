@@ -42,7 +42,7 @@ export function ToolbarPanel({
 							type="button"
 							aria-pressed={active}
 							className={cn(
-								"inline-flex cursor-pointer items-center gap-1.5 rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+								"inline-flex cursor-pointer items-center gap-1.5 rounded-sm px-2.5 py-1 text-xs font-medium",
 								active
 									? "bg-background text-foreground shadow-xs"
 									: "text-muted-foreground hover:text-foreground",

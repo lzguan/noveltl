@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Effect } from "effect";
 import {
 	readChaptersByNovelChaptersGet,
@@ -31,7 +31,7 @@ import { AutoLabelPanel } from "../panels/autoLabels/AutoLabelPanel";
 import { EditorPanel } from "../panels/EditorPanel";
 import { LeftPanel } from "../panels/LeftPanel";
 import { TranslationsPanel } from "../panels/translations/TranslationsPanel";
-import { RightPanel } from "../panels/RightPanel";
+import { RightPanel, type RightPanelTab } from "../panels/RightPanel";
 import { ToolbarPanel } from "../panels/ToolbarPanel";
 import type { Role } from "@/api/models/role";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
@@ -255,6 +255,128 @@ export function EditNovelPage() {
 		}
 	}, []);
 
+	const currentChapterId = chapterState.activeChapterId;
+	const activeChapterNum =
+		currentChapterId === null
+			? null
+			: (chapterState.chapterList.find((chapter) => chapter.chapterId === currentChapterId)
+					?.chapterNum ?? null);
+	const activeChapterServerId =
+		currentChapterId === null || !managers
+			? null
+			: Effect.runSync(managers.controllerGetters.chapterServerId(currentChapterId));
+	const activeChapterContentServerId =
+		currentChapterId === null || !managers
+			? null
+			: Effect.runSync(managers.controllerGetters.chapterContentServerId(currentChapterId));
+
+	// Opens a server chapter and highlights a range, only if it still has the given content version.
+	const gotoText = useCallback<GotoText>(
+		(cServId, reference) => {
+			if (!managers) return;
+			const pid = Effect.runSync(managers.controllerGetters.chapterIdFromServerId(cServId));
+			if (pid === null) {
+				console.warn(`Could not find chapter for server ID ${cServId}`);
+				return;
+			}
+			managers.chapterMgr.switchChapter(pid, {
+				start: reference.start,
+				end: reference.end,
+				desiredCCId: reference.ccServId,
+			});
+		},
+		[managers],
+	);
+
+	const chapterNumbers = useMemo(
+		() => chapterState.chapterList.map((chapter) => chapter.chapterNum),
+		[chapterState.chapterList],
+	);
+
+	const novelServerId = novel?.novel.novelId ?? null;
+	const rightPanelTabs = useMemo<readonly [RightPanelTab, ...RightPanelTab[]] | null>(() => {
+		if (!managers || novelServerId === null) return null;
+		return [
+			{
+				value: "auto-labels",
+				label: "Auto Labels",
+				keepMounted: true,
+				content: (
+					<AutoLabelPanel
+						key={novelServerId}
+						novelId={novelServerId}
+						labelGroupServerId={managers.labelGroupMgr.labelGroupServerId}
+						onLabelGroupPromoted={managers.labelGroupMgr.reloadPromotedLabelGroup}
+						chapterNumByServerId={chapterNumByServerId}
+						currentChapterId={activeChapterServerId}
+						openChapterContentIds={openChapterContents.openChapterContentIds}
+						labelGroups={trackedLabelGroups.labelGroups}
+						setActive={managers.labelGroupMgr.setActive}
+						previewEnabled={autoLabelPreview.enabled}
+						previewLoading={autoLabelPreview.loading}
+						onSetPreviewEnabled={autoLabelPreview.setEnabled}
+						onSelectedRunChange={setSelectedAutoLabelRun}
+						activeId={trackedLabelGroups.activeLabelGroupId}
+					/>
+				),
+			},
+			{
+				value: "filters",
+				label: "Filters",
+				keepMounted: true,
+				content: (
+					<FiltersPanel key={novelServerId} novelId={novelServerId} gotoText={gotoText} />
+				),
+			},
+			{
+				value: "memories",
+				label: "Memories",
+				keepMounted: true,
+				content: (
+					<MemoryPanel
+						key={novelServerId}
+						novelId={novelServerId}
+						chapterId={activeChapterServerId}
+						chapterNum={activeChapterNum}
+						chapterContentId={activeChapterContentServerId}
+					/>
+				),
+			},
+			{
+				value: "memory-agent",
+				label: "Agent Jobs",
+				content: <MemoryAgentPanel novelId={novelServerId} />,
+			},
+			{
+				value: "translations",
+				label: "Translations",
+				keepMounted: true,
+				content: (
+					<TranslationsPanel
+						key={novelServerId}
+						novelId={novelServerId}
+						chapterNumbers={chapterNumbers}
+					/>
+				),
+			},
+		];
+	}, [
+		managers,
+		novelServerId,
+		chapterNumByServerId,
+		activeChapterServerId,
+		activeChapterNum,
+		activeChapterContentServerId,
+		openChapterContents.openChapterContentIds,
+		trackedLabelGroups.labelGroups,
+		trackedLabelGroups.activeLabelGroupId,
+		autoLabelPreview.enabled,
+		autoLabelPreview.loading,
+		autoLabelPreview.setEnabled,
+		gotoText,
+		chapterNumbers,
+	]);
+
 	if (error) {
 		return (
 			<div className="flex items-center justify-center h-full text-sm text-destructive">
@@ -263,41 +385,13 @@ export function EditNovelPage() {
 		);
 	}
 
-	if (!managers || !novel) {
+	if (!managers || !novel || !rightPanelTabs) {
 		return (
 			<div className="flex items-center justify-center h-full text-sm text-muted-foreground">
 				Loading...
 			</div>
 		);
 	}
-
-	const currentChapterId = chapterState.activeChapterId;
-	const activeChapterNum =
-		currentChapterId === null
-			? null
-			: (chapterState.chapterList.find((chapter) => chapter.chapterId === currentChapterId)
-					?.chapterNum ?? null);
-	const activeChapterServerId =
-		currentChapterId === null
-			? null
-			: Effect.runSync(managers.controllerGetters.chapterServerId(currentChapterId));
-	const activeChapterContentServerId =
-		currentChapterId === null
-			? null
-			: Effect.runSync(managers.controllerGetters.chapterContentServerId(currentChapterId));
-	// Opens a server chapter and highlights a range, only if it still has the given content version.
-	const gotoText: GotoText = (cServId, reference) => {
-		const pid = Effect.runSync(managers.controllerGetters.chapterIdFromServerId(cServId));
-		if (pid === null) {
-			console.warn(`Could not find chapter for server ID ${cServId}`);
-			return;
-		}
-		managers.chapterMgr.switchChapter(pid, {
-			start: reference.start,
-			end: reference.end,
-			desiredCCId: reference.ccServId,
-		});
-	};
 
 	return (
 		<div className="relative h-full min-h-0">
@@ -349,84 +443,7 @@ export function EditNovelPage() {
 							key={novel.novel.novelId}
 							novelId={novel.novel.novelId}
 						>
-							<RightPanel
-								tabs={[
-									{
-										value: "auto-labels",
-										label: "Auto Labels",
-										keepMounted: true,
-										content: (
-											<AutoLabelPanel
-												key={novel.novel.novelId}
-												novelId={novel.novel.novelId}
-												labelGroupServerId={
-													managers.labelGroupMgr.labelGroupServerId
-												}
-												onLabelGroupPromoted={
-													managers.labelGroupMgr.reloadPromotedLabelGroup
-												}
-												chapterNumByServerId={chapterNumByServerId}
-												currentChapterId={activeChapterServerId}
-												openChapterContentIds={
-													openChapterContents.openChapterContentIds
-												}
-												labelGroups={trackedLabelGroups.labelGroups}
-												setActive={managers.labelGroupMgr.setActive}
-												previewEnabled={autoLabelPreview.enabled}
-												previewLoading={autoLabelPreview.loading}
-												onSetPreviewEnabled={autoLabelPreview.setEnabled}
-												onSelectedRunChange={setSelectedAutoLabelRun}
-												activeId={trackedLabelGroups.activeLabelGroupId}
-											/>
-										),
-									},
-									{
-										value: "filters",
-										label: "Filters",
-										keepMounted: true,
-										content: (
-											<FiltersPanel
-												key={novel.novel.novelId}
-												novelId={novel.novel.novelId}
-												gotoText={gotoText}
-											/>
-										),
-									},
-									{
-										value: "memories",
-										label: "Memories",
-										keepMounted: true,
-										content: (
-											<MemoryPanel
-												key={novel.novel.novelId}
-												novelId={novel.novel.novelId}
-												chapterId={activeChapterServerId}
-												chapterNum={activeChapterNum}
-												chapterContentId={activeChapterContentServerId}
-											/>
-										),
-									},
-									{
-										value: "memory-agent",
-										label: "Agent Jobs",
-										content: <MemoryAgentPanel novelId={novel.novel.novelId} />,
-									},
-									{
-										value: "translations",
-										label: "Translations",
-										keepMounted: true,
-										content: (
-											<TranslationsPanel
-												key={novel.novel.novelId}
-												novelId={novel.novel.novelId}
-												chapterNumbers={chapterState.chapterList.map(
-													(chapter) => chapter.chapterNum,
-												)}
-											/>
-										),
-									},
-								]}
-							/>
+							<RightPanel tabs={rightPanelTabs} />
 						</MemoryGroupsProvider>
 					</div>
 				</div>

@@ -5,17 +5,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
+from src.autolabels.promotions.processing import process_promotion_job
 from src.autolabels.schemas import CreateLabelDataByAutoLabel
+from src.autolabels.service import create_promotion_job, query_promotion_failures
 from src.labels import models as label_models
+from test_support.autolabels import RecordingPromotionDispatcher
 from test_support.test_data.scenarios import DatabaseScenario
 
 logger = logging.getLogger(__name__)
 
 
-class TestInsertLabelDatasByAutolabels:
-    """Tests for insert_label_datas_by_autolabels cross-module operation."""
-
+class TestAutoLabelPromotion:
     async def test_basic(
         self,
         xianxia_autolabels_scenario: DatabaseScenario,
@@ -25,6 +25,7 @@ class TestInsertLabelDatasByAutolabels:
         run = xianxia_autolabels_scenario.autolabel_runs["cluener"]
         autolabels = xianxia_autolabels_scenario.autolabels
         label_group = xianxia_autolabels_scenario.label_groups["labels"]
+        owner = xianxia_autolabels_scenario.users["owner"]
         request = CreateLabelDataByAutoLabel(
             run_id=run.run_id,
         )
@@ -38,23 +39,23 @@ class TestInsertLabelDatasByAutolabels:
         test_db.add(preexisting_label_data)
         test_db.commit()
         test_db.refresh(preexisting_label_data)
+        preexisting_label_data_id = preexisting_label_data.label_data_id
 
-        res = await insert_label_datas_by_autolabels(
+        created = await create_promotion_job(
             async_test_db,
-            xianxia_autolabels_scenario.users["owner"],
+            owner,
+            RecordingPromotionDispatcher(),
             label_group.label_group_id,
             request,
         )
-
-        assert len(res.errors) == 0, f"Expected 0 errors, got: {res.errors}"
         expected_count = len(autolabels)
-        logger.info(
-            f"Expecting {expected_count} successes, have {len(res.success)} successes + {len(res.errors)} failures"
-        )
-        assert len(res.success) == expected_count
+        assert created.item_count == expected_count
+        assert await process_promotion_job(async_test_db, created.promotion_id)
+        failures = await query_promotion_failures(async_test_db, owner, created.promotion_id, limit=50, offset=0)
+        assert failures == [], f"Expected 0 errors, got: {failures}"
 
         source_revision_ids = {autolabel.chapter_content_id for autolabel in autolabels.values()}
-        assert {s[1] for s in res.success} == source_revision_ids
+        test_db.expire_all()
 
         label_datas_in_db = (
             test_db.execute(
@@ -66,7 +67,8 @@ class TestInsertLabelDatasByAutolabels:
             .all()
         )
         assert len(label_datas_in_db) == expected_count
-        assert any(label_data.label_data_id == preexisting_label_data.label_data_id for label_data in label_datas_in_db)
+        assert {label_data.chapter_content_id for label_data in label_datas_in_db} == source_revision_ids
+        assert any(label_data.label_data_id == preexisting_label_data_id for label_data in label_datas_in_db)
 
         source_data_map = {al.chapter_content_id: al.auto_label_data for al in autolabels.values()}
 

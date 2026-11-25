@@ -17,11 +17,11 @@ from src.autolabels.inference.celery_app import app
 from src.autolabels.inference.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.models import AutoLabel
 from src.autolabels.params import CluenerParams
-from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
+from src.autolabels.promotions.processing import process_promotion_job
 from src.autolabels.schemas import CreateAutoLabels, CreateLabelDataByAutoLabel
-from src.autolabels.service import insert_auto_labels
+from src.autolabels.service import create_promotion_job, insert_auto_labels, query_promotion_failures
 from src.labels import models as label_models
-from test_support.autolabels import DeterministicNERModel
+from test_support.autolabels import DeterministicNERModel, RecordingPromotionDispatcher
 from test_support.test_data.scenarios import DatabaseScenario
 
 logger = logging.getLogger(__name__)
@@ -133,15 +133,19 @@ class TestAutolabelEndToEnd:
 
         # 3. Promote autolabels to label data.
         promote_request = CreateLabelDataByAutoLabel(run_id=run_id)
-        promote_result = await insert_label_datas_by_autolabels(
+        created_promotion = await create_promotion_job(
             async_test_db,
             user,
+            RecordingPromotionDispatcher(),
             label_group.label_group_id,
             promote_request,
         )
-
-        assert len(promote_result.errors) == 0, f"Expected 0 promotion errors, got: {promote_result.errors}"
-        assert len(promote_result.success) == len(chapters)
+        assert created_promotion.item_count == len(chapters)
+        assert await process_promotion_job(async_test_db, created_promotion.promotion_id)
+        failures = await query_promotion_failures(
+            async_test_db, user, created_promotion.promotion_id, limit=50, offset=0
+        )
+        assert failures == [], f"Expected 0 promotion failures, got: {failures}"
 
         # 4. Verify label datas and labels are in the DB.
         label_datas = (

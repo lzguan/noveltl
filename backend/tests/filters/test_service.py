@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.autolabels.models import AutoLabelRun
-from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
+from src.autolabels.promotions.processing import process_promotion_job
 from src.autolabels.schemas import CreateLabelDataByAutoLabel
+from src.autolabels.service import create_promotion_job, query_promotion_failures
 from src.datasets import Catalog, NovelDataset, load_config
 from src.datasets.materializer import materialize_latest_autolabels
 from src.filters.data_types import (
@@ -80,6 +81,7 @@ from src.filters.service import (
 )
 from src.novels.constants import Role
 from src.schemas import Model
+from test_support.autolabels import RecordingPromotionDispatcher
 from test_support.test_data.scenarios import DatabaseScenario, PasswordHash, ScenarioBuilder
 
 
@@ -213,13 +215,16 @@ async def _create_catalog_sort_data(
         admin,
     )
     run = db.execute(select(AutoLabelRun).where(AutoLabelRun.run_id == auto_labels[0].run_id)).scalar_one()
-    promotion = await insert_label_datas_by_autolabels(
+    created_promotion = await create_promotion_job(
         async_db,
         admin,
+        RecordingPromotionDispatcher(),
         scenario.label_groups["labels"].label_group_id,
         CreateLabelDataByAutoLabel(run_id=run.run_id),
     )
-    assert not promotion.errors
+    assert created_promotion.item_count == len(auto_labels)
+    assert await process_promotion_job(async_db, created_promotion.promotion_id)
+    assert await query_promotion_failures(async_db, admin, created_promotion.promotion_id, limit=1, offset=0) == []
 
     label = Get(field_name="label", type="labelRef")
     span = Call(

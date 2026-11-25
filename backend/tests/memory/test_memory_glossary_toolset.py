@@ -10,10 +10,15 @@ from pydantic_ai.models.test import TestModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.memory.access import MemAccessContext
-from src.memory.agent.agents.recording import GLOSSARY_TOOLSET_NAMES, resolve_capabilities
+from src.memory.agent.agents.recording import (
+    GLOSSARY_TOOLSET_NAMES,
+    capability_factories_by_name,
+    resolve_capabilities,
+)
 from src.memory.agent.config import JobParamsV1 as JobParams
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.recording import MEMORY_AGENT_PROMPT
+from src.memory.agent.toolsets.conventions.tools import conventions_read_toolset
 from src.memory.agent.toolsets.glossary import common as glossary_common
 from src.memory.agent.toolsets.glossary.character_state import (
     character_state_memories,
@@ -35,6 +40,7 @@ from src.memory.agent.toolsets.glossary.facts import (
 )
 from src.memory.agent.toolsets.glossary.gender import (
     gender_memories,
+    glossary_gender_read_toolset,
     glossary_gender_write_toolset,
     new_gender_memory,
 )
@@ -44,11 +50,13 @@ from src.memory.agent.toolsets.glossary.gender_advanced_events import (
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
     gender_state,
+    glossary_gender_advanced_facts_read_toolset,
     glossary_gender_advanced_facts_write_toolset,
     new_gender_fact_memory,
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
     gender_perception_memories,
+    glossary_gender_advanced_relations_read_toolset,
     glossary_gender_advanced_relations_write_toolset,
     new_gender_perception_memory,
 )
@@ -62,7 +70,8 @@ from src.memory.agent.toolsets.glossary.relations import (
     relation_memories,
 )
 from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
-from src.memory.agent.types import ParsedToolsets
+from src.memory.agent.toolsets.translations.tools import translations_read_toolset
+from src.memory.agent.types import OccurrenceRetentionConfig, ParsedToolsets, ToolsetConfig
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.models import MemoryGroup
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryMemoryPage, AgentGlossaryTerm
@@ -790,6 +799,29 @@ def test_job_params_reject_retired_reader_names() -> None:
                 "glossary_gender_advanced_facts_read": {},
             },
         )
+
+
+def test_callable_memory_toolsets_require_sequential_execution() -> None:
+    toolsets: dict[str, FunctionToolset[MemAgentDeps]] = {
+        "conventions_read": conventions_read_toolset,
+        "translations_read": translations_read_toolset,
+        "glossary_facts_read": glossary_facts_read_toolset,
+        "glossary_gender_read": glossary_gender_read_toolset,
+        "glossary_gender_advanced_facts_read": glossary_gender_advanced_facts_read_toolset,
+        "glossary_gender_advanced_relations_read": glossary_gender_advanced_relations_read_toolset,
+    }
+    for name, factory in capability_factories_by_name.items():
+        config = OccurrenceRetentionConfig() if name == "glossary_gender_advanced_events_write" else ToolsetConfig()
+        capability = factory(config)
+        if isinstance(capability, Toolset) and isinstance(capability.toolset, FunctionToolset):
+            toolsets[name] = capability.toolset
+
+    callable_toolsets = {name: toolset for name, toolset in toolsets.items() if toolset.tools}
+    assert callable_toolsets
+    for name, toolset in callable_toolsets.items():
+        assert toolset.sequential is True, f"{name} must be sequential=True because tools share one AsyncSession"
+        for tool_name, tool in toolset.tools.items():
+            assert tool.sequential is True, f"{name}.{tool_name} must be sequential=True"
 
 
 def test_job_params_reject_unknown_toolsets_and_settings() -> None:

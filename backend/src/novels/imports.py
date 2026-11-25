@@ -1,22 +1,32 @@
 import uuid
 from collections.abc import Sequence
 
+import psycopg
+from psycopg.errors import DataError as PsycopgDataError
 from psycopg.errors import ForeignKeyViolation, UniqueViolation
 from pydantic import Field
-from sqlalchemy import VARCHAR, Boolean, Integer, Text, column, insert, select, values
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.exc import DataError, IntegrityError
+from sqlalchemy import DateTime, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.exceptions import InsufficientPermissionsException
 from src.novels.constants import MAX_CHAPTER_TITLE_LEN
 from src.novels.exceptions import ChapterNumDuplicateException, NovelNotFoundException
-from src.novels.models import Chapter, ChapterContent
-from src.novels.permissions import (
-    chapter_mod_access_insert,
-)
+from src.novels.models import Chapter
+from src.novels.permissions import chapter_mod_access_insert
 from src.schemas import Model
+
+_COPY_CHAPTERS_SQL = (
+    "COPY chapters (chapter_id, novel_id, chapter_num, chapter_title, chapter_is_public, created_at, updated_at) "
+    "FROM STDIN (FORMAT BINARY)"
+)
+_COPY_CHAPTERS_TYPES = ["uuid", "uuid", "int4", "varchar", "bool", "timestamp", "timestamp"]
+
+_COPY_CONTENTS_SQL = (
+    "COPY chapter_contents (chapter_id, chapter_content_text, chapter_content_version, created_at, updated_at) "
+    "FROM STDIN (FORMAT BINARY)"
+)
+_COPY_CONTENTS_TYPES = ["uuid", "text", "int4", "timestamp", "timestamp"]
 
 
 class ChapterUpload(Model):
@@ -47,64 +57,62 @@ async def upload_v1(
         ChapterNumDuplicateException: If a chapter with the same number already exists for the novel.
         ValueError: If the chapter title is too long.
     """
-    cols = (
-        column("novel_id", postgresql.UUID),
-        column("chapter_num", Integer),
-        column("chapter_title", VARCHAR(MAX_CHAPTER_TITLE_LEN)),
-        column("chapter_is_public", Boolean),
-    )
-    data = [
-        (
-            novel_id,
-            u.chapter_num,
-            u.chapter_title if u.chapter_title is not None else f"Chapter {u.chapter_num}",
-            u.chapter_is_public,
+    permission_q = chapter_mod_access_insert(select(cast(func.now(), DateTime)), current_user, novel_id)
+    now = (await db.execute(permission_q)).scalar_one_or_none()
+    if now is None:
+        await db.rollback()
+        raise InsufficientPermissionsException("You do not have permission to upload chapters to this novel.")
+
+    inserted_chapters = [
+        Chapter(
+            chapter_id=uuid.uuid4(),
+            novel_id=novel_id,
+            chapter_num=u.chapter_num,
+            chapter_title=u.chapter_title if u.chapter_title is not None else f"Chapter {u.chapter_num}",
+            chapter_is_public=u.chapter_is_public,
         )
         for u in request.chapters
     ]
-    vals = select(values(*cols).data(data).alias("vals"))
-    vals = chapter_mod_access_insert(vals, current_user, novel_id)
-    stmt = insert(Chapter).from_select(cols, vals).returning(Chapter)
+
     try:
-        result = await db.execute(stmt)
-        result_scalars = result.scalars().all()
-    except IntegrityError as e:
+        conn = await db.connection()
+        raw_conn = await conn.get_raw_connection()
+        driver_conn = raw_conn.driver_connection
+        if not isinstance(driver_conn, psycopg.AsyncConnection):
+            raise TypeError(f"Expected psycopg AsyncConnection, got {type(driver_conn)!r}")
+
+        async with driver_conn.cursor() as cur:
+            async with cur.copy(_COPY_CHAPTERS_SQL) as copy:
+                copy.set_types(_COPY_CHAPTERS_TYPES)
+                for chapter in inserted_chapters:
+                    await copy.write_row(
+                        (
+                            chapter.chapter_id,
+                            novel_id,
+                            chapter.chapter_num,
+                            chapter.chapter_title,
+                            chapter.chapter_is_public,
+                            now,
+                            now,
+                        )
+                    )
+            async with cur.copy(_COPY_CONTENTS_SQL) as copy:
+                copy.set_types(_COPY_CONTENTS_TYPES)
+                for chapter, upload in zip(inserted_chapters, request.chapters, strict=True):
+                    await copy.write_row((chapter.chapter_id, upload.chapter_content_text, 1, now, now))
+
+        await db.commit()
+    except ForeignKeyViolation as e:
         await db.rollback()
-        if isinstance(e.orig, ForeignKeyViolation):
-            raise NovelNotFoundException from e
-        if isinstance(e.orig, UniqueViolation):
-            raise ChapterNumDuplicateException from e
-        raise e
-    except DataError as e:
+        raise NovelNotFoundException from e
+    except UniqueViolation as e:
+        await db.rollback()
+        raise ChapterNumDuplicateException from e
+    except PsycopgDataError as e:
         await db.rollback()
         raise ValueError("Chapter title is too long") from e
-    except Exception as e:
+    except Exception:
         await db.rollback()
-        raise e
+        raise
 
-    if len(result_scalars) != len(request.chapters):
-        raise InsufficientPermissionsException("You do not have permission to upload chapters to this novel.")
-
-    num_content_dict = {u.chapter_num: u.chapter_content_text for u in request.chapters}
-    num_id_dict: dict[int, Chapter] = {chapter.chapter_num: chapter for chapter in result_scalars}
-
-    cols2 = (
-        column("chapter_id", postgresql.UUID),
-        column("chapter_content_text", Text),
-        column("chapter_content_version", Integer),
-    )
-    vals = select(
-        values(*cols2)
-        .data([(num_id_dict[num].chapter_id, num_content_dict[num], 1) for num in num_id_dict])
-        .alias("vals2")
-    )
-    stmt2 = insert(ChapterContent).from_select(cols2, vals)
-
-    try:
-        await db.execute(stmt2)
-        await db.commit()
-    except Exception as e:
-        await db.rollback()
-        raise e
-
-    return result_scalars
+    return inserted_chapters

@@ -218,16 +218,61 @@ class TestCreateChaptersByUpload:
             _chapter_upload([]),
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        errors = response.json()["detail"]
+        assert isinstance(errors, list) and len(errors) >= 1
+        assert all("input" not in err and "url" not in err for err in errors)
 
-    def test_invalid_json_upload_returns_bad_request(
+    def test_invalid_json_upload_returns_validation_error_without_echoing_body(
         self, client: TestClient, novel_access_scenario: DatabaseScenario
     ) -> None:
+        secret_snippet = "SECRET_UPLOAD_BODY_SHOULD_NOT_ECHO"
         response = _post_chapter_upload(
-            client, novel_access_scenario.users["owner"], novel_access_scenario.novels["prt"].novel_id, b'{"chapters":'
+            client,
+            novel_access_scenario.users["owner"],
+            novel_access_scenario.novels["prt"].novel_id,
+            f'{{"chapters": "{secret_snippet}'.encode(),
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert secret_snippet not in response.text
+        errors = response.json()["detail"]
+        assert all("input" not in err and "url" not in err for err in errors)
+
+    def test_bulk_upload_commits_and_rolls_back_atomically_on_existing_duplicate(
+        self,
+        client: TestClient,
+        novel_access_scenario: DatabaseScenario,
+    ) -> None:
+        novel_id = novel_access_scenario.novels["prt"].novel_id
+        owner = novel_access_scenario.users["owner"]
+
+        ok_response = _post_chapter_upload(
+            client,
+            owner,
+            novel_id,
+            _chapter_upload([{"chapterNum": 600 + i, "chapterContentText": f"Body {i}"} for i in range(5)]),
+        )
+        assert ok_response.status_code == status.HTTP_200_OK
+        assert [chapter["chapterNum"] for chapter in ok_response.json()] == [600, 601, 602, 603, 604]
+
+        # A duplicate against an existing chapter rolls back the entire COPY transaction.
+        conflict_response = _post_chapter_upload(
+            client,
+            owner,
+            novel_id,
+            _chapter_upload(
+                [
+                    {"chapterNum": 700, "chapterContentText": "New chapter 1"},
+                    {"chapterNum": 701, "chapterContentText": "New chapter 2"},
+                    {"chapterNum": 600, "chapterContentText": "Existing duplicate"},
+                ]
+            ),
+        )
+        assert conflict_response.status_code == status.HTTP_409_CONFLICT
+        chapters_response = client.get("/chapters", params={"novelId": str(novel_id)}, headers=_auth_headers(owner))
+        chapter_nums = {chapter["chapterNum"] for chapter in chapters_response.json()}
+        assert 700 not in chapter_nums and 701 not in chapter_nums
 
     def test_missing_file_field_returns_validation_error(
         self, client: TestClient, novel_access_scenario: DatabaseScenario

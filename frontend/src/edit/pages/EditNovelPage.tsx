@@ -5,7 +5,7 @@ import {
 	readLabelGroupsLabelGroupsGet,
 	readNovelWithContributorsNovelsNovelIdWithContributorsGet,
 } from "@/api/endpoints/default/default";
-import type { Chapter, LabelGroup, Novel } from "@/api/models";
+import type { Chapter, LabelGroup, Novel, Visibility } from "@/api/models";
 import type { SelectedAutoLabelRun } from "@/autolabels/runs/autoLabelRunsState";
 import { buildController } from "../controller/controller";
 import type { NovelData } from "../controller/novelDataManager";
@@ -54,6 +54,7 @@ function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]):
 
 export function EditNovelPage() {
 	const [novel, setNovel] = useState<{ novel: Novel; role: Role } | null>(null);
+	const [novelVisibility, setNovelVisibility] = useState<Visibility | null>(null);
 	const [novelId, setNovelId] = useState<string | null>(null);
 	const [chapters, setChapters] = useState<Chapter[] | null>(null);
 	const [labelGroups, setLabelGroups] = useState<LabelGroup[] | null>(null);
@@ -140,6 +141,7 @@ export function EditNovelPage() {
 			.then((resp) => {
 				if (resp.status !== 200) throw new Error(`Failed to load novel: ${resp.status}`);
 				setNovel({ novel: resp.data.novel, role: "owner" }); // temporarily owner, will change to role of user with id equal to current logged in user once user state in global store
+				setNovelVisibility(resp.data.novel.novelVisibility);
 				setError(null);
 			})
 			.then(() => readChaptersByNovelChaptersGet({ novelId }))
@@ -292,6 +294,10 @@ export function EditNovelPage() {
 		() => chapterState.chapterList.map((chapter) => chapter.chapterNum),
 		[chapterState.chapterList],
 	);
+	const publicChapterCount = useMemo(
+		() => chapterState.chapterList.filter((chapter) => chapter.chapterIsPublic).length,
+		[chapterState.chapterList],
+	);
 
 	const novelServerId = novel?.novel.novelId ?? null;
 	const rightPanelTabs = useMemo<readonly [RightPanelTab, ...RightPanelTab[]] | null>(() => {
@@ -397,10 +403,15 @@ export function EditNovelPage() {
 		<div className="relative h-full min-h-0">
 			<div className="flex h-full min-h-0 flex-col">
 				<ToolbarPanel
+					novelId={novel.novel.novelId}
 					novelTitle={novel.novel.novelTitle}
+					novelVisibility={novelVisibility ?? novel.novel.novelVisibility}
+					publicChapterCount={publicChapterCount}
+					totalChapterCount={chapterState.chapterList.length}
 					mode={editorState.mode}
 					loading={!editorState.data.empty && editorState.data.loading}
 					onSetMode={editorState.setMode}
+					onVisibilityUpdated={setNovelVisibility}
 				/>
 				<div className="flex flex-1 min-h-0 overflow-hidden">
 					<div className="w-56 border-r shrink-0 flex flex-col min-h-0">

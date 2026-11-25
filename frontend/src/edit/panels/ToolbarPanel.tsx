@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Eye, Pencil, Tag, type LucideIcon } from "lucide-react";
+import type { Visibility } from "@/api/models";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { EditorMode } from "../managers/editorManager";
+import { getVisibilityMeta, NovelVisibilityDialog } from "./NovelVisibilityDialog";
 
 const MODES: { mode: EditorMode; label: string; icon: LucideIcon }[] = [
 	{ mode: "view", label: "View", icon: Eye },
@@ -10,18 +14,32 @@ const MODES: { mode: EditorMode; label: string; icon: LucideIcon }[] = [
 ];
 
 export function ToolbarPanel({
+	novelId,
 	novelTitle,
+	novelVisibility,
+	publicChapterCount,
+	totalChapterCount,
 	mode,
 	loading,
 	onSetMode,
+	onVisibilityUpdated,
 }: {
+	novelId: string;
 	novelTitle: string;
+	novelVisibility: Visibility;
+	publicChapterCount: number;
+	totalChapterCount: number;
 	mode: EditorMode;
 	loading: boolean;
 	onSetMode: (m: EditorMode) => void;
+	onVisibilityUpdated: (visibility: Visibility) => void;
 }) {
+	const [showVisibility, setShowVisibility] = useState(false);
+	const visibilityMeta = getVisibilityMeta(novelVisibility);
+	const VisibilityIcon = visibilityMeta.icon;
+
 	return (
-		<div className="flex min-w-0 items-center gap-3 border-b px-3 py-1.5">
+		<div className="flex min-w-0 items-center gap-2 border-b px-3 py-1.5">
 			<h1
 				className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight"
 				title={novelTitle}
@@ -29,6 +47,18 @@ export function ToolbarPanel({
 				{novelTitle}
 			</h1>
 			{loading && <Skeleton className="h-4 w-16 shrink-0" />}
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				className="h-7 shrink-0 gap-1.5 px-2.5 text-xs font-medium"
+				aria-label={`Novel visibility: ${visibilityMeta.label}`}
+				title="Change novel visibility"
+				onClick={() => setShowVisibility(true)}
+			>
+				<VisibilityIcon className="size-3" aria-hidden="true" />
+				{visibilityMeta.label}
+			</Button>
 			<div
 				role="group"
 				aria-label="Editor mode"
@@ -55,6 +85,16 @@ export function ToolbarPanel({
 					);
 				})}
 			</div>
+			{showVisibility && (
+				<NovelVisibilityDialog
+					novelId={novelId}
+					currentVisibility={novelVisibility}
+					publicChapterCount={publicChapterCount}
+					totalChapterCount={totalChapterCount}
+					onUpdated={onVisibilityUpdated}
+					onClose={() => setShowVisibility(false)}
+				/>
+			)}
 		</div>
 	);
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Eye, Pencil, Tag, type LucideIcon } from "lucide-react";
 import type { Visibility } from "@/api/models";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ const MODES: { mode: EditorMode; label: string; icon: LucideIcon }[] = [
 ];
 
 export function ToolbarPanel({
+	brand,
+	trailing,
 	novelId,
 	novelTitle,
 	novelVisibility,
@@ -24,6 +26,8 @@ export function ToolbarPanel({
 	onSetMode,
 	onVisibilityUpdated,
 }: {
+	brand?: ReactNode;
+	trailing?: ReactNode;
 	novelId: string;
 	novelTitle: string;
 	novelVisibility: Visibility;
@@ -39,9 +43,17 @@ export function ToolbarPanel({
 	const VisibilityIcon = visibilityMeta.icon;
 
 	return (
-		<div className="flex min-w-0 items-center gap-2 border-b px-3 py-1.5">
+		<header className="flex h-11 min-w-0 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur">
+			{brand && (
+				<>
+					{brand}
+					<span className="shrink-0 text-sm text-muted-foreground/50" aria-hidden="true">
+						/
+					</span>
+				</>
+			)}
 			<h1
-				className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight"
+				className="min-w-0 flex-1 truncate text-sm font-medium tracking-tight"
 				title={novelTitle}
 			>
 				{novelTitle}
@@ -85,6 +97,12 @@ export function ToolbarPanel({
 					);
 				})}
 			</div>
+			{trailing && (
+				<>
+					<div className="h-4 w-px shrink-0 bg-border" aria-hidden="true" />
+					{trailing}
+				</>
+			)}
 			{showVisibility && (
 				<NovelVisibilityDialog
 					novelId={novelId}
@@ -95,6 +113,6 @@ export function ToolbarPanel({
 					onClose={() => setShowVisibility(false)}
 				/>
 			)}
-		</div>
+		</header>
 	);
 }

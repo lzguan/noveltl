@@ -29,8 +29,8 @@ export function PromotionJobsList({
 	const activeCount = jobs.filter(isActive).length;
 
 	return (
-		<Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-1 px-2">
-			<CollapsibleTrigger className="flex items-center gap-1 rounded-md px-1 py-1 text-left text-xs font-medium text-muted-foreground hover:bg-muted">
+		<Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-2">
+			<CollapsibleTrigger className="flex cursor-pointer items-center gap-1 rounded-md py-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground">
 				<ChevronRight
 					className={cn("size-3.5 transition-transform", open && "rotate-90")}
 				/>
@@ -38,16 +38,16 @@ export function PromotionJobsList({
 				{activeCount > 0 && <Badge variant="outline">{activeCount} running</Badge>}
 			</CollapsibleTrigger>
 			<CollapsibleContent>
-				<ul className="flex flex-col gap-1">
+				<ul className="flex flex-col gap-2">
 					{jobs.map((job) => {
 						const { done, failed, total } = job.counts;
 						return (
 							<li
 								key={job.promotionId}
-								className="flex flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-xs"
+								className="flex flex-col gap-1 rounded-lg border border-border bg-card px-3 py-2 text-xs"
 							>
-								<div className="flex items-center gap-1">
-									<span className="min-w-0 flex-1 truncate">
+								<div className="flex items-center gap-1.5">
+									<span className="min-w-0 flex-1 truncate font-medium text-foreground">
 										{runNames.get(job.runId) ?? "Unknown run"} →{" "}
 										{labelGroupNames.get(job.labelGroupId) ?? "Unknown group"}
 									</span>

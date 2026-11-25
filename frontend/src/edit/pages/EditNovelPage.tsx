@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Effect } from "effect";
+import { UserMenu } from "@/components/navigation/AppShell";
+import { routeTo } from "@/routes";
 import {
 	readChaptersByNovelChaptersGet,
 	readLabelGroupsLabelGroupsGet,
@@ -383,80 +386,98 @@ export function EditNovelPage() {
 		chapterNumbers,
 	]);
 
+	const brandLink = (
+		<Link
+			to={routeTo.edit.dashboard()}
+			className="shrink-0 text-sm font-semibold tracking-tight hover:opacity-80"
+		>
+			NovelTL
+		</Link>
+	);
+
 	if (error) {
 		return (
-			<div className="flex items-center justify-center h-full text-sm text-destructive">
-				{String(error)}
+			<div className="flex h-screen flex-col bg-background">
+				<header className="flex h-11 shrink-0 items-center justify-between border-b px-3">
+					{brandLink}
+					<UserMenu />
+				</header>
+				<div className="flex flex-1 items-center justify-center text-sm text-destructive">
+					{String(error)}
+				</div>
 			</div>
 		);
 	}
 
 	if (!managers || !novel || !rightPanelTabs) {
 		return (
-			<div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-				Loading...
+			<div className="flex h-screen flex-col bg-background">
+				<header className="flex h-11 shrink-0 items-center justify-between border-b px-3">
+					{brandLink}
+					<UserMenu />
+				</header>
+				<div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+					Loading...
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="relative h-full min-h-0">
-			<div className="flex h-full min-h-0 flex-col">
-				<ToolbarPanel
-					novelId={novel.novel.novelId}
-					novelTitle={novel.novel.novelTitle}
-					novelVisibility={novelVisibility ?? novel.novel.novelVisibility}
-					publicChapterCount={publicChapterCount}
-					totalChapterCount={chapterState.chapterList.length}
-					mode={editorState.mode}
-					loading={!editorState.data.empty && editorState.data.loading}
-					onSetMode={editorState.setMode}
-					onVisibilityUpdated={setNovelVisibility}
-				/>
-				<div className="flex flex-1 min-h-0 overflow-hidden">
-					<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
-						<LeftPanel
-							novelId={novel.novel.novelId}
-							gotoText={gotoText}
-							chapters={chapterState.chapterList}
-							currentChapterId={currentChapterId}
-							onSwitchChapter={managers.chapterMgr.switchChapter}
-							onAddChapter={managers.chapterMgr.addChapter}
-							onChaptersVisibilityUpdated={chapterState.setChaptersVisibility}
-							labelGroups={trackedLabelGroups.labelGroups}
-							chapterOpen={!editorState.data.empty && !editorState.data.loading}
-							onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
-							onSetActive={managers.labelGroupMgr.setActive}
-							onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
-							onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
-							activeId={trackedLabelGroups.activeLabelGroupId}
-						/>
-					</div>
-					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-						<ChapterTabs
-							tabs={chapterState.tabs}
-							chapters={chapterState.chapterList}
-							activeChapterId={chapterState.activeChapterId}
-							onActivate={managers.chapterMgr.switchChapter}
-							onClose={managers.chapterMgr.closeChapter}
-						/>
-						<EditorPanel
-							data={editorState.data}
-							mode={editorState.mode}
-							onSetCaret={editorState.setCaret}
-							onTextOp={managers.editorMgr.textOp}
-							labeling={labeling}
-							preview={autoLabelPreview.preview}
-						/>
-					</div>
-					<div className="shrink-0 flex flex-col min-h-0">
-						<MemoryGroupsProvider
-							key={novel.novel.novelId}
-							novelId={novel.novel.novelId}
-						>
-							<RightPanel tabs={rightPanelTabs} />
-						</MemoryGroupsProvider>
-					</div>
+		<div className="relative flex h-screen min-h-0 flex-col bg-background">
+			<ToolbarPanel
+				brand={brandLink}
+				trailing={<UserMenu />}
+				novelId={novel.novel.novelId}
+				novelTitle={novel.novel.novelTitle}
+				novelVisibility={novelVisibility ?? novel.novel.novelVisibility}
+				publicChapterCount={publicChapterCount}
+				totalChapterCount={chapterState.chapterList.length}
+				mode={editorState.mode}
+				loading={!editorState.data.empty && editorState.data.loading}
+				onSetMode={editorState.setMode}
+				onVisibilityUpdated={setNovelVisibility}
+			/>
+			<div className="flex flex-1 min-h-0 overflow-hidden">
+				<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
+					<LeftPanel
+						novelId={novel.novel.novelId}
+						gotoText={gotoText}
+						chapters={chapterState.chapterList}
+						currentChapterId={currentChapterId}
+						onSwitchChapter={managers.chapterMgr.switchChapter}
+						onAddChapter={managers.chapterMgr.addChapter}
+						onChaptersVisibilityUpdated={chapterState.setChaptersVisibility}
+						labelGroups={trackedLabelGroups.labelGroups}
+						chapterOpen={!editorState.data.empty && !editorState.data.loading}
+						onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
+						onSetActive={managers.labelGroupMgr.setActive}
+						onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
+						onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
+						activeId={trackedLabelGroups.activeLabelGroupId}
+					/>
+				</div>
+				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+					<ChapterTabs
+						tabs={chapterState.tabs}
+						chapters={chapterState.chapterList}
+						activeChapterId={chapterState.activeChapterId}
+						onActivate={managers.chapterMgr.switchChapter}
+						onClose={managers.chapterMgr.closeChapter}
+					/>
+					<EditorPanel
+						data={editorState.data}
+						mode={editorState.mode}
+						onSetCaret={editorState.setCaret}
+						onTextOp={managers.editorMgr.textOp}
+						labeling={labeling}
+						preview={autoLabelPreview.preview}
+					/>
+				</div>
+				<div className="shrink-0 flex flex-col min-h-0">
+					<MemoryGroupsProvider key={novel.novel.novelId} novelId={novel.novel.novelId}>
+						<RightPanel tabs={rightPanelTabs} />
+					</MemoryGroupsProvider>
 				</div>
 			</div>
 		</div>

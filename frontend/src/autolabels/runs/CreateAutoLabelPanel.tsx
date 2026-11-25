@@ -71,9 +71,9 @@ export function CreateAutoLabelPanel({
 	};
 
 	return (
-		<section className="flex flex-col gap-2 p-2">
-			<div className="flex flex-col gap-1">
-				<Label className="text-xs" htmlFor="autolabel-model">
+		<section className="flex flex-col gap-3">
+			<div className="flex flex-col gap-1.5">
+				<Label className="text-xs font-medium" htmlFor="autolabel-model">
 					Model
 				</Label>
 				<Select
@@ -110,11 +110,11 @@ export function CreateAutoLabelPanel({
 				</Select>
 			</div>
 
-			<div className="flex flex-col gap-1">
-				<Label className="text-xs">Chapters</Label>
-				<div className="flex items-center gap-1">
+			<div className="flex flex-col gap-1.5">
+				<Label className="text-xs font-medium">Chapters</Label>
+				<div className="flex items-center gap-1.5">
 					<Input
-						className="h-7 min-w-0 text-xs"
+						className="h-8 min-w-0 text-xs"
 						inputMode="numeric"
 						placeholder="Start"
 						aria-label="Start chapter"
@@ -124,7 +124,7 @@ export function CreateAutoLabelPanel({
 					/>
 					<span className="text-xs text-muted-foreground">to</span>
 					<Input
-						className="h-7 min-w-0 text-xs"
+						className="h-8 min-w-0 text-xs"
 						inputMode="numeric"
 						placeholder="End"
 						aria-label="End chapter"
@@ -138,14 +138,14 @@ export function CreateAutoLabelPanel({
 			<Collapsible
 				open={advancedOpen}
 				onOpenChange={setAdvancedOpen}
-				className="rounded-md border border-border"
+				className="rounded-lg border border-border bg-card"
 			>
 				<CollapsibleTrigger asChild>
 					<Button
 						type="button"
-						size="xs"
+						size="sm"
 						variant="ghost"
-						className="w-full justify-start"
+						className="h-8 w-full justify-start px-2.5 text-xs"
 						disabled={
 							controlsDisabled ||
 							!selectedModel ||
@@ -159,7 +159,7 @@ export function CreateAutoLabelPanel({
 						Advanced Settings
 					</Button>
 				</CollapsibleTrigger>
-				<CollapsibleContent className="p-2 pt-0">
+				<CollapsibleContent className="border-t p-3">
 					{params && selectedModel && modelHasAdvancedSettings(selectedModel) && (
 						<AutoLabelParamsForm
 							key={selectedModel.name}
@@ -179,11 +179,11 @@ export function CreateAutoLabelPanel({
 				</p>
 			)}
 
-			<div className="flex justify-end gap-1">
+			<div className="flex justify-end gap-2">
 				<Button
 					type="button"
-					size="xs"
-					variant="ghost"
+					size="sm"
+					variant="outline"
 					onClick={reset}
 					disabled={controlsDisabled}
 				>
@@ -191,7 +191,7 @@ export function CreateAutoLabelPanel({
 				</Button>
 				<Button
 					type="button"
-					size="xs"
+					size="sm"
 					disabled={controlsDisabled || params === null || !paramsValid}
 					onClick={() => {
 						if (!params || !paramsValid || controlsDisabled) return;

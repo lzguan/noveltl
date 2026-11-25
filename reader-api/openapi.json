@@ -1,0 +1,994 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NovelTL Reader API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "operationId": "healthz",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthzResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ingest/health": {
+      "get": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "Ingest Health",
+        "operationId": "ingest_health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestHealthResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/ingest/novels/{externalId}/status": {
+      "get": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "Ingest Novel Status",
+        "operationId": "ingest_novel_status",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "externalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Externalid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestNovelStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ingest/novels/{externalId}": {
+      "put": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "Ingest Upsert Novel",
+        "operationId": "ingest_upsert_novel",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "externalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Externalid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestNovelUpsertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestNovelUpsertResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ingest/novels/{externalId}/chapters": {
+      "put": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "Ingest Upsert Chapters",
+        "operationId": "ingest_upsert_chapters",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "externalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Externalid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestChaptersUpsertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestChaptersUpsertResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "Ingest Delete Chapters",
+        "operationId": "ingest_delete_chapters",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "externalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Externalid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestChaptersDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestChaptersDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "List Novels",
+        "operationId": "list_novels",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicNovelSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Novels"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Get Novel",
+        "operationId": "get_novel",
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicNovelSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}/chapters": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "List Novel Chapters",
+        "operationId": "list_novel_chapters",
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicChapterSummary"
+                  },
+                  "title": "Response List Novel Chapters"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}/chapters/{chapterNum}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Get Novel Chapter",
+        "operationId": "get_novel_chapter",
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "chapterNum",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "Chapternum"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicChapterDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthzResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "HealthzResponse"
+      },
+      "IngestChapterItem": {
+        "properties": {
+          "chapterNum": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Chapternum"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 512,
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "externalVersion": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Externalversion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterNum",
+          "title",
+          "body"
+        ],
+        "title": "IngestChapterItem"
+      },
+      "IngestChapterStatus": {
+        "properties": {
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "contentHash": {
+            "type": "string",
+            "title": "Contenthash"
+          },
+          "externalVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Externalversion"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterNum",
+          "title",
+          "contentHash",
+          "externalVersion",
+          "updatedAt"
+        ],
+        "title": "IngestChapterStatus"
+      },
+      "IngestChaptersDeleteRequest": {
+        "properties": {
+          "chapterNums": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Chapternums"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterNums"
+        ],
+        "title": "IngestChaptersDeleteRequest"
+      },
+      "IngestChaptersDeleteResponse": {
+        "properties": {
+          "deletedChapterNums": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Deletedchapternums"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deletedChapterNums"
+        ],
+        "title": "IngestChaptersDeleteResponse"
+      },
+      "IngestChaptersUpsertRequest": {
+        "properties": {
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/IngestChapterItem"
+            },
+            "type": "array",
+            "title": "Chapters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapters"
+        ],
+        "title": "IngestChaptersUpsertRequest"
+      },
+      "IngestChaptersUpsertResponse": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "publicUrl": {
+            "type": "string",
+            "title": "Publicurl"
+          },
+          "upsertedChapterNums": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Upsertedchapternums"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "publicUrl",
+          "upsertedChapterNums"
+        ],
+        "title": "IngestChaptersUpsertResponse"
+      },
+      "IngestHealthResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "protocolVersion": {
+            "type": "integer",
+            "title": "Protocolversion",
+            "default": 1
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "publicBaseUrl": {
+            "type": "string",
+            "title": "Publicbaseurl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "publicBaseUrl"
+        ],
+        "title": "IngestHealthResponse"
+      },
+      "IngestNovelStatusResponse": {
+        "properties": {
+          "exists": {
+            "type": "boolean",
+            "title": "Exists"
+          },
+          "novelId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Novelid"
+          },
+          "publicUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publicurl"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/IngestChapterStatus"
+            },
+            "type": "array",
+            "title": "Chapters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exists"
+        ],
+        "title": "IngestNovelStatusResponse"
+      },
+      "IngestNovelUpsertRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "languageCode": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Languagecode",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "IngestNovelUpsertRequest"
+      },
+      "IngestNovelUpsertResponse": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "publicUrl": {
+            "type": "string",
+            "title": "Publicurl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "publicUrl"
+        ],
+        "title": "IngestNovelUpsertResponse"
+      },
+      "PublicChapterDetail": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "novelTitle": {
+            "type": "string",
+            "title": "Noveltitle"
+          },
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "contentHash": {
+            "type": "string",
+            "title": "Contenthash"
+          },
+          "externalVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Externalversion"
+          },
+          "prev": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicChapterNav"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicChapterNav"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "novelTitle",
+          "chapterId",
+          "chapterNum",
+          "title",
+          "body",
+          "contentHash",
+          "externalVersion",
+          "prev",
+          "next"
+        ],
+        "title": "PublicChapterDetail"
+      },
+      "PublicChapterNav": {
+        "properties": {
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterNum",
+          "title"
+        ],
+        "title": "PublicChapterNav"
+      },
+      "PublicChapterSummary": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Publishedat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterId",
+          "chapterNum",
+          "title",
+          "publishedAt",
+          "updatedAt"
+        ],
+        "title": "PublicChapterSummary"
+      },
+      "PublicNovelSummary": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "languageCode": {
+            "type": "string",
+            "title": "Languagecode"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "title",
+          "description",
+          "author",
+          "languageCode",
+          "updatedAt"
+        ],
+        "title": "PublicNovelSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

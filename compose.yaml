@@ -12,6 +12,12 @@ x-test-db-env: &test-db-env
   TEST_NAME: ${TEST_NAME}
   TEST_URL: postgresql+psycopg://${TEST_USER}:${TEST_PASSWORD}@test_db:5432/${TEST_NAME}
 
+x-reader-db-env: &reader-db-env
+  READER_DB_URL: postgresql+psycopg://${READER_DB_USER:-reader}:${READER_DB_PASSWORD:-reader}@reader_db:5432/${READER_DB_NAME:-reader}
+
+x-reader-test-db-env: &reader-test-db-env
+  READER_TEST_DB_URL: postgresql+psycopg://${READER_TEST_USER:-reader_test}:${READER_TEST_PASSWORD:-reader_test}@reader_test_db:5432/${READER_TEST_NAME:-reader_test}
+
 x-redis-env: &redis-env
   REDIS_HOST: redis
   REDIS_PORT: ${REDIS_PORT}
@@ -36,7 +42,7 @@ services:
   dev:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-devcontainer:${DEV_IMAGE_TAG:-latest}
     environment:
-      <<: [*db-env, *test-db-env, *redis-env, *test-redis-env, *file-store-env, *duckdb-env]
+      <<: [*db-env, *test-db-env, *reader-db-env, *reader-test-db-env, *redis-env, *test-redis-env, *file-store-env, *duckdb-env]
       SECRET_KEY: ${SECRET_KEY}
     command: sleep infinity
 
@@ -69,6 +75,34 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     profiles:
       - test
+
+  reader_db:
+    image: postgres:18
+    restart: always
+    environment:
+      POSTGRES_USER: "${READER_DB_USER:-reader}"
+      POSTGRES_PASSWORD: "${READER_DB_PASSWORD:-reader}"
+      POSTGRES_DB: "${READER_DB_NAME:-reader}"
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - reader_db_data:/var/lib/postgresql
+
+  reader_test_db:
+    image: postgres:18
+    restart: always
+    tmpfs:
+      - /var/lib/postgresql:size=1g
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    environment:
+      POSTGRES_USER: "${READER_TEST_USER:-reader_test}"
+      POSTGRES_PASSWORD: "${READER_TEST_PASSWORD:-reader_test}"
+      POSTGRES_DB: "${READER_TEST_NAME:-reader_test}"
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    profiles:
+      - test
+
   redis:
     image: redis
   test_redis:
@@ -240,6 +274,36 @@ services:
     ports:
       - "${FRONTEND_PORT}:5173"
 
+  reader-api:
+    build:
+      context: ./reader-api
+      target: reader-api
+    depends_on:
+      - reader_db
+    environment:
+      <<: [*reader-db-env]
+      PYTHONDONTWRITEBYTECODE: "1"
+      READER_PUBLIC_BASE_URL: ${READER_PUBLIC_BASE_URL:-http://localhost:5174}
+      READER_INSTANCE_NAME: ${READER_INSTANCE_NAME:-NovelTL Reader}
+    command:
+      - uv
+      - run
+      - --no-sync
+      - uvicorn
+      - src.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8001"
+      - --reload
+      - --reload-dir
+      - src
+    volumes:
+      - ./reader-api:/home/newuser/reader-api
+      - /home/newuser/reader-api/.venv
+    ports:
+      - "${READER_API_PORT:-8001}:8001"
+
   reader:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-reader-dev:${DEV_IMAGE_TAG:-latest}
     pull_policy: always
@@ -285,5 +349,6 @@ services:
 
 volumes:
   db_data:
+  reader_db_data:
   garage_meta:
   garage_data:

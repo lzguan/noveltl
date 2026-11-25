@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPost } from "@/api/endpoints/default/default";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { Globe, Lock, Plus } from "lucide-react";
 import type { CProvId, ProvChapter } from "../../controller/types/idTypes";
 import { BulkChapterVisibilityDialog } from "./BulkChapterVisibilityDialog";
@@ -21,7 +23,12 @@ export function ChapterPanel({
 	onChaptersVisibilityUpdated: (chapterNums: readonly number[], isPublic: boolean) => void;
 }) {
 	const [showAdd, setShowAdd] = useState(false);
-	const [showVisibility, setShowVisibility] = useState(false);
+	const [editingVisibility, setEditingVisibility] = useState(false);
+	const [showBulkVisibility, setShowBulkVisibility] = useState(false);
+	const [pendingChapterNums, setPendingChapterNums] = useState<ReadonlySet<number>>(
+		() => new Set(),
+	);
+	const [toggleError, setToggleError] = useState<string | null>(null);
 	const [newNum, setNewNum] = useState("");
 	const [newTitle, setNewTitle] = useState("");
 
@@ -34,18 +41,51 @@ export function ChapterPanel({
 		setShowAdd(false);
 	};
 
+	const handleToggleChapter = async (chapter: ProvChapter) => {
+		if (pendingChapterNums.has(chapter.chapterNum)) return;
+		setPendingChapterNums((prev) => new Set(prev).add(chapter.chapterNum));
+		setToggleError(null);
+		try {
+			const resp = await actionUpdateChaptersVisibilityNovelsNovelIdChaptersVisibilityPost(
+				novelId,
+				{
+					start: chapter.chapterNum,
+					end: chapter.chapterNum,
+					isPublic: !chapter.chapterIsPublic,
+				},
+			);
+			if (resp.status !== 200) {
+				setToggleError(apiErrorMessage(resp.data, "Could not update chapter visibility."));
+				return;
+			}
+			onChaptersVisibilityUpdated(resp.data.updatedChapterNums, resp.data.isPublic);
+		} catch (err: unknown) {
+			setToggleError(requestErrorMessage(err));
+		} finally {
+			setPendingChapterNums((prev) => {
+				const next = new Set(prev);
+				next.delete(chapter.chapterNum);
+				return next;
+			});
+		}
+	};
+
 	return (
 		<div className="flex flex-col gap-1 p-2">
 			<div className="flex items-center gap-1 px-1.5 py-1">
 				<span className="text-xs font-medium text-muted-foreground flex-1">Chapters</span>
 				<Button
-					variant="ghost"
+					variant={editingVisibility ? "secondary" : "ghost"}
 					size="icon-sm"
 					className="h-5 w-5"
-					aria-label="Manage chapter visibility"
-					title="Manage chapter visibility"
+					aria-label="Edit chapter visibility"
+					aria-pressed={editingVisibility}
+					title="Edit chapter visibility"
 					disabled={chapters.length === 0}
-					onClick={() => setShowVisibility(true)}
+					onClick={() => {
+						setEditingVisibility((prev) => !prev);
+						setToggleError(null);
+					}}
 				>
 					<Globe className="h-3 w-3" />
 				</Button>
@@ -60,6 +100,38 @@ export function ChapterPanel({
 					<Plus className="h-3 w-3" />
 				</Button>
 			</div>
+			{editingVisibility && (
+				<div className="flex flex-col gap-1 px-1.5 pb-1">
+					<div className="flex items-center gap-1">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="h-6 flex-1 text-xs"
+							onClick={() => setShowBulkVisibility(true)}
+						>
+							Bulk edit…
+						</Button>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							className="h-6 text-xs"
+							onClick={() => {
+								setEditingVisibility(false);
+								setToggleError(null);
+							}}
+						>
+							Done
+						</Button>
+					</div>
+					{toggleError !== null && (
+						<p role="alert" className="text-xs text-destructive">
+							{toggleError}
+						</p>
+					)}
+				</div>
+			)}
 			{showAdd && (
 				<div className="flex flex-col gap-1 px-1.5 pb-1">
 					<div className="flex gap-1">
@@ -89,41 +161,68 @@ export function ChapterPanel({
 					</Button>
 				</div>
 			)}
-			{chapters.map((c) => (
-				<div
-					key={c.chapterId}
-					className={`flex items-center gap-1.5 px-1.5 py-1 rounded cursor-pointer text-xs ${
-						c.chapterId === currentChapterId
-							? "bg-accent font-medium"
-							: "hover:bg-accent/50 text-muted-foreground"
-					}`}
-					onClick={() => onSwitchChapter(c.chapterId)}
-				>
-					<span className="min-w-0 flex-1 truncate">
-						Ch.{c.chapterNum}: {c.chapterTitle}
-					</span>
-					{c.chapterIsPublic ? (
-						<Globe
-							className="h-3 w-3 shrink-0 text-muted-foreground/70"
-							aria-label="Public"
-						/>
-					) : (
-						<Lock
-							className="h-3 w-3 shrink-0 text-muted-foreground/40"
-							aria-label="Private"
-						/>
-					)}
-				</div>
-			))}
+			{chapters.map((c) => {
+				const isPending = pendingChapterNums.has(c.chapterNum);
+				return (
+					<div
+						key={c.chapterId}
+						className={`flex items-center gap-1 px-1.5 py-1 rounded text-xs ${
+							c.chapterId === currentChapterId
+								? "bg-accent font-medium"
+								: "hover:bg-accent/50 text-muted-foreground"
+						}`}
+					>
+						<button
+							type="button"
+							className="min-w-0 flex-1 truncate text-left cursor-pointer"
+							onClick={() => onSwitchChapter(c.chapterId)}
+						>
+							Ch.{c.chapterNum}: {c.chapterTitle}
+						</button>
+						{editingVisibility ? (
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon-sm"
+								className="h-5 w-5 shrink-0"
+								disabled={isPending}
+								aria-label={
+									c.chapterIsPublic
+										? `Make chapter ${c.chapterNum} private`
+										: `Make chapter ${c.chapterNum} public`
+								}
+								title={c.chapterIsPublic ? "Make private" : "Make public"}
+								onClick={() => void handleToggleChapter(c)}
+							>
+								{c.chapterIsPublic ? (
+									<Globe className="h-3 w-3 text-foreground" />
+								) : (
+									<Lock className="h-3 w-3 text-muted-foreground" />
+								)}
+							</Button>
+						) : c.chapterIsPublic ? (
+							<Globe
+								className="h-3 w-3 shrink-0 text-muted-foreground/70"
+								aria-label="Public"
+							/>
+						) : (
+							<Lock
+								className="h-3 w-3 shrink-0 text-muted-foreground/40"
+								aria-label="Private"
+							/>
+						)}
+					</div>
+				);
+			})}
 			{chapters.length === 0 && (
 				<div className="px-1.5 py-1 text-xs text-muted-foreground">No chapters yet.</div>
 			)}
-			{showVisibility && (
+			{showBulkVisibility && (
 				<BulkChapterVisibilityDialog
 					novelId={novelId}
 					chapters={chapters}
 					onUpdated={onChaptersVisibilityUpdated}
-					onClose={() => setShowVisibility(false)}
+					onClose={() => setShowBulkVisibility(false)}
 				/>
 			)}
 		</div>

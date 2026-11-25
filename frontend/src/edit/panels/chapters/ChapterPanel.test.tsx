@@ -29,7 +29,50 @@ beforeEach(() => {
 });
 
 describe("ChapterPanel", () => {
-	it("shows public/private status and updates visibility for a range", async () => {
+	it("shows display-only icons by default and toggles per-chapter visibility in edit mode", async () => {
+		const onSwitch = vi.fn();
+		const onUpdated = vi.fn();
+		updateVisibility.mockResolvedValueOnce({
+			status: 200,
+			data: { updatedChapterNums: [2], isPublic: true },
+			headers: new Headers(),
+		});
+
+		render(
+			<ChapterPanel
+				novelId="novel-1"
+				chapters={CHAPTERS}
+				currentChapterId={null}
+				onSwitchChapter={onSwitch}
+				onAddChapter={vi.fn()}
+				onChaptersVisibilityUpdated={onUpdated}
+			/>,
+		);
+
+		expect(screen.getAllByLabelText("Public")).toHaveLength(1);
+		expect(screen.getAllByLabelText("Private")).toHaveLength(2);
+		expect(
+			screen.queryByRole("button", { name: "Make chapter 2 public" }),
+		).not.toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole("button", { name: "Edit chapter visibility" }));
+		fireEvent.click(screen.getByRole("button", { name: "Make chapter 2 public" }));
+
+		await waitFor(() => expect(onUpdated).toHaveBeenCalledWith([2], true));
+		expect(updateVisibility).toHaveBeenCalledWith("novel-1", {
+			start: 2,
+			end: 2,
+			isPublic: true,
+		});
+		expect(onSwitch).not.toHaveBeenCalled();
+
+		fireEvent.click(screen.getByRole("button", { name: "Done" }));
+		expect(
+			screen.queryByRole("button", { name: "Make chapter 2 public" }),
+		).not.toBeInTheDocument();
+	});
+
+	it("opens bulk visibility dialog from edit mode and updates a range", async () => {
 		const onUpdated = vi.fn();
 		updateVisibility.mockResolvedValueOnce({
 			status: 200,
@@ -48,10 +91,8 @@ describe("ChapterPanel", () => {
 			/>,
 		);
 
-		expect(screen.getAllByLabelText("Public")).toHaveLength(1);
-		expect(screen.getAllByLabelText("Private")).toHaveLength(2);
-
-		fireEvent.click(screen.getByRole("button", { name: "Manage chapter visibility" }));
+		fireEvent.click(screen.getByRole("button", { name: "Edit chapter visibility" }));
+		fireEvent.click(screen.getByRole("button", { name: "Bulk edit…" }));
 		const dialog = within(await screen.findByRole("dialog"));
 		expect(dialog.getByText("Matches 3 of 3 chapters (1 public, 2 private).")).toBeVisible();
 
@@ -89,7 +130,8 @@ describe("ChapterPanel", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: "Manage chapter visibility" }));
+		fireEvent.click(screen.getByRole("button", { name: "Edit chapter visibility" }));
+		fireEvent.click(screen.getByRole("button", { name: "Bulk edit…" }));
 		const dialog = within(await screen.findByRole("dialog"));
 
 		fireEvent.change(dialog.getByLabelText("From chapter"), { target: { value: "3" } });

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RightPanelTabActiveContext } from "./rightPanelTabActive";
@@ -19,7 +19,7 @@ export type RightPanelTab = Readonly<{
 	keepMounted?: boolean;
 }>;
 
-export function RightPanel({
+export const RightPanel = memo(function RightPanel({
 	tabs,
 	defaultValue = tabs[0].value,
 }: {
@@ -109,4 +109,4 @@ export function RightPanel({
 			</Tabs>
 		</div>
 	);
-}
+});

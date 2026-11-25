@@ -254,3 +254,147 @@ class TestCreateChaptersByUpload:
         multipart_schema = openapi["components"]["schemas"][schema_name]
         assert set(multipart_schema["required"]) == {"novelId", "version", "file"}
         assert multipart_schema["properties"]["version"]["const"] == "v1"
+
+
+class TestUpdateChaptersVisibility:
+    def test_owner_and_editor_update_range_and_all_chapters(
+        self, client: TestClient, test_db: Session, novel_access_scenario: DatabaseScenario
+    ) -> None:
+        novel = novel_access_scenario.novels["oe"]
+        for num in (1, 2, 3, 4):
+            test_db.add(
+                Chapter(novel_id=novel.novel_id, chapter_num=num, chapter_title=f"Ch {num}", chapter_is_public=False)
+            )
+        test_db.commit()
+
+        publish_range = client.post(
+            f"/novels/{novel.novel_id}/chapters/visibility",
+            json={"start": 2, "end": 3, "isPublic": True},
+            headers=_auth_headers(novel_access_scenario.users["owner"]),
+        )
+        assert publish_range.status_code == status.HTTP_200_OK
+        assert publish_range.json() == {"updatedChapterNums": [2, 3], "isPublic": True}
+
+        chapters = test_db.scalars(
+            select(Chapter).where(Chapter.novel_id == novel.novel_id).order_by(Chapter.chapter_num)
+        ).all()
+        assert [(chapter.chapter_num, chapter.chapter_is_public) for chapter in chapters] == [
+            (1, False),
+            (2, True),
+            (3, True),
+            (4, False),
+        ]
+
+        # Editor can update all chapters when start/end are omitted.
+        publish_all = client.post(
+            f"/novels/{novel.novel_id}/chapters/visibility",
+            json={"isPublic": True},
+            headers=_auth_headers(novel_access_scenario.users["other"]),
+        )
+        assert publish_all.status_code == status.HTTP_200_OK
+        assert publish_all.json() == {"updatedChapterNums": [1, 2, 3, 4], "isPublic": True}
+
+        unpublish_single = client.post(
+            f"/novels/{novel.novel_id}/chapters/visibility",
+            json={"start": 3, "end": 3, "isPublic": False},
+            headers=_auth_headers(novel_access_scenario.users["owner"]),
+        )
+        assert unpublish_single.status_code == status.HTTP_200_OK
+        assert unpublish_single.json() == {"updatedChapterNums": [3], "isPublic": False}
+        test_db.expire_all()
+        chapters = test_db.scalars(
+            select(Chapter).where(Chapter.novel_id == novel.novel_id).order_by(Chapter.chapter_num)
+        ).all()
+        assert [(chapter.chapter_num, chapter.chapter_is_public) for chapter in chapters] == [
+            (1, True),
+            (2, True),
+            (3, False),
+            (4, True),
+        ]
+
+    def test_empty_range_returns_empty_list_for_editor_and_enforces_permissions(
+        self, client: TestClient, test_db: Session, novel_access_scenario: DatabaseScenario
+    ) -> None:
+        public_novel = novel_access_scenario.novels["put"]
+        private_novel = novel_access_scenario.novels["prt"]
+        viewer_novel = novel_access_scenario.novels["ov"]
+        test_db.add(
+            Chapter(novel_id=public_novel.novel_id, chapter_num=1, chapter_title="Ch 1", chapter_is_public=True)
+        )
+        test_db.commit()
+
+        empty = client.post(
+            f"/novels/{public_novel.novel_id}/chapters/visibility",
+            json={"start": 10, "end": 20, "isPublic": True},
+            headers=_auth_headers(novel_access_scenario.users["owner"]),
+        )
+        assert empty.status_code == status.HTTP_200_OK
+        assert empty.json() == {"updatedChapterNums": [], "isPublic": True}
+
+        viewer_denied = client.post(
+            f"/novels/{viewer_novel.novel_id}/chapters/visibility",
+            json={"isPublic": True},
+            headers=_auth_headers(novel_access_scenario.users["other"]),
+        )
+        assert viewer_denied.status_code == status.HTTP_401_UNAUTHORIZED
+
+        outsider_public = client.post(
+            f"/novels/{public_novel.novel_id}/chapters/visibility",
+            json={"isPublic": False},
+            headers=_auth_headers(novel_access_scenario.users["other"]),
+        )
+        assert outsider_public.status_code == status.HTTP_401_UNAUTHORIZED
+
+        outsider_private = client.post(
+            f"/novels/{private_novel.novel_id}/chapters/visibility",
+            json={"isPublic": True},
+            headers=_auth_headers(novel_access_scenario.users["other"]),
+        )
+        assert outsider_private.status_code == status.HTTP_404_NOT_FOUND
+
+        missing = client.post(
+            f"/novels/{uuid.uuid4()}/chapters/visibility",
+            json={"isPublic": True},
+            headers=_auth_headers(novel_access_scenario.users["owner"]),
+        )
+        assert missing.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_unpublishing_hides_chapters_from_outsiders(
+        self, client: TestClient, test_db: Session, novel_access_scenario: DatabaseScenario
+    ) -> None:
+        novel = novel_access_scenario.novels["put"]
+        for num in (1, 2):
+            test_db.add(
+                Chapter(novel_id=novel.novel_id, chapter_num=num, chapter_title=f"Ch {num}", chapter_is_public=True)
+            )
+        test_db.commit()
+
+        resp = client.post(
+            f"/novels/{novel.novel_id}/chapters/visibility",
+            json={"start": 2, "end": 2, "isPublic": False},
+            headers=_auth_headers(novel_access_scenario.users["owner"]),
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+        outsider_chapters = client.get(
+            f"/chapters?novelId={novel.novel_id}",
+            headers=_auth_headers(novel_access_scenario.users["other"]),
+        )
+        assert outsider_chapters.status_code == status.HTTP_200_OK
+        assert [chapter["chapterNum"] for chapter in outsider_chapters.json()] == [1]
+
+        owner_chapters = client.get(
+            f"/chapters?novelId={novel.novel_id}",
+            headers=_auth_headers(novel_access_scenario.users["owner"]),
+        )
+        assert owner_chapters.status_code == status.HTTP_200_OK
+        assert [chapter["chapterNum"] for chapter in owner_chapters.json()] == [1, 2]
+
+    def test_inverted_range_returns_422(self, client: TestClient, novel_access_scenario: DatabaseScenario) -> None:
+        novel = novel_access_scenario.novels["put"]
+        response = client.post(
+            f"/novels/{novel.novel_id}/chapters/visibility",
+            json={"start": 5, "end": 2, "isPublic": True},
+            headers=_auth_headers(novel_access_scenario.users["owner"]),
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

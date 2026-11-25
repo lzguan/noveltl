@@ -850,7 +850,7 @@ export const buildChapterDataManager = (
 			UnknownError
 		> =>
 			Effect.gen(function* () {
-				const labelGroupSlot = yield* getters.labelGroup(labelGroupId).pipe(
+				yield* getters.labelGroup(labelGroupId).pipe(
 					Effect.mapError(
 						(err) =>
 							new UnknownError({
@@ -882,7 +882,7 @@ export const buildChapterDataManager = (
 						}),
 					);
 				}
-				if (editOnly && labelGroupSlot.meta.role === "viewer") {
+				if (editOnly && (yield* getters.role()) === "viewer") {
 					return yield* Effect.fail(
 						new UnknownError({ message: "Viewer role cannot edit labels" }),
 					);

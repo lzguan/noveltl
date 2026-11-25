@@ -18,5 +18,6 @@ export interface CreateLabelDataByAutoLabel {
   chapterIds?: string[] | null;
   end?: number | null;
   runId: string;
+  skipExistingLabels?: boolean;
   start?: number | null;
 }

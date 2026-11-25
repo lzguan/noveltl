@@ -25,6 +25,7 @@ function job(
 		promotionId,
 		runId: "run",
 		labelGroupId: "group",
+		skipExistingLabels: true,
 		status,
 		message: null,
 		counts: { total: 1, done: 0, failed: 0, pending: 1 },

@@ -15,7 +15,6 @@ import {
 	type NotFoundException,
 } from "./errors";
 import type { AnyReservation, ReservationRequest, ReserveList } from "./requestTypes";
-import type { LabelRole } from "@/api/models";
 import type { ChapterDataManager } from "./dataTypes";
 import type { ChapterGetters } from "./controllerTypes";
 
@@ -185,7 +184,7 @@ export interface SlotIndex<IDT extends ProvId, Meta, Data, IndexErrorT> {
 // -----------------------------------------
 export type LabelDataSlot = Slot<{ labelData: ProvLabelData }, { labels: readonly ProvLabel[] }>;
 
-export type LabelGroupSlot = Slot<{ labelGroup: ProvLabelGroup; role: LabelRole }>;
+export type LabelGroupSlot = Slot<{ labelGroup: ProvLabelGroup }>;
 
 export type ChapterSlot = Slot<{ chapter: ProvChapter }, { chapterData: ChapterDataManager }>;
 

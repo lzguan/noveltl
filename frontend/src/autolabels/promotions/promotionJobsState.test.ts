@@ -7,6 +7,7 @@ function job(promotionId: string, status: LabelPromotionJob["status"], minute: n
 		promotionId,
 		runId: "run",
 		labelGroupId: "group",
+		skipExistingLabels: true,
 		status,
 		message: null,
 		counts: { total: 1, done: 0, failed: 0, pending: 1 },

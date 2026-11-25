@@ -15,7 +15,6 @@ from src.autolabels.promotions.processing import insert_label_datas_by_autolabel
 from src.autolabels.schemas import CreateLabelDataByAutoLabel
 from src.datasets import Catalog, NovelDataset, load_config
 from src.datasets.materializer import materialize_latest_autolabels
-from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelData
 from src.novels.constants import Role, Visibility
 from test_support.test_data.scenarios import DatabaseScenario, PasswordHash, ScenarioBuilder
@@ -59,7 +58,6 @@ def sample_scenario(test_db: Session, recommended_hash: PasswordHash) -> Databas
     builder.content("chapter_1_v1", chapter="chapter_1", version=1, text="Alice went to the market.")
     builder.content("chapter_1_v2", chapter="chapter_1", version=2, text="This is a draft text.")
     builder.label_group("official", novel="novel_1", name="Official Labels")
-    builder.label_contributor("admin_official", group="official", user="admin", role=LabelRole.OWNER)
     builder.label_data("official_v1", group="official", content="chapter_1_v1")
     builder.label(
         "alice",
@@ -192,19 +190,6 @@ def label_access_scenario(test_db: Session, no_hash: PasswordHash) -> DatabaseSc
         ("private", "Private Novel Group", "private"),
     ):
         builder.label_group(key, novel=novel, name=name)
-        builder.label_contributor(f"{key}:owner", group=key, user="owner", role=LabelRole.OWNER)
-    builder.label_contributor(
-        "with_editor:collaborator",
-        group="with_editor",
-        user="collaborator",
-        role=LabelRole.EDITOR,
-    )
-    builder.label_contributor(
-        "with_viewer:collaborator",
-        group="with_viewer",
-        user="collaborator",
-        role=LabelRole.VIEWER,
-    )
     for group in ("owner_only", "with_editor", "with_viewer"):
         builder.label_data(f"{group}_data", group=group, content="public_v1")
     builder.label_data("private_data", group="private", content="private_v1")
@@ -255,12 +240,6 @@ def editing_scenario(test_db: Session, no_hash: PasswordHash) -> DatabaseScenari
     )
     for group_key in ("group_1", "group_2"):
         builder.label_group(group_key, novel="novel", name=group_key.replace("_", " ").title())
-        builder.label_contributor(
-            f"{group_key}:owner",
-            group=group_key,
-            user="owner",
-            role=LabelRole.OWNER,
-        )
         builder.label_data(f"{group_key}_data", group=group_key, content="content_v1")
     builder.label(
         "hello",
@@ -337,7 +316,6 @@ def filter_scenario(test_db: Session, no_hash: PasswordHash) -> DatabaseScenario
     )
     builder.label_group("labels", novel="novel", name="SF Test Group")
     builder.label_group("empty_labels", novel="novel", name="SF Empty Group")
-    builder.label_contributor("owner", group="labels", user="owner", role=LabelRole.OWNER)
     builder.label_data("labels", group="labels", content="content_v1")
     builder.label_data("labels_chapter_2", group="labels", content="content_2_v1")
     builder.label_data("labels_chapter_3", group="labels", content="content_3_v1")
@@ -377,7 +355,6 @@ def _catalog_scenario(
     builder.catalog_novel("novel", dataset, source_work="catalog")
     builder.contributor("owner", novel="novel", user="owner", role=Role.OWNER)
     builder.label_group("labels", novel="novel", name=label_group_name)
-    builder.label_contributor("owner", group="labels", user="owner", role=LabelRole.OWNER)
     return builder.finish()
 
 

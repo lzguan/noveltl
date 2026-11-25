@@ -12,7 +12,7 @@ test("persists editor text changes to the backend", async ({ page, request }) =>
 	await page.getByText(`Ch.1: ${seed.chapterTitle}`).click();
 	await expect(page.locator(".cm-content")).toContainText(seed.chapterText);
 
-	await page.getByRole("button", { name: "Edit" }).click();
+	await page.getByRole("button", { name: "Edit", exact: true }).click();
 	await page.locator(".cm-content").click();
 	await page.keyboard.press(process.platform === "darwin" ? "Meta+Home" : "Control+Home");
 	await page.keyboard.type("Dear ");
@@ -26,7 +26,9 @@ test("persists editor text changes to the backend", async ({ page, request }) =>
 		.toBe(expectedText);
 
 	const updatedContent = await latestChapterContent(request, token, seed.chapterId);
-	expect(updatedContent.chapterContentVersion).toBeGreaterThan(initialContent.chapterContentVersion);
+	expect(updatedContent.chapterContentVersion).toBeGreaterThan(
+		initialContent.chapterContentVersion,
+	);
 	expect(updatedContent.chapterContentText).toBe(expectedText);
 
 	await page.reload();

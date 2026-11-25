@@ -78,7 +78,6 @@ from src.filters.service import (
     query_workflow,
     query_workflows,
 )
-from src.labels.constants import LabelRole
 from src.novels.constants import Role
 from src.schemas import Model
 from test_support.test_data.scenarios import DatabaseScenario, PasswordHash, ScenarioBuilder
@@ -203,7 +202,6 @@ async def _create_catalog_sort_data(
     builder.catalog_novel("novel", dataset, source_work="catalog")
     builder.contributor("admin", novel="novel", user="admin", role=Role.OWNER)
     builder.label_group("labels", novel="novel", name="Catalog labels")
-    builder.label_contributor("admin", group="labels", user="admin", role=LabelRole.OWNER)
     scenario = builder.finish()
 
     config = load_config(catalog, "cluener-default")

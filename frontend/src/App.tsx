@@ -29,15 +29,15 @@ function App() {
 						</Suspense>
 					}
 				/>
-				<Route
-					path={AppRoutes.EDIT.NOVEL}
-					element={
-						<Suspense fallback={<div>Loading...</div>}>
-							<EditNovelPage />
-						</Suspense>
-					}
-				/>
 			</Route>
+			<Route
+				path={AppRoutes.EDIT.NOVEL}
+				element={
+					<Suspense fallback={<div>Loading...</div>}>
+						<EditNovelPage />
+					</Suspense>
+				}
+			/>
 		</Routes>
 	);
 }

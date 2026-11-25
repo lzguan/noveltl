@@ -44,7 +44,7 @@ async function startPendingLabelReloadTextRace({
 	await page.getByText(`Ch.1: ${seed.chapterTitle}`).click();
 	await expect(page.locator(".cm-content")).toContainText(initialContent.chapterContentText);
 
-	await page.getByRole("button", { name: "Edit" }).click();
+	await page.getByRole("button", { name: "Edit", exact: true }).click();
 	await page.getByRole("tab", { name: "Labels", exact: true }).click();
 	const labelGroupPanel = page.getByRole("tabpanel", { name: "Labels", exact: true });
 	await labelGroupPanel.locator("button:has(svg.lucide-plus)").click();
@@ -179,7 +179,7 @@ test("reloads authoritative labels after text invalidates an in-flight reload", 
 	await labelGroupRow.locator("button:has(svg.lucide-refresh-cw)").click();
 	await reloadStarted;
 
-	await page.getByRole("button", { name: "Edit" }).click();
+	await page.getByRole("button", { name: "Edit", exact: true }).click();
 	const editor = page.locator(".cm-content");
 	await editor.click();
 	await page.keyboard.press(process.platform === "darwin" ? "Meta+Home" : "Control+Home");

@@ -101,6 +101,7 @@ export function AutoLabelPanel({
 		run: AutoLabelRun,
 		labelGroupId: LGProvId,
 		filter: ChapterFilter,
+		skipExistingLabels: boolean,
 	): Promise<string | null> => {
 		const labelGroupServId = labelGroupServerId(labelGroupId);
 		if (labelGroupServId === null) {
@@ -110,6 +111,7 @@ export function AutoLabelPanel({
 			runId: run.runId,
 			start: filter.start ?? null,
 			end: filter.end ?? null,
+			skipExistingLabels,
 		});
 		return result.ok ? null : QUEUE_ERRORS[result.reason];
 	};
@@ -124,7 +126,7 @@ export function AutoLabelPanel({
 		>
 			<TabsList
 				variant="line"
-				className="w-full shrink-0 justify-start border-b px-1 group-data-horizontal/tabs:h-auto"
+				className="w-full shrink-0 justify-start border-b px-2 group-data-horizontal/tabs:h-auto"
 			>
 				<TabsTrigger value="runs" className="flex-none">
 					Runs
@@ -137,10 +139,10 @@ export function AutoLabelPanel({
 				value="runs"
 				forceMount
 				hidden={view !== "runs"}
-				className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2"
+				className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3"
 			>
-				<div className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5">
-					<Label className="text-xs" htmlFor="autolabel-preview-enabled">
+				<div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+					<Label className="text-xs font-medium" htmlFor="autolabel-preview-enabled">
 						Show selected run preview
 					</Label>
 					<div className="flex items-center gap-2">
@@ -182,8 +184,13 @@ export function AutoLabelPanel({
 						labelGroups={labelGroups}
 						defaultLabelGroupId={activeId}
 						submitting={promotions.submitting}
-						onPromote={async (labelGroupId, filter) => {
-							const error = await promote(promotingRun, labelGroupId, filter);
+						onPromote={async (labelGroupId, filter, skipExistingLabels) => {
+							const error = await promote(
+								promotingRun,
+								labelGroupId,
+								filter,
+								skipExistingLabels,
+							);
 							if (error !== null) return error;
 							// The chosen group becomes active so its promoted labels are shown.
 							setActive(labelGroupId);
@@ -199,7 +206,7 @@ export function AutoLabelPanel({
 				value="create"
 				forceMount
 				hidden={view !== "create"}
-				className="min-h-0 flex-1 overflow-y-auto p-2"
+				className="min-h-0 flex-1 overflow-y-auto p-3"
 			>
 				<CreateAutoLabelPanel
 					submitting={runs.creating}

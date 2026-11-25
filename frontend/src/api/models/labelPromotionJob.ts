@@ -14,6 +14,7 @@ export interface LabelPromotionJob {
   message: string | null;
   promotionId: string;
   runId: string;
+  skipExistingLabels: boolean;
   status: AutoLabelProgress;
   updatedAt: string;
 }

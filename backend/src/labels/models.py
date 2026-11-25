@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
-    Enum,
     Float,
     ForeignKey,
     Integer,
@@ -24,10 +23,9 @@ from sqlalchemy.types import UUID
 
 from src.models import Base
 
-from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN, MAX_LABEL_WORD_LEN, LabelRole
+from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN, MAX_LABEL_WORD_LEN
 
 if TYPE_CHECKING:
-    from src.auth.models import User
     from src.novels.models import ChapterContent, Novel
 
 
@@ -53,35 +51,6 @@ class LabelGroup(Base):
     label_datas_with_label_group: Mapped[list[LabelData]] = relationship(
         back_populates="label_group_of_label_data", cascade="all, delete-orphan"
     )
-    label_contributors_with_label_group: Mapped[list[LabelContributor]] = relationship(
-        back_populates="label_group_of_label_contributor", cascade="all, delete-orphan"
-    )
-
-
-class LabelContributor(Base):
-    """
-    Association table for many-to-many relationship between LabelGroup and Users.
-
-    Attributes:
-        label_contributor_role: Role of the user in the label group (e.g., 'owner', 'contributor').
-        label_group_id: Foreign key identifier for the LabelGroup.
-        user_id: Foreign key identifier for the User.
-    """
-
-    __tablename__ = "label_group_contributors"
-
-    label_contributor_role: Mapped[LabelRole] = mapped_column(
-        Enum(LabelRole, native_enum=False, length=10, values_callable=lambda x: [str(e.value) for e in x]),
-        nullable=False,
-    )
-
-    label_group_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("label_groups.label_group_id"), primary_key=True)
-    label_group_of_label_contributor: Mapped[LabelGroup] = relationship(
-        back_populates="label_contributors_with_label_group"
-    )
-
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.user_id"), primary_key=True)
-    user_of_label_contributor: Mapped[User] = relationship(back_populates="label_contributors_with_user")
 
 
 class LabelData(Base):

@@ -81,7 +81,6 @@ function buildTestChapterDM(prefix = "") {
 						labelGroupName: "Characters",
 						novelId: NOVEL_ID,
 					}),
-					role: "owner",
 				},
 			],
 		]);

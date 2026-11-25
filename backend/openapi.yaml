@@ -796,6 +796,10 @@ components:
           format: uuid
           title: Runid
           type: string
+        skipExistingLabels:
+          default: true
+          title: Skipexistinglabels
+          type: boolean
         start:
           anyOf:
           - type: integer
@@ -1781,28 +1785,6 @@ components:
       - labelDirty
       title: LabelBase
       type: object
-    LabelContributor:
-      description: "Pydantic schema for a label contributor, which can be either a\
-        \ user or an autolabel model.\n\nAttributes:\n    label_contributor_role:\
-        \ Role of the contributor, either a user or an autolabel model.\n    label_group_id:\
-        \ UUID of label group this contributor belongs to.\n    user_id: UUID of user"
-      properties:
-        labelContributorRole:
-          $ref: '#/components/schemas/LabelRole'
-        labelGroupId:
-          format: uuid
-          title: Labelgroupid
-          type: string
-        userId:
-          format: uuid
-          title: Userid
-          type: string
-      required:
-      - labelContributorRole
-      - labelGroupId
-      - userId
-      title: LabelContributor
-      type: object
     LabelData:
       description: "Pydantic schema for a list of labels in some text.\n\nAttributes:\n\
         \    label_data_id: UUID identifier for this LabelData.\n    label_group_id:\
@@ -1849,20 +1831,6 @@ components:
       - labelGroupName
       - novelId
       title: LabelGroup
-      type: object
-    LabelGroupWithRole:
-      description: "Pydantic schema for a label group with a user's role in that label\
-        \ group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role\
-        \ of the user in this label group."
-      properties:
-        labelGroup:
-          $ref: '#/components/schemas/LabelGroup'
-        role:
-          $ref: '#/components/schemas/LabelRole'
-      required:
-      - labelGroup
-      - role
-      title: LabelGroupWithRole
       type: object
     LabelOp:
       discriminator:
@@ -1939,6 +1907,9 @@ components:
           format: uuid
           title: Runid
           type: string
+        skipExistingLabels:
+          title: Skipexistinglabels
+          type: boolean
         status:
           $ref: '#/components/schemas/AutoLabelProgress'
         updatedAt:
@@ -1949,6 +1920,7 @@ components:
       - promotionId
       - runId
       - labelGroupId
+      - skipExistingLabels
       - status
       - message
       - counts
@@ -2026,13 +1998,6 @@ components:
           type: string
       title: LabelRefField
       type: object
-    LabelRole:
-      enum:
-      - owner
-      - viewer
-      - editor
-      title: LabelRole
-      type: string
     Language:
       description: "Pydantic schema for language.\n\nAttributes:\n    language_code:\
         \ String code key to language.\n    language_name: String name of language."
@@ -4084,6 +4049,25 @@ components:
       - chapterContentId
       title: UpdateChapterContent
       type: object
+    UpdateChaptersVisibility:
+      properties:
+        end:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End
+        isPublic:
+          title: Ispublic
+          type: boolean
+        start:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start
+      required:
+      - isPublic
+      title: UpdateChaptersVisibility
+      type: object
     UpdateGlossaryTerm:
       properties:
         term:
@@ -4269,6 +4253,21 @@ components:
           - type: 'null'
           title: Sourceworktitle
       title: UpdateSourceWork
+      type: object
+    UpdatedChaptersVisibility:
+      properties:
+        isPublic:
+          title: Ispublic
+          type: boolean
+        updatedChapterNums:
+          items:
+            type: integer
+          title: Updatedchapternums
+          type: array
+      required:
+      - updatedChapterNums
+      - isPublic
+      title: UpdatedChaptersVisibility
       type: object
     User:
       description: "Pydantic model for user information.\n\nAttributes:\n    user_id:\
@@ -6449,39 +6448,6 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Label Group
-  /label-groups-with-role:
-    get:
-      description: Gets all label groups of the current user for a novel, along with
-        their roles.
-      operationId: read_label_groups_with_role_label_groups_with_role_get
-      parameters:
-      - in: query
-        name: novelId
-        required: true
-        schema:
-          format: uuid
-          title: Novelid
-          type: string
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/LabelGroupWithRole'
-                title: Response Read Label Groups With Role Label Groups With Role
-                  Get
-                type: array
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      security:
-      - OAuth2PasswordBearer: []
-      summary: Read Label Groups With Role
   /label-groups/{labelGroupId}:
     get:
       description: "Gets a label group by id.\n\nRaises:\n    404: Label group not\
@@ -6545,38 +6511,6 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Update Label Group
-  /label-groups/{labelGroupId}/contributors:
-    get:
-      description: Get the list of contributors for a label group.
-      operationId: read_label_contributors_label_groups__labelGroupId__contributors_get
-      parameters:
-      - in: path
-        name: labelGroupId
-        required: true
-        schema:
-          format: uuid
-          title: Labelgroupid
-          type: string
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/LabelContributor'
-                title: Response Read Label Contributors Label Groups  Labelgroupid  Contributors
-                  Get
-                type: array
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      security:
-      - OAuth2PasswordBearer: []
-      summary: Read Label Contributors
   /label-groups/{labelGroupId}/label-datas:
     post:
       description: "Creates a label data entry for a revision text in a label group.\n\
@@ -8933,6 +8867,51 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Chapter
+  /novels/{novelId}/chapters/visibility:
+    post:
+      operationId: action_update_chapters_visibility_novels__novelId__chapters_visibility_post
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateChaptersVisibility'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatedChaptersVisibility'
+          description: Successful Response
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Insufficient permissions.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Novel not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Action Update Chapters Visibility
   /novels/{novelId}/label-promotions:
     get:
       description: 'List a novel''s label promotion jobs: active ones first, then

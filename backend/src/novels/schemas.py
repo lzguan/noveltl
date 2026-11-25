@@ -3,9 +3,9 @@ Pydantic models for novels and chapters.
 """
 
 import uuid
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, model_validator
 
 from src.novels.constants import NovelType, Role, Visibility
 from src.schemas import Model
@@ -251,6 +251,23 @@ class UpdateChapter(Model):
     """
 
     chapter_title: str
+
+
+class UpdateChaptersVisibility(Model):
+    start: int | None = None
+    end: int | None = None
+    is_public: bool
+
+    @model_validator(mode="after")
+    def check_range(self) -> Self:
+        if self.start is not None and self.end is not None and self.start > self.end:
+            raise ValueError("start must be less than or equal to end")
+        return self
+
+
+class UpdatedChaptersVisibility(Model):
+    updated_chapter_nums: list[int]
+    is_public: bool
 
 
 class TextOp(Model):

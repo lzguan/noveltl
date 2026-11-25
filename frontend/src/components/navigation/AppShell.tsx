@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 
 import { readUserMeUsersMeGet } from "@/api/endpoints/default/default";
 import type { User } from "@/api/models";
@@ -13,7 +13,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { routeTo } from "@/routes";
-import { ChevronDownIcon, LogInIcon, LogOutIcon, PencilLineIcon, UserIcon } from "lucide-react";
+import { ChevronDownIcon, LogInIcon, LogOutIcon, UserIcon } from "lucide-react";
 
 function useAuth() {
 	const [user, setUser] = useState<User | null>(null);
@@ -50,7 +50,7 @@ function useAuth() {
 	return { user, logout };
 }
 
-function AppShell() {
+function UserMenu() {
 	const { user, logout } = useAuth();
 	const navigate = useNavigate();
 
@@ -61,57 +61,50 @@ function AppShell() {
 		});
 	}
 
+	if (!user) {
+		return (
+			<Button asChild variant="outline" size="sm" className="h-7 px-2.5 text-xs">
+				<Link to="/login">
+					<LogInIcon data-icon="inline-start" className="size-3.5" />
+					Login
+				</Link>
+			</Button>
+		);
+	}
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button variant="outline" size="sm" className="h-7 gap-1.5 px-2.5 text-xs">
+					<UserIcon data-icon="inline-start" className="size-3.5" />
+					{user.userName}
+					<ChevronDownIcon className="size-3 opacity-50" />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="w-48">
+				<DropdownMenuLabel>{user.userName}</DropdownMenuLabel>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={handleLogout}>
+					<LogOutIcon className="size-4" />
+					Log Out
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+function AppShell() {
 	return (
 		<div className="flex h-screen flex-col bg-background">
-			<header className="border-b bg-background/95 backdrop-blur shrink-0">
-				<div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 lg:flex-row lg:items-center lg:justify-between">
-					<div className="flex items-center gap-3 min-w-0">
-						<Link
-							to={routeTo.edit.dashboard()}
-							className="text-lg font-semibold tracking-tight shrink-0"
-						>
-							NovelTL
-						</Link>
-						<span className="text-sm text-muted-foreground truncate hidden sm:block">
-							Edit chapters and manage translation labels.
-						</span>
-					</div>
-
-					<div className="flex items-center gap-2 flex-wrap">
-						<Button asChild variant="ghost" size="sm">
-							<NavLink to={routeTo.edit.dashboard()} end>
-								<PencilLineIcon data-icon="inline-start" className="size-4" />
-								Edit Home
-							</NavLink>
-						</Button>
-
-						{user ? (
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm">
-										<UserIcon data-icon="inline-start" className="size-4" />
-										{user.userName}
-										<ChevronDownIcon className="size-3.5 opacity-50" />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end" className="w-48">
-									<DropdownMenuLabel>{user.userName}</DropdownMenuLabel>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={handleLogout}>
-										<LogOutIcon className="size-4" />
-										Log Out
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-						) : (
-							<Button asChild variant="outline" size="sm">
-								<Link to="/login">
-									<LogInIcon data-icon="inline-start" className="size-4" />
-									Login
-								</Link>
-							</Button>
-						)}
-					</div>
+			<header className="shrink-0 border-b bg-background/95 backdrop-blur">
+				<div className="mx-auto flex h-11 w-full max-w-6xl items-center justify-between gap-3 px-6">
+					<Link
+						to={routeTo.edit.dashboard()}
+						className="shrink-0 text-sm font-semibold tracking-tight"
+					>
+						NovelTL
+					</Link>
+					<UserMenu />
 				</div>
 			</header>
 
@@ -122,4 +115,4 @@ function AppShell() {
 	);
 }
 
-export { AppShell };
+export { AppShell, UserMenu };

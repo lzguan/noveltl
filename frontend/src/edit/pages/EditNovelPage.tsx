@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Effect } from "effect";
+import { UserMenu } from "@/components/navigation/AppShell";
+import { routeTo } from "@/routes";
 import {
 	readChaptersByNovelChaptersGet,
-	readLabelGroupsWithRoleLabelGroupsWithRoleGet,
+	readLabelGroupsLabelGroupsGet,
 	readNovelWithContributorsNovelsNovelIdWithContributorsGet,
 } from "@/api/endpoints/default/default";
-import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
+import type { Chapter, LabelGroup, Novel, Visibility } from "@/api/models";
 import type { SelectedAutoLabelRun } from "@/autolabels/runs/autoLabelRunsState";
 import { buildController } from "../controller/controller";
 import type { NovelData } from "../controller/novelDataManager";
@@ -31,7 +34,7 @@ import { AutoLabelPanel } from "../panels/autoLabels/AutoLabelPanel";
 import { EditorPanel } from "../panels/EditorPanel";
 import { LeftPanel } from "../panels/LeftPanel";
 import { TranslationsPanel } from "../panels/translations/TranslationsPanel";
-import { RightPanel } from "../panels/RightPanel";
+import { RightPanel, type RightPanelTab } from "../panels/RightPanel";
 import { ToolbarPanel } from "../panels/ToolbarPanel";
 import type { Role } from "@/api/models/role";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
@@ -54,9 +57,10 @@ function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]):
 
 export function EditNovelPage() {
 	const [novel, setNovel] = useState<{ novel: Novel; role: Role } | null>(null);
+	const [novelVisibility, setNovelVisibility] = useState<Visibility | null>(null);
 	const [novelId, setNovelId] = useState<string | null>(null);
 	const [chapters, setChapters] = useState<Chapter[] | null>(null);
-	const [labelGroups, setLabelGroups] = useState<LabelGroupWithRole[] | null>(null);
+	const [labelGroups, setLabelGroups] = useState<LabelGroup[] | null>(null);
 	const [error, setError] = useState<unknown>(null);
 
 	const editorState = useEditorState();
@@ -140,6 +144,7 @@ export function EditNovelPage() {
 			.then((resp) => {
 				if (resp.status !== 200) throw new Error(`Failed to load novel: ${resp.status}`);
 				setNovel({ novel: resp.data.novel, role: "owner" }); // temporarily owner, will change to role of user with id equal to current logged in user once user state in global store
+				setNovelVisibility(resp.data.novel.novelVisibility);
 				setError(null);
 			})
 			.then(() => readChaptersByNovelChaptersGet({ novelId }))
@@ -147,7 +152,7 @@ export function EditNovelPage() {
 				if (resp.status !== 200) throw new Error(`Failed to load chapters: ${resp.status}`);
 				setChapters(resp.data);
 			})
-			.then(() => readLabelGroupsWithRoleLabelGroupsWithRoleGet({ novelId }))
+			.then(() => readLabelGroupsLabelGroupsGet({ novelId }))
 			.then((resp) => {
 				if (resp.status !== 200)
 					throw new Error(`Failed to load label groups: ${resp.status}`);
@@ -255,22 +260,6 @@ export function EditNovelPage() {
 		}
 	}, []);
 
-	if (error) {
-		return (
-			<div className="flex items-center justify-center h-full text-sm text-destructive">
-				{String(error)}
-			</div>
-		);
-	}
-
-	if (!managers || !novel) {
-		return (
-			<div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-				Loading...
-			</div>
-		);
-	}
-
 	const currentChapterId = chapterState.activeChapterId;
 	const activeChapterNum =
 		currentChapterId === null
@@ -278,156 +267,217 @@ export function EditNovelPage() {
 			: (chapterState.chapterList.find((chapter) => chapter.chapterId === currentChapterId)
 					?.chapterNum ?? null);
 	const activeChapterServerId =
-		currentChapterId === null
+		currentChapterId === null || !managers
 			? null
 			: Effect.runSync(managers.controllerGetters.chapterServerId(currentChapterId));
 	const activeChapterContentServerId =
-		currentChapterId === null
+		currentChapterId === null || !managers
 			? null
 			: Effect.runSync(managers.controllerGetters.chapterContentServerId(currentChapterId));
+
 	// Opens a server chapter and highlights a range, only if it still has the given content version.
-	const gotoText: GotoText = (cServId, reference) => {
-		const pid = Effect.runSync(managers.controllerGetters.chapterIdFromServerId(cServId));
-		if (pid === null) {
-			console.warn(`Could not find chapter for server ID ${cServId}`);
-			return;
-		}
-		managers.chapterMgr.switchChapter(pid, {
-			start: reference.start,
-			end: reference.end,
-			desiredCCId: reference.ccServId,
-		});
-	};
+	const gotoText = useCallback<GotoText>(
+		(cServId, reference) => {
+			if (!managers) return;
+			const pid = Effect.runSync(managers.controllerGetters.chapterIdFromServerId(cServId));
+			if (pid === null) {
+				console.warn(`Could not find chapter for server ID ${cServId}`);
+				return;
+			}
+			managers.chapterMgr.switchChapter(pid, {
+				start: reference.start,
+				end: reference.end,
+				desiredCCId: reference.ccServId,
+			});
+		},
+		[managers],
+	);
+
+	const chapterNumbers = useMemo(
+		() => chapterState.chapterList.map((chapter) => chapter.chapterNum),
+		[chapterState.chapterList],
+	);
+	const publicChapterCount = useMemo(
+		() => chapterState.chapterList.filter((chapter) => chapter.chapterIsPublic).length,
+		[chapterState.chapterList],
+	);
+
+	const novelServerId = novel?.novel.novelId ?? null;
+	const rightPanelTabs = useMemo<readonly [RightPanelTab, ...RightPanelTab[]] | null>(() => {
+		if (!managers || novelServerId === null) return null;
+		return [
+			{
+				value: "auto-labels",
+				label: "Auto Labels",
+				keepMounted: true,
+				content: (
+					<AutoLabelPanel
+						key={novelServerId}
+						novelId={novelServerId}
+						labelGroupServerId={managers.labelGroupMgr.labelGroupServerId}
+						onLabelGroupPromoted={managers.labelGroupMgr.reloadPromotedLabelGroup}
+						chapterNumByServerId={chapterNumByServerId}
+						currentChapterId={activeChapterServerId}
+						openChapterContentIds={openChapterContents.openChapterContentIds}
+						labelGroups={trackedLabelGroups.labelGroups}
+						setActive={managers.labelGroupMgr.setActive}
+						previewEnabled={autoLabelPreview.enabled}
+						previewLoading={autoLabelPreview.loading}
+						onSetPreviewEnabled={autoLabelPreview.setEnabled}
+						onSelectedRunChange={setSelectedAutoLabelRun}
+						activeId={trackedLabelGroups.activeLabelGroupId}
+					/>
+				),
+			},
+			{
+				value: "filters",
+				label: "Filters",
+				keepMounted: true,
+				content: (
+					<FiltersPanel key={novelServerId} novelId={novelServerId} gotoText={gotoText} />
+				),
+			},
+			{
+				value: "memories",
+				label: "Memories",
+				keepMounted: true,
+				content: (
+					<MemoryPanel
+						key={novelServerId}
+						novelId={novelServerId}
+						chapterId={activeChapterServerId}
+						chapterNum={activeChapterNum}
+						chapterContentId={activeChapterContentServerId}
+					/>
+				),
+			},
+			{
+				value: "memory-agent",
+				label: "Agent Jobs",
+				content: <MemoryAgentPanel novelId={novelServerId} />,
+			},
+			{
+				value: "translations",
+				label: "Translations",
+				keepMounted: true,
+				content: (
+					<TranslationsPanel
+						key={novelServerId}
+						novelId={novelServerId}
+						chapterNumbers={chapterNumbers}
+					/>
+				),
+			},
+		];
+	}, [
+		managers,
+		novelServerId,
+		chapterNumByServerId,
+		activeChapterServerId,
+		activeChapterNum,
+		activeChapterContentServerId,
+		openChapterContents.openChapterContentIds,
+		trackedLabelGroups.labelGroups,
+		trackedLabelGroups.activeLabelGroupId,
+		autoLabelPreview.enabled,
+		autoLabelPreview.loading,
+		autoLabelPreview.setEnabled,
+		gotoText,
+		chapterNumbers,
+	]);
+
+	const brandLink = (
+		<Link
+			to={routeTo.edit.dashboard()}
+			className="shrink-0 text-sm font-semibold tracking-tight hover:opacity-80"
+		>
+			NovelTL
+		</Link>
+	);
+
+	if (error) {
+		return (
+			<div className="flex h-screen flex-col bg-background">
+				<header className="flex h-11 shrink-0 items-center justify-between border-b px-3">
+					{brandLink}
+					<UserMenu />
+				</header>
+				<div className="flex flex-1 items-center justify-center text-sm text-destructive">
+					{String(error)}
+				</div>
+			</div>
+		);
+	}
+
+	if (!managers || !novel || !rightPanelTabs) {
+		return (
+			<div className="flex h-screen flex-col bg-background">
+				<header className="flex h-11 shrink-0 items-center justify-between border-b px-3">
+					{brandLink}
+					<UserMenu />
+				</header>
+				<div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+					Loading...
+				</div>
+			</div>
+		);
+	}
 
 	return (
-		<div className="relative h-full min-h-0">
-			<div className="flex h-full min-h-0 flex-col">
-				<ToolbarPanel
-					novelTitle={novel.novel.novelTitle}
-					mode={editorState.mode}
-					loading={!editorState.data.empty && editorState.data.loading}
-					onSetMode={editorState.setMode}
-				/>
-				<div className="flex flex-1 min-h-0 overflow-hidden">
-					<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
-						<LeftPanel
-							novelId={novel.novel.novelId}
-							gotoText={gotoText}
-							chapters={chapterState.chapterList}
-							currentChapterId={currentChapterId}
-							onSwitchChapter={managers.chapterMgr.switchChapter}
-							onAddChapter={managers.chapterMgr.addChapter}
-							labelGroups={trackedLabelGroups.labelGroups}
-							chapterOpen={!editorState.data.empty && !editorState.data.loading}
-							onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
-							onSetActive={managers.labelGroupMgr.setActive}
-							onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
-							onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
-							activeId={trackedLabelGroups.activeLabelGroupId}
-						/>
-					</div>
-					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-						<ChapterTabs
-							tabs={chapterState.tabs}
-							chapters={chapterState.chapterList}
-							activeChapterId={chapterState.activeChapterId}
-							onActivate={managers.chapterMgr.switchChapter}
-							onClose={managers.chapterMgr.closeChapter}
-						/>
-						<EditorPanel
-							data={editorState.data}
-							mode={editorState.mode}
-							onSetCaret={editorState.setCaret}
-							onTextOp={managers.editorMgr.textOp}
-							labeling={labeling}
-							preview={autoLabelPreview.preview}
-						/>
-					</div>
-					<div className="shrink-0 flex flex-col min-h-0">
-						<MemoryGroupsProvider
-							key={novel.novel.novelId}
-							novelId={novel.novel.novelId}
-						>
-							<RightPanel
-								tabs={[
-									{
-										value: "auto-labels",
-										label: "Auto Labels",
-										keepMounted: true,
-										content: (
-											<AutoLabelPanel
-												key={novel.novel.novelId}
-												novelId={novel.novel.novelId}
-												labelGroupServerId={
-													managers.labelGroupMgr.labelGroupServerId
-												}
-												onLabelGroupPromoted={
-													managers.labelGroupMgr.reloadPromotedLabelGroup
-												}
-												chapterNumByServerId={chapterNumByServerId}
-												currentChapterId={activeChapterServerId}
-												openChapterContentIds={
-													openChapterContents.openChapterContentIds
-												}
-												labelGroups={trackedLabelGroups.labelGroups}
-												setActive={managers.labelGroupMgr.setActive}
-												previewEnabled={autoLabelPreview.enabled}
-												previewLoading={autoLabelPreview.loading}
-												onSetPreviewEnabled={autoLabelPreview.setEnabled}
-												onSelectedRunChange={setSelectedAutoLabelRun}
-												activeId={trackedLabelGroups.activeLabelGroupId}
-											/>
-										),
-									},
-									{
-										value: "filters",
-										label: "Filters",
-										keepMounted: true,
-										content: (
-											<FiltersPanel
-												key={novel.novel.novelId}
-												novelId={novel.novel.novelId}
-												gotoText={gotoText}
-											/>
-										),
-									},
-									{
-										value: "memories",
-										label: "Memories",
-										keepMounted: true,
-										content: (
-											<MemoryPanel
-												key={novel.novel.novelId}
-												novelId={novel.novel.novelId}
-												chapterId={activeChapterServerId}
-												chapterNum={activeChapterNum}
-												chapterContentId={activeChapterContentServerId}
-											/>
-										),
-									},
-									{
-										value: "memory-agent",
-										label: "Agent Jobs",
-										content: <MemoryAgentPanel novelId={novel.novel.novelId} />,
-									},
-									{
-										value: "translations",
-										label: "Translations",
-										keepMounted: true,
-										content: (
-											<TranslationsPanel
-												key={novel.novel.novelId}
-												novelId={novel.novel.novelId}
-												chapterNumbers={chapterState.chapterList.map(
-													(chapter) => chapter.chapterNum,
-												)}
-											/>
-										),
-									},
-								]}
-							/>
-						</MemoryGroupsProvider>
-					</div>
+		<div className="relative flex h-screen min-h-0 flex-col bg-background">
+			<ToolbarPanel
+				brand={brandLink}
+				trailing={<UserMenu />}
+				novelId={novel.novel.novelId}
+				novelTitle={novel.novel.novelTitle}
+				novelVisibility={novelVisibility ?? novel.novel.novelVisibility}
+				publicChapterCount={publicChapterCount}
+				totalChapterCount={chapterState.chapterList.length}
+				mode={editorState.mode}
+				loading={!editorState.data.empty && editorState.data.loading}
+				onSetMode={editorState.setMode}
+				onVisibilityUpdated={setNovelVisibility}
+			/>
+			<div className="flex flex-1 min-h-0 overflow-hidden">
+				<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
+					<LeftPanel
+						novelId={novel.novel.novelId}
+						gotoText={gotoText}
+						chapters={chapterState.chapterList}
+						currentChapterId={currentChapterId}
+						onSwitchChapter={managers.chapterMgr.switchChapter}
+						onAddChapter={managers.chapterMgr.addChapter}
+						onChaptersVisibilityUpdated={chapterState.setChaptersVisibility}
+						labelGroups={trackedLabelGroups.labelGroups}
+						chapterOpen={!editorState.data.empty && !editorState.data.loading}
+						onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
+						onSetActive={managers.labelGroupMgr.setActive}
+						onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
+						onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
+						activeId={trackedLabelGroups.activeLabelGroupId}
+					/>
+				</div>
+				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+					<ChapterTabs
+						tabs={chapterState.tabs}
+						chapters={chapterState.chapterList}
+						activeChapterId={chapterState.activeChapterId}
+						onActivate={managers.chapterMgr.switchChapter}
+						onClose={managers.chapterMgr.closeChapter}
+					/>
+					<EditorPanel
+						data={editorState.data}
+						mode={editorState.mode}
+						onSetCaret={editorState.setCaret}
+						onTextOp={managers.editorMgr.textOp}
+						labeling={labeling}
+						preview={autoLabelPreview.preview}
+					/>
+				</div>
+				<div className="shrink-0 flex flex-col min-h-0">
+					<MemoryGroupsProvider key={novel.novel.novelId} novelId={novel.novel.novelId}>
+						<RightPanel tabs={rightPanelTabs} />
+					</MemoryGroupsProvider>
 				</div>
 			</div>
 		</div>

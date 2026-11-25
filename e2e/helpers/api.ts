@@ -18,15 +18,6 @@ type ChapterContentResponse = {
 	chapterContentVersion: number;
 };
 
-type LabelGroupWithRoleResponse = {
-	labelGroup: {
-		labelGroupId: string;
-		labelGroupName: string;
-		novelId: string;
-	};
-	role: string;
-};
-
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;
 }
@@ -45,17 +36,6 @@ function isChapterContentResponse(value: unknown): value is ChapterContentRespon
 		typeof value.chapterContentId === "string" &&
 		typeof value.chapterContentText === "string" &&
 		typeof value.chapterContentVersion === "number"
-	);
-}
-
-function isLabelGroupWithRoleResponse(value: unknown): value is LabelGroupWithRoleResponse {
-	return (
-		isRecord(value) &&
-		isRecord(value.labelGroup) &&
-		typeof value.labelGroup.labelGroupId === "string" &&
-		typeof value.labelGroup.labelGroupName === "string" &&
-		typeof value.labelGroup.novelId === "string" &&
-		typeof value.role === "string"
 	);
 }
 
@@ -100,31 +80,6 @@ export async function loginByApi(
 	}, body);
 
 	return body.access_token;
-}
-
-export async function labelGroupsWithRole(
-	request: APIRequestContext,
-	token: string,
-	novelId: string,
-): Promise<LabelGroupWithRoleResponse[]> {
-	const response = await request.get(apiUrl(`/label-groups-with-role?novelId=${novelId}`), {
-		headers: {
-			Authorization: `Bearer ${token}`,
-		},
-	});
-
-	if (!response.ok()) {
-		throw new Error(
-			`Label groups request failed with status ${response.status()}: ${await response.text()}`,
-		);
-	}
-
-	const body = await response.json();
-	if (!Array.isArray(body) || !body.every(isLabelGroupWithRoleResponse)) {
-		throw new Error("Label groups response did not match the expected shape.");
-	}
-
-	return body;
 }
 
 export async function latestChapterContent(

@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { LoaderCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ProvChapter } from "../../controller/types/idTypes";
 import type { ChapterTab } from "../../hooks/useChapters";
 
-export function ChapterTabs({
+export const ChapterTabs = memo(function ChapterTabs({
 	tabs,
 	chapters,
 	activeChapterId,
@@ -73,4 +74,4 @@ export function ChapterTabs({
 			})}
 		</div>
 	);
-}
+});

@@ -712,7 +712,7 @@ def run_label_source(
     statement = label_group_mod_access_select(
         statement,
         current_user,
-        novel_edit_only=True,
+        edit_only=True,
     )
     try:
         label_group = db.execute(statement).scalar_one()

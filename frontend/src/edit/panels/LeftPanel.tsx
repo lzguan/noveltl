@@ -4,15 +4,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChapterPanel } from "./chapters/ChapterPanel";
 import { LabelGroupPanel } from "./labelGroups/LabelGroupPanel";
 import { TermSearchPanel, type GotoText } from "./termSearch/TermSearchPanel";
-import { useState } from "react";
+import { memo, useState } from "react";
 
-export function LeftPanel({
+export const LeftPanel = memo(function LeftPanel({
 	novelId,
 	gotoText,
 	chapters,
 	currentChapterId,
 	onSwitchChapter,
 	onAddChapter,
+	onChaptersVisibilityUpdated,
 	labelGroups,
 	chapterOpen,
 	onToggleVisibility,
@@ -27,6 +28,7 @@ export function LeftPanel({
 	currentChapterId: CProvId | null;
 	onSwitchChapter: (id: CProvId) => void;
 	onAddChapter: (num: number, title: string, isPublic: boolean) => void;
+	onChaptersVisibilityUpdated: (chapterNums: readonly number[], isPublic: boolean) => void;
 	labelGroups: [LGProvId, LabelGroupView][];
 	chapterOpen: boolean;
 	onToggleVisibility: (id: LGProvId) => void;
@@ -54,10 +56,12 @@ export function LeftPanel({
 			</TabsList>
 			<TabsContent value="chapters" className="overflow-y-auto">
 				<ChapterPanel
+					novelId={novelId}
 					chapters={chapters}
 					currentChapterId={currentChapterId}
 					onSwitchChapter={onSwitchChapter}
 					onAddChapter={onAddChapter}
+					onChaptersVisibilityUpdated={onChaptersVisibilityUpdated}
 				/>
 			</TabsContent>
 			<TabsContent value="label-groups" className="overflow-y-auto">
@@ -82,4 +86,4 @@ export function LeftPanel({
 			</TabsContent>
 		</Tabs>
 	);
-}
+});

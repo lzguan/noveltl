@@ -11,7 +11,6 @@ from src.labels.constants import (
     MAX_LABEL_ENTITY_GROUP_NAME_LEN,
     MAX_LABEL_GROUP_NAME_LEN,
     MAX_LABEL_WORD_LEN,
-    LabelRole,
 )
 from src.schemas import Model
 
@@ -31,19 +30,6 @@ class LabelGroup(Model):
     label_group_id: uuid.UUID
     label_group_name: str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
     novel_id: uuid.UUID
-
-
-class LabelGroupWithRole(Model):
-    """
-    Pydantic schema for a label group with a user's role in that label group.
-
-    Attributes:
-        label_group: LabelGroup object.
-        role: Role of the user in this label group.
-    """
-
-    label_group: LabelGroup
-    role: LabelRole
 
 
 class CreateLabelGroup(Model):
@@ -254,19 +240,3 @@ class UpdateLabelDataStream(Model):
     """
 
     ops: list[LabelOp]
-
-
-class LabelContributor(Model):
-    """
-    Pydantic schema for a label contributor, which can be either a user or an autolabel model.
-
-    Attributes:
-        label_contributor_role: Role of the contributor, either a user or an autolabel model.
-        label_group_id: UUID of label group this contributor belongs to.
-        user_id: UUID of user
-    """
-
-    model_config = ConfigDict(from_attributes=True)
-    label_contributor_role: LabelRole
-    label_group_id: uuid.UUID
-    user_id: uuid.UUID

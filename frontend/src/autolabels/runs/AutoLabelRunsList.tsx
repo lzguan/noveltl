@@ -67,21 +67,21 @@ function RunRows({
 }) {
 	if (entry.status === "loading") {
 		return (
-			<div className="px-2 pb-2 text-xs text-muted-foreground">
+			<div className="border-t bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
 				Loading chapter statuses...
 			</div>
 		);
 	}
 	if (entry.status === "error") {
 		return (
-			<div className="px-2 pb-2 text-xs text-destructive">
+			<div className="border-t bg-muted/20 px-3 py-2 text-xs text-destructive">
 				Failed to load chapter statuses. Reload to retry.
 			</div>
 		);
 	}
 	if (entry.status !== "ready") {
 		return (
-			<div className="px-2 pb-2 text-xs text-muted-foreground">
+			<div className="border-t bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
 				Reload this run to load chapter statuses.
 			</div>
 		);
@@ -94,9 +94,12 @@ function RunRows({
 	});
 
 	return (
-		<div className="flex flex-col gap-1 px-2 pb-2">
+		<div className="flex flex-col gap-1.5 border-t bg-muted/20 px-3 py-2">
 			{rows.map((al) => (
-				<div key={al.autoLabelMeta.autoLabelId} className="flex items-center gap-1 text-xs">
+				<div
+					key={al.autoLabelMeta.autoLabelId}
+					className="flex items-center gap-1.5 text-xs"
+				>
 					<MatchDot
 						status={getChapterMatchStatus(
 							al.chapterId,
@@ -104,15 +107,12 @@ function RunRows({
 							openChapterContentIds,
 						)}
 					/>
-					<span className="min-w-10 text-muted-foreground">
+					<span className="min-w-11 text-muted-foreground">
 						Ch. {chapterNumById.get(al.chapterId) ?? "?"}
 					</span>
 					<Badge variant={statusVariant(al.autoLabelMeta.autoLabelStatus)}>
 						{al.autoLabelMeta.autoLabelStatus}
 					</Badge>
-					{al.autoLabelMeta.autoLabelStatus === "done" && (
-						<span className="text-muted-foreground">OK</span>
-					)}
 					{al.autoLabelMeta.autoLabelMessage && (
 						<span className="min-w-0 flex-1 truncate text-muted-foreground">
 							{al.autoLabelMeta.autoLabelMessage}
@@ -154,11 +154,13 @@ function AutoLabelRunItem({
 		<Collapsible open={expanded} onOpenChange={setExpanded}>
 			<div
 				className={cn(
-					"rounded-md border border-transparent",
-					selected && "border-border bg-muted/40",
+					"overflow-hidden rounded-lg border bg-card",
+					selected
+						? "border-primary/60 bg-accent/40 ring-1 ring-primary/20"
+						: "border-border",
 				)}
 			>
-				<div className="flex items-center gap-1">
+				<div className="flex items-center gap-1 px-1.5 pt-1.5">
 					<CollapsibleTrigger asChild>
 						<Button
 							type="button"
@@ -174,7 +176,7 @@ function AutoLabelRunItem({
 					<button
 						type="button"
 						aria-pressed={selected}
-						className="flex min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 py-1 text-left text-xs hover:bg-muted"
+						className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs hover:bg-muted/60"
 						onClick={() => {
 							if (selected) {
 								onDeselectRun();
@@ -184,7 +186,9 @@ function AutoLabelRunItem({
 						}}
 					>
 						<MatchDot status={currentStatus} />
-						<span className="min-w-0 flex-1 truncate">{runLabel}</span>
+						<span className="min-w-0 flex-1 truncate font-medium text-foreground">
+							{runLabel}
+						</span>
 						<Badge
 							variant={
 								entry.status === "ready"
@@ -222,7 +226,7 @@ function AutoLabelRunItem({
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</div>
-				<div className="px-7 pb-1 text-xs text-muted-foreground">
+				<div className="px-8 pb-2 text-xs text-muted-foreground">
 					{entry.run.modelName} · {countDone(entry)} done ·{" "}
 					{formatCreatedAt(entry.run.createdAt)}
 				</div>
@@ -266,13 +270,13 @@ export function AutoLabelRunsList({
 	onPromoteRun: (run: AutoLabelRun) => void;
 }) {
 	return (
-		<section className="flex flex-col gap-1 p-2">
-			<div className="flex items-center gap-2 px-1">
-				<div className="flex-1" />
+		<section className="flex flex-col gap-2">
+			<div className="flex items-center justify-between gap-2">
+				<span className="text-xs font-medium text-muted-foreground">Runs</span>
 				<Button
 					type="button"
 					size="xs"
-					variant="ghost"
+					variant="outline"
 					onClick={onRefreshAllRuns}
 					disabled={refreshing}
 				>
@@ -280,9 +284,9 @@ export function AutoLabelRunsList({
 					{refreshing ? "Reloading" : "Reload All"}
 				</Button>
 			</div>
-			<div className="flex flex-col gap-1">
+			<div className="flex flex-col gap-2">
 				{runs.length === 0 ? (
-					<div className="px-1 py-2 text-xs text-muted-foreground">
+					<div className="rounded-lg border border-dashed p-6 text-center text-xs text-muted-foreground">
 						No autolabel runs yet.
 					</div>
 				) : (

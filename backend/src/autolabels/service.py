@@ -27,7 +27,7 @@ from src.autolabels.permissions import auto_label_mod_access_insert, auto_label_
 from src.autolabels.promotions.dispatch.dispatcher import PromotionDispatcher
 from src.autolabels.schemas import CreateLabelDataByAutoLabel
 from src.labels.exceptions import LabelGroupNotFoundException
-from src.labels.models import LabelData, LabelGroup
+from src.labels.models import Label, LabelData, LabelGroup
 from src.labels.permissions import label_group_mod_access_select
 from src.novels import models as nm
 from src.novels.exceptions import NovelNotFoundException
@@ -361,8 +361,9 @@ def _promotion_candidates(promotion_id: uuid.UUID, label_group_id: uuid.UUID, re
         .correlate(nm.Chapter)
         .scalar_subquery()
     )
-    already_labelled = (
-        select(LabelData.label_data_id)
+    has_existing_labels = (
+        select(Label.label_id)
+        .join(LabelData, LabelData.label_data_id == Label.label_data_id)
         .where(
             LabelData.label_group_id == label_group_id,
             LabelData.chapter_content_id == models.AutoLabel.chapter_content_id,
@@ -382,9 +383,10 @@ def _promotion_candidates(promotion_id: uuid.UUID, label_group_id: uuid.UUID, re
             models.AutoLabel.auto_label_status == AutoLabelProgress.DONE,
             nm.Chapter.novel_id == group_novel,
             nm.ChapterContent.chapter_content_version == latest_version,
-            ~already_labelled,
         )
     )
+    if request.skip_existing_labels:
+        candidates = candidates.where(~has_existing_labels)
     if request.chapter_ids:
         candidates = candidates.where(nm.Chapter.chapter_id.in_(request.chapter_ids))
     if request.start is not None:
@@ -411,19 +413,20 @@ async def create_promotion_job(
         literal(request.run_id),
         LabelGroup.label_group_id,
         literal(current_user.user_id),
+        literal(request.skip_existing_labels),
     ).join(
         models.AutoLabelRun,
         and_(models.AutoLabelRun.run_id == request.run_id, models.AutoLabelRun.novel_id == LabelGroup.novel_id),
     )
     job_values = label_group_mod_access_select(
-        job_values.where(LabelGroup.label_group_id == label_group_id), current_user, label_edit_only=True
+        job_values.where(LabelGroup.label_group_id == label_group_id), current_user, edit_only=True
     )
     try:
         created = (
             await db.execute(
                 insert(models.LabelPromotionJob)
                 .from_select(
-                    ["run_id", "label_group_id", "requested_by"],
+                    ["run_id", "label_group_id", "requested_by", "skip_existing_labels"],
                     job_values,
                 )
                 .returning(models.LabelPromotionJob.promotion_id)
@@ -480,6 +483,7 @@ async def query_promotion_jobs(
             promotion_id=row.promotion_id,
             run_id=row.run_id,
             label_group_id=row.label_group_id,
+            skip_existing_labels=row.skip_existing_labels,
             status=row.status,
             message=row.message,
             counts=schemas.LabelPromotionCounts(

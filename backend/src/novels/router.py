@@ -42,6 +42,8 @@ from src.novels.schemas import (
     SourceWorkData,
     UpdateChapter,
     UpdateChapterContent,
+    UpdateChaptersVisibility,
+    UpdatedChaptersVisibility,
     UpdateNovel,
     UpdateSourceWork,
 )
@@ -68,6 +70,7 @@ from src.novels.service import (
     query_source_work_by_id,
     query_source_works_by_title,
     remove_chapter,
+    update_chapters_visibility,
 )
 from src.novels.term_search import MAX_CHAPTERS_PER_PAGE, search_chapter_content, search_novel
 from src.requests.cache import redis_cache
@@ -481,6 +484,30 @@ async def action_publish_chapter(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Insufficient permissions to perform this action."
         ) from e
     return chapter
+
+
+@router.post(
+    "/novels/{novelId}/chapters/visibility",
+    response_model=UpdatedChaptersVisibility,
+    responses={
+        401: {"model": DetailHTTPErrorResponse, "description": "Insufficient permissions."},
+        404: {"model": DetailHTTPErrorResponse, "description": "Novel not found."},
+    },
+)
+async def action_update_chapters_visibility(
+    novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
+    request: UpdateChaptersVisibility,
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    try:
+        return await update_chapters_visibility(db, current_user, novel_id, request)
+    except NovelNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Novel with id {novel_id} not found.") from e
+    except InsufficientPermissionsException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Insufficient permissions to perform this action."
+        ) from e
 
 
 # ---------------------------------------------------------------------------

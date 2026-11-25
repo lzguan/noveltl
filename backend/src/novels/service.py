@@ -721,6 +721,40 @@ async def make_public_chapter(db: AsyncSession, current_user: User, chapter_id: 
     return chapter
 
 
+async def update_chapters_visibility(
+    db: AsyncSession,
+    current_user: User,
+    novel_id: uuid.UUID,
+    request: schemas.UpdateChaptersVisibility,
+) -> schemas.UpdatedChaptersVisibility:
+    stmt = update(models.Chapter).where(models.Chapter.novel_id == novel_id).values(chapter_is_public=request.is_public)
+    if request.start is not None:
+        stmt = stmt.where(models.Chapter.chapter_num >= request.start)
+    if request.end is not None:
+        stmt = stmt.where(models.Chapter.chapter_num <= request.end)
+    stmt = chapter_mod_access_update(stmt, current_user)
+    stmt = stmt.returning(models.Chapter.chapter_num)
+    try:
+        updated_nums = sorted((await db.execute(stmt)).scalars().all())
+        if not updated_nums:
+            editable_q = novel_mod_access_select(
+                select(models.Novel.novel_id).where(models.Novel.novel_id == novel_id),
+                current_user,
+                edit_only=True,
+            )
+            if (await db.execute(editable_q)).scalar_one_or_none() is None:
+                await query_novel_by_id(db, current_user, novel_id)
+                raise InsufficientPermissionsException
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return schemas.UpdatedChaptersVisibility(
+        updated_chapter_nums=updated_nums,
+        is_public=request.is_public,
+    )
+
+
 async def modify_chapter_content(
     db: AsyncSession,
     current_user: User,

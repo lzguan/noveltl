@@ -15,6 +15,7 @@ from src.translations.actions.common.inputs import (
 )
 from src.translations.actions.common.outputs import output_records
 from src.translations.actions.common.prompts import format_memories
+from src.translations.actions.common.staging import stage_chapter_outputs
 from src.translations.actions.execution.taskiq_actions import TaskiqActionCallbacks
 from src.translations.actions.registry import ACTION_CALLBACKS
 from src.translations.broker import broker, schedule_source
@@ -154,6 +155,7 @@ async def poll(context: ActionTaskContext) -> bool:
             raise RuntimeError(f"Provider batch failed: {error}")
 
 
+@stage_chapter_outputs
 async def finalize(context: ActionTaskContext) -> None:
     if context.task.provider_output_id is None:
         raise ValueError("Finalization requires a provider output ID")

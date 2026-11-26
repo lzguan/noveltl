@@ -13,6 +13,7 @@ export function EditorPanel({
 	onTextOp,
 	labeling,
 	preview,
+	onScrollElementChange,
 }: {
 	data: EditorData;
 	mode: EditorMode;
@@ -20,6 +21,7 @@ export function EditorPanel({
 	onTextOp: (op: TextOp) => void;
 	labeling: LabelEditing;
 	preview: AutoLabelPreview | null;
+	onScrollElementChange?: (element: HTMLElement | null) => void;
 }) {
 	if (data.empty) {
 		return (
@@ -46,6 +48,7 @@ export function EditorPanel({
 				labeling={labeling}
 				preview={preview}
 				initialSelection={data.initialSelection}
+				onScrollElementChange={onScrollElementChange}
 			/>
 		</div>
 	);

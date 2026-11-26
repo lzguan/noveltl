@@ -8183,6 +8183,204 @@
         }
       }
     },
+    "/translation-jobs/{jobId}/outputs": {
+      "get": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "List Outputs",
+        "operationId": "list_outputs_translation_jobs__jobId__outputs_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          },
+          {
+            "name": "stageId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stageid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationOutputsRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translation-jobs/{jobId}/outputs/{chapterId}": {
+      "get": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Read Output",
+        "operationId": "read_output_translation_jobs__jobId__outputs__chapterId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          },
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          },
+          {
+            "name": "stageId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stageid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationOutputChapterDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translation-jobs/{jobId}/accept": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Accept Outputs",
+        "operationId": "accept_outputs_translation_jobs__jobId__accept_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationAcceptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationAcceptResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/translation-jobs/{jobId}": {
       "get": {
         "tags": [
@@ -13306,6 +13504,163 @@
         ],
         "title": "TranslateTermsStageConfig"
       },
+      "TranslationAcceptBatchScope": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "batch",
+            "title": "Mode"
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Batchid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "batchId"
+        ],
+        "title": "TranslationAcceptBatchScope"
+      },
+      "TranslationAcceptJobScope": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "job",
+            "title": "Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "TranslationAcceptJobScope"
+      },
+      "TranslationAcceptRangeScope": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "const": "range",
+            "title": "Mode"
+          },
+          "startChapterNum": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Startchapternum"
+          },
+          "endChapterNum": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Endchapternum"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "startChapterNum",
+          "endChapterNum"
+        ],
+        "title": "TranslationAcceptRangeScope"
+      },
+      "TranslationAcceptRequest": {
+        "properties": {
+          "targetNovelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Targetnovelid"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/TranslationAcceptScope"
+          },
+          "stageId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stageid"
+          },
+          "onExisting": {
+            "type": "string",
+            "enum": [
+              "skip",
+              "overwrite"
+            ],
+            "title": "Onexisting",
+            "default": "skip"
+          }
+        },
+        "type": "object",
+        "required": [
+          "targetNovelId",
+          "scope"
+        ],
+        "title": "TranslationAcceptRequest"
+      },
+      "TranslationAcceptResult": {
+        "properties": {
+          "targetNovelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Targetnovelid"
+          },
+          "createdChapters": {
+            "type": "integer",
+            "title": "Createdchapters"
+          },
+          "updatedChapters": {
+            "type": "integer",
+            "title": "Updatedchapters"
+          },
+          "skippedChapters": {
+            "type": "integer",
+            "title": "Skippedchapters"
+          },
+          "chapterNums": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Chapternums"
+          }
+        },
+        "type": "object",
+        "required": [
+          "targetNovelId",
+          "createdChapters",
+          "updatedChapters",
+          "skippedChapters",
+          "chapterNums"
+        ],
+        "title": "TranslationAcceptResult"
+      },
+      "TranslationAcceptScope": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TranslationAcceptJobScope"
+          },
+          {
+            "$ref": "#/components/schemas/TranslationAcceptBatchScope"
+          },
+          {
+            "$ref": "#/components/schemas/TranslationAcceptRangeScope"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "mode",
+          "mapping": {
+            "batch": "#/components/schemas/TranslationAcceptBatchScope",
+            "job": "#/components/schemas/TranslationAcceptJobScope",
+            "range": "#/components/schemas/TranslationAcceptRangeScope"
+          }
+        }
+      },
       "TranslationActionCheck": {
         "properties": {
           "action": {
@@ -13766,6 +14121,11 @@
           },
           "progress": {
             "$ref": "#/components/schemas/TranslationProgress"
+          },
+          "stagedChapterCount": {
+            "type": "integer",
+            "title": "Stagedchaptercount",
+            "default": 0
           }
         },
         "type": "object",
@@ -13799,6 +14159,123 @@
         ],
         "title": "TranslationLaneEnd"
       },
+      "TranslationOutputChapterDetail": {
+        "properties": {
+          "stageId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Stageid"
+          },
+          "stageNum": {
+            "type": "integer",
+            "title": "Stagenum"
+          },
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "chapterTitle": {
+            "type": "string",
+            "title": "Chaptertitle"
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Batchid"
+          },
+          "batchNum": {
+            "type": "integer",
+            "title": "Batchnum"
+          },
+          "sourceChapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourcechaptercontentid"
+          },
+          "sourceText": {
+            "type": "string",
+            "title": "Sourcetext"
+          },
+          "translatedText": {
+            "type": "string",
+            "title": "Translatedtext"
+          },
+          "stagedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Stagedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stageId",
+          "stageNum",
+          "chapterId",
+          "chapterNum",
+          "chapterTitle",
+          "batchId",
+          "batchNum",
+          "sourceChapterContentId",
+          "sourceText",
+          "translatedText",
+          "stagedAt"
+        ],
+        "title": "TranslationOutputChapterDetail"
+      },
+      "TranslationOutputChapterSummary": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "chapterTitle": {
+            "type": "string",
+            "title": "Chaptertitle"
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Batchid"
+          },
+          "batchNum": {
+            "type": "integer",
+            "title": "Batchnum"
+          },
+          "stagedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Stagedat"
+          },
+          "acceptedNovelIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Acceptednovelids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterId",
+          "chapterNum",
+          "chapterTitle",
+          "batchId",
+          "batchNum",
+          "stagedAt"
+        ],
+        "title": "TranslationOutputChapterSummary"
+      },
       "TranslationOutputPort": {
         "properties": {
           "stream": {
@@ -13815,6 +14292,61 @@
           "type"
         ],
         "title": "TranslationOutputPort"
+      },
+      "TranslationOutputsRead": {
+        "properties": {
+          "selectedStageId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selectedstageid"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationStagedStage"
+            },
+            "type": "array",
+            "title": "Stages"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationOutputChapterSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "targetNovels": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationTargetNovel"
+            },
+            "type": "array",
+            "title": "Targetnovels"
+          },
+          "lastTargetNovelId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lasttargetnovelid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "targetNovels"
+        ],
+        "title": "TranslationOutputsRead"
       },
       "TranslationPipelineCheck": {
         "properties": {
@@ -13992,6 +14524,67 @@
           "action"
         ],
         "title": "TranslationStageRequest"
+      },
+      "TranslationStagedStage": {
+        "properties": {
+          "stageId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Stageid"
+          },
+          "stageNum": {
+            "type": "integer",
+            "title": "Stagenum"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "chapterCount": {
+            "type": "integer",
+            "title": "Chaptercount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stageId",
+          "stageNum",
+          "action",
+          "chapterCount"
+        ],
+        "title": "TranslationStagedStage"
+      },
+      "TranslationTargetNovel": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "novelTitle": {
+            "type": "string",
+            "title": "Noveltitle"
+          },
+          "languageCode": {
+            "type": "string",
+            "title": "Languagecode"
+          },
+          "novelType": {
+            "$ref": "#/components/schemas/NovelType"
+          },
+          "novelVisibility": {
+            "$ref": "#/components/schemas/Visibility"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "novelTitle",
+          "languageCode",
+          "novelType",
+          "novelVisibility"
+        ],
+        "title": "TranslationTargetNovel"
       },
       "TranslationTaskRead": {
         "properties": {

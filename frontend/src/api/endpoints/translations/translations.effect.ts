@@ -37,6 +37,7 @@ export const listJobsTranslationJobsGet200ResponseItemsItemProgressRetryableBatc
 export const listJobsTranslationJobsGet200ResponseItemsItemProgressStartableBatchesDefault = 0;
 export const listJobsTranslationJobsGet200ResponseItemsItemProgressTotalBatchesDefault = 0;
 export const listJobsTranslationJobsGet200ResponseItemsItemProgressTotalTasksDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemStagedChapterCountDefault = 0;
 
 export const ListJobsTranslationJobsGet200Response = S.Struct({
   "items": S.Array(S.Struct({
@@ -54,6 +55,7 @@ export const ListJobsTranslationJobsGet200Response = S.Struct({
   "totalBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressTotalBatchesDefault))),
   "totalTasks": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressTotalTasksDefault)))
 }),
+  "stagedChapterCount": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemStagedChapterCountDefault))),
   "stages": S.Array(S.Struct({
   "action": S.String,
   "config": S.Record(S.String, S.Unknown),
@@ -272,6 +274,56 @@ export const ReadTranslationJobsJobIdGet422Response = S.Struct({
 })
 
 /**
+ * @summary Accept Outputs
+ */
+export const AcceptOutputsTranslationJobsJobIdAcceptPostParams = S.Struct({
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const acceptOutputsTranslationJobsJobIdAcceptPostBodyOnExistingDefault = 'skip';
+export const acceptOutputsTranslationJobsJobIdAcceptPostBodyScopeThreeEndChapterNumMin = 0;
+
+export const acceptOutputsTranslationJobsJobIdAcceptPostBodyScopeThreeStartChapterNumMin = 0;
+
+
+
+export const AcceptOutputsTranslationJobsJobIdAcceptPostBody = S.Struct({
+  "onExisting": S.Literals(['skip', 'overwrite']).pipe(S.withDecodingDefaultType(Effect.succeed(acceptOutputsTranslationJobsJobIdAcceptPostBodyOnExistingDefault))),
+  "scope": S.Union([S.Struct({
+  "mode": S.Literals(['job'])
+}), S.Struct({
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "mode": S.Literals(['batch'])
+}), S.Struct({
+  "endChapterNum": S.Number.check(S.isGreaterThanOrEqualTo(acceptOutputsTranslationJobsJobIdAcceptPostBodyScopeThreeEndChapterNumMin)),
+  "mode": S.Literals(['range']),
+  "startChapterNum": S.Number.check(S.isGreaterThanOrEqualTo(acceptOutputsTranslationJobsJobIdAcceptPostBodyScopeThreeStartChapterNumMin))
+})]),
+  "stageId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "targetNovelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const AcceptOutputsTranslationJobsJobIdAcceptPost200Response = S.Struct({
+  "chapterNums": S.Array(S.Number),
+  "createdChapters": S.Number,
+  "skippedChapters": S.Number,
+  "targetNovelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedChapters": S.Number
+})
+
+export const AcceptOutputsTranslationJobsJobIdAcceptPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary List Batches
  */
 export const ListBatchesTranslationJobsJobIdBatchesGetParams = S.Struct({
@@ -301,6 +353,7 @@ export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressRetr
 export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressStartableBatchesDefault = 0;
 export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalBatchesDefault = 0;
 export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalTasksDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobStagedChapterCountDefault = 0;
 
 export const ListBatchesTranslationJobsJobIdBatchesGet200Response = S.Struct({
   "items": S.Array(S.Struct({
@@ -333,6 +386,7 @@ export const ListBatchesTranslationJobsJobIdBatchesGet200Response = S.Struct({
   "totalBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalBatchesDefault))),
   "totalTasks": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalTasksDefault)))
 }),
+  "stagedChapterCount": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobStagedChapterCountDefault))),
   "stages": S.Array(S.Struct({
   "action": S.String,
   "config": S.Record(S.String, S.Unknown),
@@ -474,6 +528,94 @@ export const CancelAllTranslationJobsJobIdCancelAllPost200Response = S.Struct({
 })
 
 export const CancelAllTranslationJobsJobIdCancelAllPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary List Outputs
+ */
+export const ListOutputsTranslationJobsJobIdOutputsGetParams = S.Struct({
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const ListOutputsTranslationJobsJobIdOutputsGetQueryParams = S.Struct({
+  "stageId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
+})
+
+export const ListOutputsTranslationJobsJobIdOutputsGet200Response = S.Struct({
+  "items": S.Array(S.Struct({
+  "acceptedNovelIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchNum": S.Number,
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterNum": S.Number,
+  "chapterTitle": S.String,
+  "stagedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})),
+  "lastTargetNovelId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "selectedStageId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "stages": S.optional(S.Array(S.Struct({
+  "action": S.String,
+  "chapterCount": S.Number,
+  "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stageNum": S.Number
+}))),
+  "targetNovels": S.Array(S.Struct({
+  "languageCode": S.String,
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelTitle": S.String,
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)])
+}))
+})
+
+export const ListOutputsTranslationJobsJobIdOutputsGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Read Output
+ */
+export const ReadOutputTranslationJobsJobIdOutputsChapterIdGetParams = S.Struct({
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const ReadOutputTranslationJobsJobIdOutputsChapterIdGetQueryParams = S.Struct({
+  "stageId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
+})
+
+export const ReadOutputTranslationJobsJobIdOutputsChapterIdGet200Response = S.Struct({
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchNum": S.Number,
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterNum": S.Number,
+  "chapterTitle": S.String,
+  "sourceChapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "sourceText": S.String,
+  "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stageNum": S.Number,
+  "stagedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "translatedText": S.String
+})
+
+export const ReadOutputTranslationJobsJobIdOutputsChapterIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.StructWithRest(S.Struct({
 

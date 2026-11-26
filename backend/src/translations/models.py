@@ -2,7 +2,19 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import UUID
@@ -30,6 +42,7 @@ class TranslationStage(Base):
 
     __table_args__ = (
         UniqueConstraint("job_id", "stage_num", name="uq_translation_stage_job_num"),
+        UniqueConstraint("stage_id", "job_id", name="uq_translation_stage_id_job_id"),
         CheckConstraint("stage_num >= 0", name="ck_translation_stage_num"),
     )
 
@@ -62,6 +75,7 @@ class TranslationJobChapter(Base):
     batch_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("translation_batches.batch_id", ondelete="CASCADE"), nullable=False, index=True
     )
+    chapter_num: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class TranslationTask(Base):
@@ -101,4 +115,49 @@ class TranslationTask(Base):
             "(claim_token IS NOT NULL AND claim_expires_at IS NOT NULL)",
             name="ck_translation_task_claim_token_expiration",
         ),
+    )
+
+
+class TranslationChapterOutput(Base):
+    __tablename__ = "translation_chapter_outputs"
+
+    stage_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True)
+    chapter_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True)
+    job_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False, index=True)
+    translated_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["stage_id", "job_id"],
+            ["translation_stages.stage_id", "translation_stages.job_id"],
+            ondelete="CASCADE",
+            name="fk_translation_chapter_outputs_stage_job",
+        ),
+        ForeignKeyConstraint(
+            ["job_id", "chapter_id"],
+            ["translation_job_chapters.job_id", "translation_job_chapters.chapter_id"],
+            ondelete="CASCADE",
+            name="fk_translation_chapter_outputs_job_chapter",
+        ),
+    )
+
+
+class TranslationChapterAccept(Base):
+    __tablename__ = "translation_chapter_accepts"
+
+    accept_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
+    stage_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False)
+    source_chapter_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False)
+    target_chapter_content_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chapter_contents.chapter_content_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["stage_id", "source_chapter_id"],
+            ["translation_chapter_outputs.stage_id", "translation_chapter_outputs.chapter_id"],
+            ondelete="CASCADE",
+            name="fk_translation_chapter_accepts_output",
+        ),
+        Index("ix_translation_chapter_accepts_stage_source", "stage_id", "source_chapter_id"),
     )

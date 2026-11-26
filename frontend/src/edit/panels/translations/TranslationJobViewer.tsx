@@ -85,9 +85,16 @@ function state(progress: TranslationProgress) {
 export function JobCard({
 	job,
 	onDetails,
+	onOpenReview,
 	...controls
-}: ViewerControls & { job: TranslationJobSummary; onDetails: () => void }) {
+}: ViewerControls & {
+	job: TranslationJobSummary;
+	onDetails: () => void;
+	onOpenReview: () => void;
+}) {
 	const progress = job.progress;
+	const stagedCount = job.stagedChapterCount ?? 0;
+	const outputsNotStaged = (progress.completedBatches ?? 0) > 0 && stagedCount === 0;
 	return (
 		<article className="rounded-lg border bg-card p-3 space-y-3">
 			<div className="flex items-center gap-2">
@@ -112,14 +119,28 @@ export function JobCard({
 				</Button>
 			</div>
 			<p className="text-xs text-muted-foreground">
-				{job.stages.length} stages · {progress.totalBatches ?? 0} batches
+				{job.stages.length} stages · {progress.totalBatches ?? 0} batches · {stagedCount}{" "}
+				staged
 			</p>
 			<Progress completed={progress.completedTasks ?? 0} total={progress.totalTasks ?? 0} />
 			<p className="text-xs text-muted-foreground">
 				{progress.completedBatches ?? 0} complete · {progress.activeBatches ?? 0} processing
 				· {progress.failedBatches ?? 0} failed · {progress.cancelledBatches ?? 0} cancelled
 			</p>
-			<Controls {...controls} progress={progress} jobId={job.jobId} />
+			{outputsNotStaged && (
+				<p className="text-xs text-muted-foreground">Outputs not staged</p>
+			)}
+			<div className="flex flex-wrap items-center gap-1">
+				<Controls {...controls} progress={progress} jobId={job.jobId} />
+				<Button
+					size="sm"
+					variant="secondary"
+					disabled={stagedCount === 0}
+					onClick={onOpenReview}
+				>
+					Review
+				</Button>
+			</div>
 		</article>
 	);
 }
@@ -190,12 +211,14 @@ function BatchPage({
 	page,
 	revision,
 	onPage,
+	onOpenReview,
 	...controls
 }: ViewerControls & {
 	jobId: string;
 	page: number;
 	revision: number;
 	onPage: (page: number) => void;
+	onOpenReview: (job: TranslationJobSummary) => void;
 }) {
 	const load = useCallback(
 		async (signal: AbortSignal) => {
@@ -211,6 +234,8 @@ function BatchPage({
 		[jobId, page],
 	);
 	const { data, error, refreshing, refresh } = useTranslationRead(load, revision);
+	const stagedCount = data?.job.stagedChapterCount ?? 0;
+	const outputsNotStaged = (data?.job.progress.completedBatches ?? 0) > 0 && stagedCount === 0;
 	return (
 		<>
 			{!data && !error && <p role="status">Loading batches…</p>}
@@ -228,9 +253,23 @@ function BatchPage({
 					<p className="text-xs">
 						{data.job.stages
 							.map((stage) => stage.action.replaceAll("_", " "))
-							.join(" → ")}
+							.join(" → ")}{" "}
+						· {stagedCount} staged
 					</p>
-					<Controls {...controls} progress={data.job.progress} jobId={jobId} />
+					{outputsNotStaged && (
+						<p className="text-xs text-muted-foreground">Outputs not staged</p>
+					)}
+					<div className="flex flex-wrap items-center gap-1">
+						<Controls {...controls} progress={data.job.progress} jobId={jobId} />
+						<Button
+							size="sm"
+							variant="secondary"
+							disabled={stagedCount === 0}
+							onClick={() => onOpenReview(data.job)}
+						>
+							Review
+						</Button>
+					</div>
 					{data.items.length === 0 && <p>No batches on this page.</p>}
 					{data.items.map((batch) => {
 						const progress = batchProgress(batch, data.observedAt);
@@ -283,8 +322,15 @@ export function BatchDialog({
 	revision,
 	notice,
 	onClose,
+	onOpenReview,
 	...controls
-}: ViewerControls & { jobId: string; revision: number; notice: string; onClose: () => void }) {
+}: ViewerControls & {
+	jobId: string;
+	revision: number;
+	notice: string;
+	onClose: () => void;
+	onOpenReview: (job: TranslationJobSummary) => void;
+}) {
 	const [page, setPage] = useState(0);
 	return (
 		<Dialog
@@ -310,6 +356,7 @@ export function BatchDialog({
 					page={page}
 					revision={revision}
 					onPage={setPage}
+					onOpenReview={onOpenReview}
 					{...controls}
 				/>
 			</DialogContent>

@@ -12,5 +12,6 @@ export interface TranslationJobSummary {
   config: TranslationJobSummaryConfig;
   jobId: string;
   progress: TranslationProgress;
+  stagedChapterCount?: number;
   stages: TranslationStageRead[];
 }

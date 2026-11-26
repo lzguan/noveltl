@@ -86,10 +86,9 @@ const editorTheme = EditorView.theme({
 	"&": {
 		height: "100%",
 		fontSize: "1.05rem",
-		fontFamily: '"Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif',
 	},
 	".cm-content": { lineHeight: "1.75", padding: "1rem" },
-	".cm-scroller": { overflow: "auto" },
+	".cm-scroller": { overflow: "auto", fontFamily: "var(--font-reading)" },
 	"&.cm-focused": { outline: "none" },
 	".cm-autolabel-preview": {
 		backgroundColor: "color-mix(in oklab, var(--primary) 10%, transparent)",
@@ -123,6 +122,7 @@ export function CodeMirrorEditor({
 	labeling,
 	preview,
 	initialSelection,
+	onScrollElementChange,
 }: {
 	sm: SM;
 	mode: EditorMode;
@@ -131,6 +131,7 @@ export function CodeMirrorEditor({
 	labeling: LabelEditing;
 	preview: AutoLabelPreview | null;
 	initialSelection?: InitialSelection;
+	onScrollElementChange?: (element: HTMLElement | null) => void;
 }) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const viewRef = useRef<EditorView | null>(null);
@@ -139,6 +140,8 @@ export function CodeMirrorEditor({
 	onSetCaretRef.current = onSetCaret;
 	const onTextOpRef = useRef(onTextOp);
 	onTextOpRef.current = onTextOp;
+	const onScrollElementChangeRef = useRef(onScrollElementChange);
+	onScrollElementChangeRef.current = onScrollElementChange;
 
 	const [menuCtx, setMenuCtx] = useState<MenuCtx>({ selection: null, labels: [] });
 	const [form, setForm] = useState<FormState | null>(null);
@@ -227,6 +230,7 @@ export function CodeMirrorEditor({
 				: undefined,
 		});
 		viewRef.current = view;
+		onScrollElementChangeRef.current?.(view.scrollDOM);
 
 		const unsubscribe = sm.subscribe(() => {
 			view.dispatch({ effects: setDecorations.of(buildDecorations(sm)) });
@@ -234,6 +238,7 @@ export function CodeMirrorEditor({
 
 		return () => {
 			unsubscribe();
+			onScrollElementChangeRef.current?.(null);
 			view.destroy();
 			viewRef.current = null;
 		};

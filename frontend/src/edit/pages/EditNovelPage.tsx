@@ -13,7 +13,7 @@ import type { SelectedAutoLabelRun } from "@/autolabels/runs/autoLabelRunsState"
 import { buildController } from "../controller/controller";
 import type { NovelData } from "../controller/novelDataManager";
 import { Prov } from "../controller/types/helperTypes";
-import type { ProvChapter } from "../controller/types/idTypes";
+import { CServId, type ProvChapter } from "../controller/types/idTypes";
 import { generateRandomColor } from "@/edit/lib/text-model/builtin/colors";
 import { useEditorState } from "../hooks/useEditorState";
 import { useChapters } from "../hooks/useChapters";
@@ -70,6 +70,7 @@ export function EditNovelPage() {
 	const [selectedAutoLabelRun, setSelectedAutoLabelRun] = useState<SelectedAutoLabelRun>({
 		runId: null,
 	});
+	const [editorScrollElement, setEditorScrollElement] = useState<HTMLElement | null>(null);
 
 	const [managers, setManagers] = useState<{
 		chapterMgr: ReturnType<typeof createChapterManager>;
@@ -294,6 +295,18 @@ export function EditNovelPage() {
 			? null
 			: Effect.runSync(managers.controllerGetters.chapterContentServerId(currentChapterId));
 
+	const handleSelectServerChapter = useCallback(
+		(chapterServerId: string) => {
+			if (!managers) return;
+			const pid = Effect.runSync(
+				managers.controllerGetters.chapterIdFromServerId(CServId(chapterServerId)),
+			);
+			if (pid === null) return;
+			managers.chapterMgr.switchChapter(pid);
+		},
+		[managers],
+	);
+
 	// Opens a server chapter and highlights a range, only if it still has the given content version.
 	const gotoText = useCallback<GotoText>(
 		(cServId, reference) => {
@@ -322,6 +335,7 @@ export function EditNovelPage() {
 	);
 
 	const novelServerId = novel?.novel.novelId ?? null;
+	const sourceWorkId = novel?.novel.sourceWorkId ?? null;
 	const rightPanelTabs = useMemo<readonly [RightPanelTab, ...RightPanelTab[]] | null>(() => {
 		if (!managers || novelServerId === null) return null;
 		return [
@@ -383,6 +397,11 @@ export function EditNovelPage() {
 					<TranslationsPanel
 						key={novelServerId}
 						novelId={novelServerId}
+						sourceWorkId={sourceWorkId}
+						currentChapterId={activeChapterServerId}
+						currentChapterContentId={activeChapterContentServerId}
+						editorScrollElement={editorScrollElement}
+						onSelectChapter={handleSelectServerChapter}
 						chapterNumbers={chapterNumbers}
 					/>
 				),
@@ -391,10 +410,13 @@ export function EditNovelPage() {
 	}, [
 		managers,
 		novelServerId,
+		sourceWorkId,
 		chapterNumByServerId,
 		activeChapterServerId,
 		activeChapterNum,
 		activeChapterContentServerId,
+		editorScrollElement,
+		handleSelectServerChapter,
 		openChapterContents.openChapterContentIds,
 		trackedLabelGroups.labelGroups,
 		trackedLabelGroups.activeLabelGroupId,
@@ -500,6 +522,7 @@ export function EditNovelPage() {
 						onTextOp={managers.editorMgr.textOp}
 						labeling={labeling}
 						preview={autoLabelPreview.preview}
+						onScrollElementChange={setEditorScrollElement}
 					/>
 				</div>
 				<div className="shrink-0 flex flex-col min-h-0">

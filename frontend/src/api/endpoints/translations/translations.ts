@@ -8,6 +8,10 @@ import type {
   HTTPValidationError,
   ListBatchesTranslationJobsJobIdBatchesGetParams,
   ListJobsTranslationJobsGetParams,
+  ListOutputsTranslationJobsJobIdOutputsGetParams,
+  ReadOutputTranslationJobsJobIdOutputsChapterIdGetParams,
+  TranslationAcceptRequest,
+  TranslationAcceptResult,
   TranslationActionsRead,
   TranslationBatchPage,
   TranslationControlResult,
@@ -16,6 +20,8 @@ import type {
   TranslationJobDraft,
   TranslationJobPage,
   TranslationJobRead,
+  TranslationOutputChapterDetail,
+  TranslationOutputsRead,
   TranslationPipelineCheck
 } from '../../models';
 
@@ -256,6 +262,63 @@ export const readTranslationJobsJobIdGet = async (jobId: string, options?: Param
     method: 'GET'
 
 
+  }
+);}
+
+
+export type acceptOutputsTranslationJobsJobIdAcceptPostResponse200 = {
+  data: TranslationAcceptResult
+  status: 200
+}
+
+export type acceptOutputsTranslationJobsJobIdAcceptPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type acceptOutputsTranslationJobsJobIdAcceptPostResponseSuccess = (acceptOutputsTranslationJobsJobIdAcceptPostResponse200) & {
+  headers: Headers;
+};
+export type acceptOutputsTranslationJobsJobIdAcceptPostResponseError = (acceptOutputsTranslationJobsJobIdAcceptPostResponse422) & {
+  headers: Headers;
+};
+
+export type acceptOutputsTranslationJobsJobIdAcceptPostResponse = (acceptOutputsTranslationJobsJobIdAcceptPostResponseSuccess | acceptOutputsTranslationJobsJobIdAcceptPostResponseError)
+
+export const getAcceptOutputsTranslationJobsJobIdAcceptPostUrl = (jobId: string,) => {
+
+
+
+
+  return `/api/translation-jobs/${jobId}/accept`
+}
+
+/**
+ * @summary Accept Outputs
+ */
+export const acceptOutputsTranslationJobsJobIdAcceptPost = async (jobId: string,
+    translationAcceptRequest: TranslationAcceptRequest, options?: Parameters<typeof customFetch>[1]): Promise<acceptOutputsTranslationJobsJobIdAcceptPostResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<acceptOutputsTranslationJobsJobIdAcceptPostResponse>(getAcceptOutputsTranslationJobsJobIdAcceptPostUrl(jobId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(translationAcceptRequest)
   }
 );}
 
@@ -523,6 +586,110 @@ export const cancelAllTranslationJobsJobIdCancelAllPost = async (jobId: string, 
   {
     ...options,
     method: 'POST'
+
+
+  }
+);}
+
+
+export type listOutputsTranslationJobsJobIdOutputsGetResponse200 = {
+  data: TranslationOutputsRead
+  status: 200
+}
+
+export type listOutputsTranslationJobsJobIdOutputsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listOutputsTranslationJobsJobIdOutputsGetResponseSuccess = (listOutputsTranslationJobsJobIdOutputsGetResponse200) & {
+  headers: Headers;
+};
+export type listOutputsTranslationJobsJobIdOutputsGetResponseError = (listOutputsTranslationJobsJobIdOutputsGetResponse422) & {
+  headers: Headers;
+};
+
+export type listOutputsTranslationJobsJobIdOutputsGetResponse = (listOutputsTranslationJobsJobIdOutputsGetResponseSuccess | listOutputsTranslationJobsJobIdOutputsGetResponseError)
+
+export const getListOutputsTranslationJobsJobIdOutputsGetUrl = (jobId: string,
+    params?: ListOutputsTranslationJobsJobIdOutputsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/translation-jobs/${jobId}/outputs?${stringifiedParams}` : `/api/translation-jobs/${jobId}/outputs`
+}
+
+/**
+ * @summary List Outputs
+ */
+export const listOutputsTranslationJobsJobIdOutputsGet = async (jobId: string,
+    params?: ListOutputsTranslationJobsJobIdOutputsGetParams, options?: Parameters<typeof customFetch>[1]): Promise<listOutputsTranslationJobsJobIdOutputsGetResponse> => {
+
+  return customFetch<listOutputsTranslationJobsJobIdOutputsGetResponse>(getListOutputsTranslationJobsJobIdOutputsGetUrl(jobId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type readOutputTranslationJobsJobIdOutputsChapterIdGetResponse200 = {
+  data: TranslationOutputChapterDetail
+  status: 200
+}
+
+export type readOutputTranslationJobsJobIdOutputsChapterIdGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readOutputTranslationJobsJobIdOutputsChapterIdGetResponseSuccess = (readOutputTranslationJobsJobIdOutputsChapterIdGetResponse200) & {
+  headers: Headers;
+};
+export type readOutputTranslationJobsJobIdOutputsChapterIdGetResponseError = (readOutputTranslationJobsJobIdOutputsChapterIdGetResponse422) & {
+  headers: Headers;
+};
+
+export type readOutputTranslationJobsJobIdOutputsChapterIdGetResponse = (readOutputTranslationJobsJobIdOutputsChapterIdGetResponseSuccess | readOutputTranslationJobsJobIdOutputsChapterIdGetResponseError)
+
+export const getReadOutputTranslationJobsJobIdOutputsChapterIdGetUrl = (jobId: string,
+    chapterId: string,
+    params?: ReadOutputTranslationJobsJobIdOutputsChapterIdGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/translation-jobs/${jobId}/outputs/${chapterId}?${stringifiedParams}` : `/api/translation-jobs/${jobId}/outputs/${chapterId}`
+}
+
+/**
+ * @summary Read Output
+ */
+export const readOutputTranslationJobsJobIdOutputsChapterIdGet = async (jobId: string,
+    chapterId: string,
+    params?: ReadOutputTranslationJobsJobIdOutputsChapterIdGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readOutputTranslationJobsJobIdOutputsChapterIdGetResponse> => {
+
+  return customFetch<readOutputTranslationJobsJobIdOutputsChapterIdGetResponse>(getReadOutputTranslationJobsJobIdOutputsChapterIdGetUrl(jobId,chapterId,params),
+  {
+    ...options,
+    method: 'GET'
 
 
   }

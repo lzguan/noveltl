@@ -10,11 +10,13 @@ import {
 	cancelTranslationJobsJobIdBatchesBatchIdCancelPost,
 	retryTranslationJobsJobIdBatchesBatchIdRetryPost,
 } from "@/api/endpoints/translations/translations";
+import type { TranslationJobSummary } from "@/api/models";
 import { Button } from "@/components/ui/button";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { CreateTranslationDialog } from "./CreateTranslationDialog";
 import { BatchDialog, JobCard, Pagination } from "./TranslationJobViewer";
 import type { Control, ViewerControls } from "./TranslationJobViewer";
+import { TranslationReviewPanel } from "./TranslationReviewPanel";
 import { useTranslationRead } from "./useTranslationRead";
 
 const jobControls = {
@@ -35,6 +37,7 @@ function JobList({
 	revision,
 	onPage,
 	onDetails,
+	onOpenReview,
 	...controls
 }: ViewerControls & {
 	novelId: string;
@@ -42,6 +45,7 @@ function JobList({
 	revision: number;
 	onPage: (page: number) => void;
 	onDetails: (id: string) => void;
+	onOpenReview: (job: TranslationJobSummary) => void;
 }) {
 	const load = useCallback(
 		async (signal: AbortSignal) => {
@@ -80,6 +84,7 @@ function JobList({
 							key={job.jobId}
 							job={job}
 							onDetails={() => onDetails(job.jobId)}
+							onOpenReview={() => onOpenReview(job)}
 							{...controls}
 						/>
 					))}
@@ -92,12 +97,23 @@ function JobList({
 export function TranslationsPanel({
 	novelId,
 	chapterNumbers,
+	sourceWorkId = null,
+	currentChapterId = null,
+	currentChapterContentId = null,
+	editorScrollElement = null,
+	onSelectChapter,
 }: {
 	novelId: string;
 	chapterNumbers: number[];
+	sourceWorkId?: string | null;
+	currentChapterId?: string | null;
+	currentChapterContentId?: string | null;
+	editorScrollElement?: HTMLElement | null;
+	onSelectChapter?: (chapterId: string) => void;
 }) {
 	const [creating, setCreating] = useState(false);
 	const [details, setDetails] = useState<string>();
+	const [reviewing, setReviewing] = useState<TranslationJobSummary | null>(null);
 	const [notice, setNotice] = useState("");
 	const [pending, setPending] = useState(false);
 	const pendingRef = useRef(false);
@@ -134,6 +150,22 @@ export function TranslationsPanel({
 			setPending(false);
 		}
 	}
+	if (reviewing) {
+		return (
+			<TranslationReviewPanel
+				key={reviewing.jobId}
+				jobId={reviewing.jobId}
+				stages={reviewing.stages}
+				sourceWorkId={sourceWorkId}
+				currentChapterId={currentChapterId}
+				currentChapterContentId={currentChapterContentId}
+				editorScrollElement={editorScrollElement}
+				onSelectChapter={onSelectChapter}
+				onClose={() => setReviewing(null)}
+				onAccepted={() => setRevision((value) => value + 1)}
+			/>
+		);
+	}
 	return (
 		<div className="h-full overflow-y-auto p-3 space-y-4">
 			<div className="flex justify-between items-center">
@@ -152,6 +184,7 @@ export function TranslationsPanel({
 				revision={revision}
 				onPage={setPage}
 				onDetails={setDetails}
+				onOpenReview={setReviewing}
 				pending={pending}
 				onControl={control}
 			/>
@@ -162,6 +195,10 @@ export function TranslationsPanel({
 					revision={revision}
 					notice={notice}
 					onClose={() => setDetails(undefined)}
+					onOpenReview={(job) => {
+						setDetails(undefined);
+						setReviewing(job);
+					}}
 					pending={pending}
 					onControl={control}
 				/>

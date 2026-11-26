@@ -2,9 +2,10 @@ import hashlib
 import re
 import uuid
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import BinaryIO
 
-from sqlalchemy import select
+from sqlalchemy import func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.files.async_storage import AsyncObjectStore
@@ -15,8 +16,20 @@ _NAMESPACE_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62})$")
 _COPY_CHUNK_SIZE = 1024 * 1024
 
 
-async def create_file(
-    db: AsyncSession,
+@dataclass(frozen=True)
+class UploadedFile:
+    file_id: uuid.UUID
+    storage_name: str
+    bucket: str
+    object_key: str
+    content_type: str
+    content_encoding: str | None
+    byte_size: int
+    sha256: str
+    etag: str | None
+
+
+async def upload_file(
     store: AsyncObjectStore,
     content: BinaryIO,
     *,
@@ -25,8 +38,7 @@ async def create_file(
     namespace: str,
     content_type: str,
     content_encoding: str | None = None,
-) -> StoredFile:
-    """Upload a file and add its completed metadata to the caller's transaction."""
+) -> UploadedFile:
     if _NAMESPACE_PATTERN.fullmatch(namespace) is None:
         raise ValueError("namespace must contain only lowercase letters, numbers, and hyphens")
 
@@ -45,7 +57,7 @@ async def create_file(
             byte_size += len(chunk)
             await writer.write(chunk)
 
-    stored_file = StoredFile(
+    return UploadedFile(
         file_id=file_id,
         storage_name=storage_name,
         bucket=bucket,
@@ -56,8 +68,26 @@ async def create_file(
         sha256=digest.hexdigest(),
         etag=writer.result.etag,
     )
-    db.add(stored_file)
-    return stored_file
+
+
+async def insert_file(db: AsyncSession, uploaded: UploadedFile) -> uuid.UUID:
+    with db.no_autoflush:
+        await db.execute(
+            insert(StoredFile).values(
+                file_id=uploaded.file_id,
+                storage_name=uploaded.storage_name,
+                bucket=uploaded.bucket,
+                object_key=uploaded.object_key,
+                content_type=uploaded.content_type,
+                content_encoding=uploaded.content_encoding,
+                byte_size=uploaded.byte_size,
+                sha256=uploaded.sha256,
+                etag=uploaded.etag,
+                created_at=func.now(),
+                updated_at=func.now(),
+            )
+        )
+    return uploaded.file_id
 
 
 async def get_file(db: AsyncSession, file_id: uuid.UUID) -> StoredFile:

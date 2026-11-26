@@ -115,14 +115,15 @@ async def test_create_job_builds_batched_pipeline_from_latest_chapter_contents(a
     assert [
         (
             chapter_num,
+            job_chapter.chapter_num,
             job_chapter.source_chapter_content_id,
             job_chapter.batch_id,
         )
         for job_chapter, chapter_num in job_chapters
     ] == [
-        (2, latest_contents[1].chapter_content_id, batches[0].batch_id),
-        (3, latest_contents[2].chapter_content_id, batches[0].batch_id),
-        (4, latest_contents[3].chapter_content_id, batches[1].batch_id),
+        (2, 2, latest_contents[1].chapter_content_id, batches[0].batch_id),
+        (3, 3, latest_contents[2].chapter_content_id, batches[0].batch_id),
+        (4, 4, latest_contents[3].chapter_content_id, batches[1].batch_id),
     ]
 
     tasks = (

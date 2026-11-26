@@ -30,7 +30,7 @@ async def create_job(db: AsyncSession, request: TranslationJobCreate) -> UUID:
         Integer,
     ).label("batch_num")
     selected_chapters_statement = (
-        select(Chapter.chapter_id, ChapterContent.chapter_content_id, batch_num)
+        select(Chapter.chapter_id, Chapter.chapter_num, ChapterContent.chapter_content_id, batch_num)
         .join(ChapterContent, ChapterContent.chapter_id == Chapter.chapter_id)
         .where(
             Chapter.novel_id == request.novel_id,
@@ -96,12 +96,14 @@ async def create_job(db: AsyncSession, request: TranslationJobCreate) -> UUID:
                     "chapter_id",
                     "source_chapter_content_id",
                     "batch_id",
+                    "chapter_num",
                 ],
                 select(
                     literal(job_id),
                     selected_chapters.c.chapter_id,
                     selected_chapters.c.chapter_content_id,
                     inserted_batches.c.batch_id,
+                    selected_chapters.c.chapter_num,
                 ).join(
                     inserted_batches,
                     inserted_batches.c.batch_num == selected_chapters.c.batch_num,

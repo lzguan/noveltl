@@ -114,6 +114,7 @@ def worker(
         "src.translations.actions.execution.taskiq_actions.TaskiqSessionLocal", testing_async_session_local
     )
     monkeypatch.setattr("src.translations.actions.translate.get_async_object_store", lambda: store)
+    monkeypatch.setattr("src.translations.actions.common.staging.get_async_object_store", lambda: store)
     return store
 
 

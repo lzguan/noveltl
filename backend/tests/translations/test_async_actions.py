@@ -29,7 +29,7 @@ class FailingClient(EchoClient):
 @pytest.fixture
 def store(monkeypatch: pytest.MonkeyPatch) -> MemoryObjectStore:
     store = MemoryObjectStore()
-    for module in ("load_inputs", "prune_memories", "translate"):
+    for module in ("load_inputs", "prune_memories", "translate", "common.staging"):
         monkeypatch.setattr(f"src.translations.actions.{module}.get_async_object_store", lambda: store)
     return store
 

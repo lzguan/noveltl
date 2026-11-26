@@ -103,7 +103,7 @@ describe("RightPanel", () => {
 		fireEvent.keyDown(separator, { key: "Home" });
 		expect(separator).toHaveAttribute("aria-valuenow", "320");
 		fireEvent.keyDown(separator, { key: "End" });
-		expect(separator).toHaveAttribute("aria-valuenow", "640");
+		expect(separator).toHaveAttribute("aria-valuenow", "840");
 	});
 
 	it("resizes by dragging the divider", () => {

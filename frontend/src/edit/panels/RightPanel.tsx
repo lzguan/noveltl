@@ -5,7 +5,7 @@ import { RightPanelTabActiveContext } from "./rightPanelTabActive";
 
 const DEFAULT_RIGHT_PANEL_WIDTH = 448;
 const MIN_RIGHT_PANEL_WIDTH = 320;
-const MAX_RIGHT_PANEL_WIDTH = 640;
+const MAX_RIGHT_PANEL_WIDTH = 840;
 const KEYBOARD_RESIZE_STEP = 16;
 
 function clampRightPanelWidth(width: number) {

@@ -8,7 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.models import User
 from src.novels.models import Novel
 from src.novels.permissions import novel_mod_access_select
-from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
+from src.translations.models import (
+    TranslationBatch,
+    TranslationChapterOutput,
+    TranslationJob,
+    TranslationStage,
+    TranslationTask,
+)
 from src.translations.schemas import (
     TranslationBatchDetail,
     TranslationBatchPage,
@@ -74,12 +80,26 @@ async def _summaries(db: AsyncSession, jobs: list[TranslationJob]) -> list[Trans
         select(TranslationStage).where(TranslationStage.job_id.in_(ids)).order_by(TranslationStage.stage_num)
     ):
         stages[stage.job_id].append(TranslationStageRead.model_validate(stage))
+    staged_counts = {
+        job_id: count
+        for job_id, count in (
+            await db.execute(
+                select(
+                    TranslationChapterOutput.job_id,
+                    func.count(func.distinct(TranslationChapterOutput.chapter_id)),
+                )
+                .where(TranslationChapterOutput.job_id.in_(ids))
+                .group_by(TranslationChapterOutput.job_id)
+            )
+        ).all()
+    }
     return [
         TranslationJobSummary(
             job_id=job.job_id,
             config=job.config,
             stages=stages[job.job_id],
             progress=progress.get(job.job_id, TranslationProgress()),
+            staged_chapter_count=staged_counts.get(job.job_id, 0),
         )
         for job in jobs
     ]

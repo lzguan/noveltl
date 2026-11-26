@@ -6,6 +6,7 @@ from typing import Annotated, Any, ClassVar, Literal, Self
 from pydantic import ConfigDict, Field, TypeAdapter, model_validator
 
 from src.memory.types import MemoryType, PluginName
+from src.novels.constants import NovelType, Visibility
 from src.schemas import Model
 from src.translations.types import (
     ActionName,
@@ -308,6 +309,7 @@ class TranslationJobSummary(Model):
     config: dict[str, Any]
     stages: list[TranslationStageRead]
     progress: TranslationProgress
+    staged_chapter_count: int = 0
 
 
 class TranslationJobPage(Model):
@@ -324,3 +326,93 @@ class TranslationBatchPage(Model):
     items: list[TranslationBatchDetail]
     total: int
     observed_at: datetime
+
+
+class TranslationTargetNovel(Model):
+    model_config = ConfigDict(from_attributes=True)
+    novel_id: uuid.UUID
+    novel_title: str
+    language_code: str
+    novel_type: NovelType
+    novel_visibility: Visibility
+
+
+class TranslationStagedStage(Model):
+    stage_id: uuid.UUID
+    stage_num: int
+    action: str
+    chapter_count: int
+
+
+class TranslationOutputChapterSummary(Model):
+    chapter_id: uuid.UUID
+    chapter_num: int
+    chapter_title: str
+    batch_id: uuid.UUID
+    batch_num: int
+    staged_at: datetime
+    accepted_novel_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class TranslationOutputsRead(Model):
+    selected_stage_id: uuid.UUID | None = None
+    stages: list[TranslationStagedStage] = Field(default_factory=list)
+    items: list[TranslationOutputChapterSummary]
+    target_novels: list[TranslationTargetNovel]
+    last_target_novel_id: uuid.UUID | None = None
+
+
+class TranslationOutputChapterDetail(Model):
+    stage_id: uuid.UUID
+    stage_num: int
+    chapter_id: uuid.UUID
+    chapter_num: int
+    chapter_title: str
+    batch_id: uuid.UUID
+    batch_num: int
+    source_chapter_content_id: uuid.UUID
+    source_text: str
+    translated_text: str
+    staged_at: datetime
+
+
+class TranslationAcceptJobScope(Model):
+    mode: Literal["job"]
+
+
+class TranslationAcceptBatchScope(Model):
+    mode: Literal["batch"]
+    batch_id: uuid.UUID
+
+
+class TranslationAcceptRangeScope(Model):
+    mode: Literal["range"]
+    start_chapter_num: int = Field(ge=0)
+    end_chapter_num: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        if self.start_chapter_num > self.end_chapter_num:
+            raise ValueError("start_chapter_num must be less than or equal to end_chapter_num")
+        return self
+
+
+type TranslationAcceptScope = Annotated[
+    TranslationAcceptJobScope | TranslationAcceptBatchScope | TranslationAcceptRangeScope,
+    Field(discriminator="mode"),
+]
+
+
+class TranslationAcceptRequest(Model):
+    target_novel_id: uuid.UUID
+    scope: TranslationAcceptScope
+    stage_id: uuid.UUID | None = None
+    on_existing: Literal["skip", "overwrite"] = "skip"
+
+
+class TranslationAcceptResult(Model):
+    target_novel_id: uuid.UUID
+    created_chapters: int
+    updated_chapters: int
+    skipped_chapters: int
+    chapter_nums: list[int]

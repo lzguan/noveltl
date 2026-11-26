@@ -10,7 +10,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.files.access import create_file
+from src.files.access import insert_file, upload_file
 from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
 from src.memory.plugins.conventions.types import ConventionCategory
@@ -216,8 +216,7 @@ async def make_job(
             )
     task.status = State.READY
     if loaded:
-        stored = await create_file(
-            db,
+        uploaded = await upload_file(
             store,
             BytesIO(b"".join(encode_translation_record(record) for record in records)),
             storage_name="test",
@@ -225,8 +224,8 @@ async def make_job(
             namespace="translations",
             content_type="application/jsonl",
         )
-        await db.flush()
-        loader.status, loader.output_file_id = State.COMPLETE, stored.file_id
+        stored_file_id = await insert_file(db, uploaded)
+        loader.status, loader.output_file_id = State.COMPLETE, stored_file_id
     await db.commit()
     return task.task_id, records
 

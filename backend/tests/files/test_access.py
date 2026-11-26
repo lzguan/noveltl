@@ -7,7 +7,7 @@ from io import BytesIO
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.files.access import create_file, fetch_file
+from src.files.access import fetch_file, get_file, insert_file, upload_file
 from src.files.async_storage import AsyncObjectWriter
 from src.files.models import StoredFile
 from src.files.storage import UploadResult
@@ -62,43 +62,11 @@ class MemoryObjectStore:
             yield content[offset : offset + chunk_size]
 
 
-async def test_create_file_uploads_before_adding_uncommitted_metadata(async_test_db: AsyncSession) -> None:
-    store = MemoryObjectStore()
-    content = b'{"custom_id":"chapter-1"}\n'
-
-    stored_file = await create_file(
-        async_test_db,
-        store,
-        BytesIO(content),
-        storage_name="default",
-        bucket="noveltl",
-        namespace="translations",
-        content_type="application/jsonl",
-    )
-
-    assert store.objects[stored_file.object_key] == content
-    assert stored_file in async_test_db.new
-    assert stored_file.byte_size == len(content)
-    assert stored_file.sha256 == hashlib.sha256(content).hexdigest()
-    assert stored_file.etag == "test-etag"
-
-
-async def test_failed_upload_does_not_add_a_file_or_rollback_the_caller(async_test_db: AsyncSession) -> None:
-    existing = StoredFile(
-        file_id=uuid.uuid4(),
-        storage_name="default",
-        bucket="noveltl",
-        object_key="translations/existing",
-        content_type="application/jsonl",
-        byte_size=0,
-        sha256=hashlib.sha256(b"").hexdigest(),
-    )
-    async_test_db.add(existing)
+async def test_failed_upload_raises_without_recording_an_object() -> None:
     store = MemoryObjectStore(upload_error=RuntimeError("object store unavailable"))
 
     with pytest.raises(RuntimeError, match="object store unavailable"):
-        await create_file(
-            async_test_db,
+        await upload_file(
             store,
             BytesIO(b"batch input"),
             storage_name="default",
@@ -107,7 +75,7 @@ async def test_failed_upload_does_not_add_a_file_or_rollback_the_caller(async_te
             content_type="application/jsonl",
         )
 
-    assert list(async_test_db.new) == [existing]
+    assert store.objects == {}
 
 
 async def test_fetch_file_reads_the_recorded_object_key(async_test_db: AsyncSession) -> None:
@@ -128,3 +96,32 @@ async def test_fetch_file_reads_the_recorded_object_key(async_test_db: AsyncSess
 
     assert b"".join(await alist(fetch_file(store, stored_file, chunk_size=3))) == content
     assert store.fetched_keys == [stored_file.object_key]
+
+
+async def test_upload_file_and_insert_file_separates_storage_from_db_insert(async_test_db: AsyncSession) -> None:
+    store = MemoryObjectStore()
+    content = b'{"chapter":1}\n'
+
+    uploaded = await upload_file(
+        store,
+        BytesIO(content),
+        storage_name="default",
+        bucket="noveltl",
+        namespace="translations",
+        content_type="application/jsonl",
+    )
+    assert store.objects[uploaded.object_key] == content
+    assert uploaded.byte_size == len(content)
+    assert uploaded.sha256 == hashlib.sha256(content).hexdigest()
+    assert uploaded.etag == "test-etag"
+    assert list(async_test_db.new) == []
+
+    file_id = await insert_file(async_test_db, uploaded)
+    assert file_id == uploaded.file_id
+    assert list(async_test_db.new) == []
+    with async_test_db.no_autoflush:
+        recorded = await get_file(async_test_db, file_id)
+    assert recorded.object_key == uploaded.object_key
+    assert recorded.sha256 == hashlib.sha256(content).hexdigest()
+    assert recorded.byte_size == len(content)
+    assert recorded.etag == "test-etag"

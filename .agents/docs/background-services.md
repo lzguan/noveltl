@@ -60,12 +60,15 @@ uses Garage as an S3-compatible store. The cached
 the configured adapter; inspect [files/config.py](../../backend/src/files/config.py)
 for storage settings rather than copying credentials into notes or scripts.
 
-[create_file](../../backend/src/files/access.py) streams bytes into a new
-namespaced UUID key, computes byte size/SHA-256, then adds `StoredFile` metadata
-to the caller's session. It does **not** commit. The writer completes on context
-exit and attempts multipart abort on failure. Object upload and database commit
-are separate operations; rolling back SQL does not itself undo an already
-completed object upload. Do not describe this as an atomic cross-store write.
+[upload_file](../../backend/src/files/access.py) streams bytes into a new
+namespaced UUID key without holding a DB session and returns an `UploadedFile`
+descriptor (byte size, SHA-256, ETag). Callers then pass that descriptor to
+[insert_file](../../backend/src/files/access.py) to execute a Core SQL `INSERT`
+into `stored_files` inside their transaction without committing or triggering
+ORM autoflush. The writer completes on context exit and attempts multipart abort
+on failure. Object upload and database commit are separate operations; rolling
+back SQL does not itself undo an already completed object upload. Do not
+describe this as an atomic cross-store write.
 
 Translation tasks distinguish initial inputs, provider request/output handles,
 and normalized stage-output artifacts. Check the actual file field and codec

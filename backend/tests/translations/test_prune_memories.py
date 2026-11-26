@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.files.access import create_file
+from src.files.access import insert_file, upload_file
 from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
 from src.memory.schemas import Memory as MemorySchema
@@ -145,8 +145,7 @@ async def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output
         MemoriesRecord(chapter_id=chapter_id, stream="memories", payload=[candidate]) for chapter_id in chapter_ids
     ]
     store = MemoryObjectStore()
-    loaded = await create_file(
-        async_test_db,
+    uploaded = await upload_file(
         store,
         BytesIO(b"".join(encode_translation_record(record) for record in chapters + candidates)),
         storage_name="test",
@@ -154,8 +153,8 @@ async def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output
         namespace="translations",
         content_type="application/jsonl",
     )
-    await async_test_db.flush()
-    loader.status, loader.output_file_id = State.COMPLETE, loaded.file_id
+    loaded_file_id = await insert_file(async_test_db, uploaded)
+    loader.status, loader.output_file_id = State.COMPLETE, loaded_file_id
     task.status = State.READY
     await async_test_db.commit()
     monkeypatch.setattr(

@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/open-sans";
 @source "../node_modules/@rjsf/shadcn";
 
 @custom-variant dark (&:is(.dark *));
@@ -9,6 +10,9 @@
 @theme inline {
 	--font-heading: var(--font-sans);
 	--font-sans: "Inter Variable", sans-serif;
+	--font-reading:
+		"Open Sans Variable", "Noto Sans CJK SC", "PingFang SC", "Hiragino Sans GB",
+		"Microsoft YaHei", system-ui, sans-serif;
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

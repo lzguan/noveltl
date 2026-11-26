@@ -86,10 +86,9 @@ const editorTheme = EditorView.theme({
 	"&": {
 		height: "100%",
 		fontSize: "1.05rem",
-		fontFamily: '"Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif',
 	},
 	".cm-content": { lineHeight: "1.75", padding: "1rem" },
-	".cm-scroller": { overflow: "auto" },
+	".cm-scroller": { overflow: "auto", fontFamily: "var(--font-reading)" },
 	"&.cm-focused": { outline: "none" },
 	".cm-autolabel-preview": {
 		backgroundColor: "color-mix(in oklab, var(--primary) 10%, transparent)",

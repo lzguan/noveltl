@@ -62,6 +62,7 @@ def database_schema(reader_test_url: str) -> Generator[None]:
         alembic_cfg.set_main_option("script_location", str(READER_API_ROOT / "alembic"))
         alembic_cfg.set_main_option("sqlalchemy.url", reader_test_url)
         command.upgrade(alembic_cfg, "head")
+        command.check(alembic_cfg)
         yield
     finally:
         engine.dispose()

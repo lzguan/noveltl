@@ -44,7 +44,8 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.useRealTimers();
 });
-function setup() {
+function setup(jobOverrides: Partial<TranslationJobSummary> = {}) {
+	const activeJob: TranslationJobSummary = { ...job, ...jobOverrides };
 	const reads: string[] = [];
 	const posts: string[] = [];
 	let readFails = false;
@@ -66,17 +67,24 @@ function setup() {
 			}
 			reads.push(url);
 			if (readFails) return Response.json({ detail: "Read unavailable" }, { status: 503 });
+			if (parsed.pathname.endsWith("/outputs")) {
+				return Response.json({
+					items: [],
+					targetNovels: [],
+					lastTargetNovelId: null,
+				});
+			}
 			if (parsed.pathname.endsWith("/batches")) {
 				const offset = Number(parsed.searchParams.get("offset"));
 				return Response.json({
-					job,
+					job: activeJob,
 					items: batches.slice(offset, offset + 5),
 					total: 6,
 					observedAt: "2026-09-18T00:00:00Z",
 				});
 			}
 			return Response.json({
-				items: parsed.searchParams.get("offset") === "5" ? [] : [job],
+				items: parsed.searchParams.get("offset") === "5" ? [] : [activeJob],
 				total: 6,
 			});
 		}),
@@ -84,7 +92,12 @@ function setup() {
 	// Rendered as right-panel tab content so tests can hide the tab without remounting.
 	const panel = (active: boolean) => (
 		<RightPanelTabActiveContext value={active}>
-			<TranslationsPanel novelId="novel-1" chapterNumbers={[1, 2]} />
+			<TranslationsPanel
+				novelId="novel-1"
+				sourceWorkId="work-1"
+				currentChapterId="ch-1"
+				chapterNumbers={[1, 2]}
+			/>
 		</RightPanelTabActiveContext>
 	);
 	const view = render(panel(true));
@@ -171,4 +184,35 @@ it("pauses polling while its tab is hidden and reloads when shown again", async 
 		await vi.advanceTimersByTimeAsync(5000);
 	});
 	expect(harness.reads).toHaveLength(3);
+});
+
+it("disables Review and hints when completed batches have no staged outputs", async () => {
+	setup({ stagedChapterCount: 0 });
+	await screen.findByRole("heading", { name: "Job job-1" });
+	expect(screen.getByText("Outputs not staged")).toBeInTheDocument();
+	expect(screen.getByRole("button", { name: "Review" })).toBeDisabled();
+
+	fireEvent.click(screen.getByRole("button", { name: "Show details for job job-1" }));
+	const dialog = within(await screen.findByRole("dialog"));
+	await dialog.findByRole("heading", { name: "Batch 1" });
+	expect(dialog.getByText("Outputs not staged")).toBeInTheDocument();
+	expect(dialog.getByRole("button", { name: "Review" })).toBeDisabled();
+});
+
+it("enables Review and opens the inline right-panel review view when outputs are staged", async () => {
+	setup({ stagedChapterCount: 3 });
+	await screen.findByRole("heading", { name: "Job job-1" });
+	expect(screen.getByText(/3 staged/)).toBeInTheDocument();
+	expect(screen.queryByText("Outputs not staged")).not.toBeInTheDocument();
+
+	const reviewButton = screen.getByRole("button", { name: "Review" });
+	expect(reviewButton).toBeEnabled();
+	fireEvent.click(reviewButton);
+
+	expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+	expect(screen.getByRole("heading", { name: "Job job-1 · Review" })).toBeInTheDocument();
+	await screen.findByText("No staged translated chapters are available for this job yet.");
+
+	fireEvent.click(screen.getByRole("button", { name: "Jobs" }));
+	await screen.findByRole("heading", { name: "Job job-1" });
 });

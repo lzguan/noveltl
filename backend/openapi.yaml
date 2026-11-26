@@ -3459,6 +3459,116 @@ components:
       - modelName
       title: TranslateTermsStageConfig
       type: object
+    TranslationAcceptBatchScope:
+      properties:
+        batchId:
+          format: uuid
+          title: Batchid
+          type: string
+        mode:
+          const: batch
+          title: Mode
+          type: string
+      required:
+      - mode
+      - batchId
+      title: TranslationAcceptBatchScope
+      type: object
+    TranslationAcceptJobScope:
+      properties:
+        mode:
+          const: job
+          title: Mode
+          type: string
+      required:
+      - mode
+      title: TranslationAcceptJobScope
+      type: object
+    TranslationAcceptRangeScope:
+      properties:
+        endChapterNum:
+          minimum: 0.0
+          title: Endchapternum
+          type: integer
+        mode:
+          const: range
+          title: Mode
+          type: string
+        startChapterNum:
+          minimum: 0.0
+          title: Startchapternum
+          type: integer
+      required:
+      - mode
+      - startChapterNum
+      - endChapterNum
+      title: TranslationAcceptRangeScope
+      type: object
+    TranslationAcceptRequest:
+      properties:
+        onExisting:
+          default: skip
+          enum:
+          - skip
+          - overwrite
+          title: Onexisting
+          type: string
+        scope:
+          $ref: '#/components/schemas/TranslationAcceptScope'
+        stageId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Stageid
+        targetNovelId:
+          format: uuid
+          title: Targetnovelid
+          type: string
+      required:
+      - targetNovelId
+      - scope
+      title: TranslationAcceptRequest
+      type: object
+    TranslationAcceptResult:
+      properties:
+        chapterNums:
+          items:
+            type: integer
+          title: Chapternums
+          type: array
+        createdChapters:
+          title: Createdchapters
+          type: integer
+        skippedChapters:
+          title: Skippedchapters
+          type: integer
+        targetNovelId:
+          format: uuid
+          title: Targetnovelid
+          type: string
+        updatedChapters:
+          title: Updatedchapters
+          type: integer
+      required:
+      - targetNovelId
+      - createdChapters
+      - updatedChapters
+      - skippedChapters
+      - chapterNums
+      title: TranslationAcceptResult
+      type: object
+    TranslationAcceptScope:
+      discriminator:
+        mapping:
+          batch: '#/components/schemas/TranslationAcceptBatchScope'
+          job: '#/components/schemas/TranslationAcceptJobScope'
+          range: '#/components/schemas/TranslationAcceptRangeScope'
+        propertyName: mode
+      oneOf:
+      - $ref: '#/components/schemas/TranslationAcceptJobScope'
+      - $ref: '#/components/schemas/TranslationAcceptBatchScope'
+      - $ref: '#/components/schemas/TranslationAcceptRangeScope'
     TranslationActionCheck:
       properties:
         action:
@@ -3776,6 +3886,10 @@ components:
           type: string
         progress:
           $ref: '#/components/schemas/TranslationProgress'
+        stagedChapterCount:
+          default: 0
+          title: Stagedchaptercount
+          type: integer
         stages:
           items:
             $ref: '#/components/schemas/TranslationStageRead'
@@ -3804,6 +3918,98 @@ components:
       - source
       title: TranslationLaneEnd
       type: object
+    TranslationOutputChapterDetail:
+      properties:
+        batchId:
+          format: uuid
+          title: Batchid
+          type: string
+        batchNum:
+          title: Batchnum
+          type: integer
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        chapterNum:
+          title: Chapternum
+          type: integer
+        chapterTitle:
+          title: Chaptertitle
+          type: string
+        sourceChapterContentId:
+          format: uuid
+          title: Sourcechaptercontentid
+          type: string
+        sourceText:
+          title: Sourcetext
+          type: string
+        stageId:
+          format: uuid
+          title: Stageid
+          type: string
+        stageNum:
+          title: Stagenum
+          type: integer
+        stagedAt:
+          format: date-time
+          title: Stagedat
+          type: string
+        translatedText:
+          title: Translatedtext
+          type: string
+      required:
+      - stageId
+      - stageNum
+      - chapterId
+      - chapterNum
+      - chapterTitle
+      - batchId
+      - batchNum
+      - sourceChapterContentId
+      - sourceText
+      - translatedText
+      - stagedAt
+      title: TranslationOutputChapterDetail
+      type: object
+    TranslationOutputChapterSummary:
+      properties:
+        acceptedNovelIds:
+          items:
+            format: uuid
+            type: string
+          title: Acceptednovelids
+          type: array
+        batchId:
+          format: uuid
+          title: Batchid
+          type: string
+        batchNum:
+          title: Batchnum
+          type: integer
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        chapterNum:
+          title: Chapternum
+          type: integer
+        chapterTitle:
+          title: Chaptertitle
+          type: string
+        stagedAt:
+          format: date-time
+          title: Stagedat
+          type: string
+      required:
+      - chapterId
+      - chapterNum
+      - chapterTitle
+      - batchId
+      - batchNum
+      - stagedAt
+      title: TranslationOutputChapterSummary
+      type: object
     TranslationOutputPort:
       properties:
         stream:
@@ -3815,6 +4021,40 @@ components:
       - stream
       - type
       title: TranslationOutputPort
+      type: object
+    TranslationOutputsRead:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/TranslationOutputChapterSummary'
+          title: Items
+          type: array
+        lastTargetNovelId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Lasttargetnovelid
+        selectedStageId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Selectedstageid
+        stages:
+          items:
+            $ref: '#/components/schemas/TranslationStagedStage'
+          title: Stages
+          type: array
+        targetNovels:
+          items:
+            $ref: '#/components/schemas/TranslationTargetNovel'
+          title: Targetnovels
+          type: array
+      required:
+      - items
+      - targetNovels
+      title: TranslationOutputsRead
       type: object
     TranslationPipelineCheck:
       properties:
@@ -3945,6 +4185,52 @@ components:
       required:
       - action
       title: TranslationStageRequest
+      type: object
+    TranslationStagedStage:
+      properties:
+        action:
+          title: Action
+          type: string
+        chapterCount:
+          title: Chaptercount
+          type: integer
+        stageId:
+          format: uuid
+          title: Stageid
+          type: string
+        stageNum:
+          title: Stagenum
+          type: integer
+      required:
+      - stageId
+      - stageNum
+      - action
+      - chapterCount
+      title: TranslationStagedStage
+      type: object
+    TranslationTargetNovel:
+      properties:
+        languageCode:
+          title: Languagecode
+          type: string
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        novelTitle:
+          title: Noveltitle
+          type: string
+        novelType:
+          $ref: '#/components/schemas/NovelType'
+        novelVisibility:
+          $ref: '#/components/schemas/Visibility'
+      required:
+      - novelId
+      - novelTitle
+      - languageCode
+      - novelType
+      - novelVisibility
+      title: TranslationTargetNovel
       type: object
     TranslationTaskRead:
       properties:
@@ -9440,6 +9726,41 @@ paths:
       summary: Read
       tags:
       - translations
+  /translation-jobs/{jobId}/accept:
+    post:
+      operationId: accept_outputs_translation_jobs__jobId__accept_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranslationAcceptRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationAcceptResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Accept Outputs
+      tags:
+      - translations
   /translation-jobs/{jobId}/batches:
     get:
       operationId: list_batches_translation_jobs__jobId__batches_get
@@ -9657,6 +9978,89 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Cancel All
+      tags:
+      - translations
+  /translation-jobs/{jobId}/outputs:
+    get:
+      operationId: list_outputs_translation_jobs__jobId__outputs_get
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      - in: query
+        name: stageId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Stageid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationOutputsRead'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: List Outputs
+      tags:
+      - translations
+  /translation-jobs/{jobId}/outputs/{chapterId}:
+    get:
+      operationId: read_output_translation_jobs__jobId__outputs__chapterId__get
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      - in: query
+        name: stageId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Stageid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationOutputChapterDetail'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Output
       tags:
       - translations
   /translation-jobs/{jobId}/resume-all:

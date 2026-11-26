@@ -109,6 +109,7 @@ async def test_stale_callback_writes_roll_back(
     async with testing_async_session_local() as stale:
         task = await stale.get(TranslationTask, task_id)
         assert task is not None
+        stale.expunge(task)
         task.provider_batch_id = "must not commit"
         # The stale transaction began before expiry; completion must use wall-clock time.
         async with testing_async_session_local.begin() as db:
@@ -116,7 +117,7 @@ async def test_stale_callback_writes_roll_back(
             if replace:
                 assert await acquire(db, task_id, replacement)
         with pytest.raises(TranslationClaimLostError):
-            await finish_claim(stale, task_id, token, during=State.PREPARING, finish=State.PREPARED)
+            await finish_claim(stale, task, token, during=State.PREPARING, finish=State.PREPARED)
         await stale.rollback()
     async with testing_async_session_local.begin() as db:
         assert not await fail_claim(db, task_id, token, during=State.PREPARING, error="stale failure")
@@ -135,8 +136,9 @@ async def test_complete_claim_commits_callback_fields_and_releases(
     async with testing_async_session_local.begin() as db:
         task = await db.get(TranslationTask, task_id)
         assert task is not None
+        db.expunge(task)
         task.provider_batch_id = "provider-job"
-        await finish_claim(db, task_id, token, during=State.PREPARING, finish=State.PREPARED)
+        await finish_claim(db, task, token, during=State.PREPARING, finish=State.PREPARED)
     async with testing_async_session_local.begin() as db:
         task = await db.get(TranslationTask, task_id)
         assert task is not None
@@ -161,7 +163,6 @@ async def test_wrapper_failure_rolls_back_and_blocks_retry(
     async def failing(context: ActionTaskContext) -> None:
         calls.append(context.task.task_id)
         context.task.provider_batch_id = "rolled-back"
-        await context.db.flush()
         raise ValueError("failed preparation")
 
     try:

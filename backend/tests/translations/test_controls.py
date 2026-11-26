@@ -97,7 +97,7 @@ async def test_cancel_fences_worker_and_retry_preserves_provider_output(
     assert following.failed_at is not None and following.status == State.WAITING
     async with testing_async_session_local.begin() as db:
         with pytest.raises(TranslationClaimLostError):
-            await finish_claim(db, current.task_id, token, during=State.FINALIZING, finish=State.COMPLETE)
+            await finish_claim(db, current, token, during=State.FINALIZING, finish=State.COMPLETE)
     assert not (await control_translation_job(async_test_db, user, job_id, "resume")).affected_batch_ids
 
     # A blocking read is fine here: the test owns the loop while the kick is observed.

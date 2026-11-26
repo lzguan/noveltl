@@ -105,7 +105,6 @@ async def test_wrapper_failure_rolls_back_and_blocks_retry(
     async def failing(context: ActionTaskContext) -> None:
         calls.append(context.task.task_id)
         context.task.provider_batch_id = "rolled-back"
-        await context.db.flush()
         raise ValueError("failed preparation")
 
     # A worker logs a step's exception; the task row records it.

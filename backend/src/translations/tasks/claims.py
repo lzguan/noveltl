@@ -65,36 +65,37 @@ def _owned(task_id: UUID, token: UUID, during: TranslationTaskStatus):
 
 async def finish_claim(
     db: AsyncSession,
-    task_id: UUID,
+    task: TranslationTask,
     token: UUID,
     *,
     during: TranslationTaskStatus,
     finish: TranslationTaskStatus,
     poll_interval: timedelta | None = None,
 ) -> None:
-    """Fence callback writes before flushing them; stale workers must roll back.
+    """Apply callback task fields and release the claim in one guarded update.
 
     Use wall-clock time because the callback transaction may have started long
     before its lease expired. The guarded update locks the row through commit.
     """
     if poll_interval is not None and poll_interval <= timedelta(0):
         raise ValueError("Poll interval must be positive")
-    with db.no_autoflush:
-        owned = await db.scalar(
-            update(TranslationTask)
-            .where(_owned(task_id, token, during))
-            .values(
-                status=finish,
-                claim_token=None,
-                claim_expires_at=None,
-                next_poll_at=func.clock_timestamp() + poll_interval if poll_interval is not None else None,
-            )
-            .returning(TranslationTask.task_id)
-            .execution_options(synchronize_session=False)
+    owned = await db.scalar(
+        update(TranslationTask)
+        .where(_owned(task.task_id, token, during))
+        .values(
+            status=finish,
+            claim_token=None,
+            claim_expires_at=None,
+            next_poll_at=func.clock_timestamp() + poll_interval if poll_interval is not None else None,
+            request_file_id=task.request_file_id,
+            output_file_id=task.output_file_id,
+            provider_batch_id=task.provider_batch_id,
+            provider_output_id=task.provider_output_id,
         )
+        .returning(TranslationTask.task_id)
+    )
     if owned is None:
-        raise TranslationClaimLostError(f"Lost translation task claim: {task_id}")
-    await db.flush()
+        raise TranslationClaimLostError(f"Lost translation task claim: {task.task_id}")
 
 
 async def fail_claim(

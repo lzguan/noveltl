@@ -36,10 +36,11 @@ async def run_claimed_step(
                 await session.execute(select(TranslationTask).where(TranslationTask.task_id == task_id))
             ).scalar_one()
             await session.commit()
+            session.expunge(task)
             done = await f(ActionTaskContext(db=session, task=task))
             await finish_claim(
                 session,
-                task_id,
+                task,
                 token,
                 during=during,
                 finish=finish if done else expect,

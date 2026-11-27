@@ -1,0 +1,71 @@
+name: Reader API checks and tests
+
+on:
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          version-file: reader-api/pyproject.toml
+      - run: uv --directory reader-api sync --locked
+      - run: uv --directory reader-api run --no-sync ruff check
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          version-file: reader-api/pyproject.toml
+      - run: uv --directory reader-api sync --locked
+      - run: uv --directory reader-api run --no-sync pyrefly check
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: reader_test
+          POSTGRES_PASSWORD: reader_test
+          POSTGRES_USER: reader_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U reader_test -d reader_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      READER_DB_URL: postgresql+psycopg://reader_test:reader_test@localhost:5432/reader_test
+      READER_TEST_DB_URL: postgresql+psycopg://reader_test:reader_test@localhost:5432/reader_test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          version-file: reader-api/pyproject.toml
+      - name: Install dependencies
+        run: uv --directory reader-api sync --locked
+      - name: Validate migrations
+        run: uv --directory reader-api run --no-sync alembic upgrade head
+      - name: Run tests
+        run: uv --directory reader-api run --no-sync pytest

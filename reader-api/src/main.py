@@ -2,6 +2,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 
+from src.admin.router import router as admin_router
 from src.ingest.router import router as ingest_router
 from src.public.router import router as public_router
 from src.schemas import HealthzResponse
@@ -10,12 +11,13 @@ app = FastAPI(title="NovelTL Reader API", version="0.1.0")
 
 
 @app.middleware("http")
-async def ingest_no_store_middleware(
+async def private_routes_no_store_middleware(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
     response = await call_next(request)
-    if request.url.path == "/ingest" or request.url.path.startswith("/ingest/"):
+    path = request.url.path
+    if path == "/ingest" or path.startswith("/ingest/") or path == "/admin" or path.startswith("/admin/"):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -25,6 +27,7 @@ async def healthz() -> HealthzResponse:
     return HealthzResponse(ok=True)
 
 
+app.include_router(admin_router)
 app.include_router(ingest_router)
 app.include_router(public_router)
 

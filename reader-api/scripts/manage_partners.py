@@ -1,11 +1,13 @@
 import argparse
 import asyncio
+import getpass
 import sys
 import uuid
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.admin.auth import hash_admin_password
 from src.auth import generate_api_key
 from src.database import AsyncSessionLocal, async_engine
 from src.models import ReaderPartner, ReaderPartnerKey
@@ -78,6 +80,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_revoke = subparsers.add_parser("revoke-key", help="Revoke an API key by UUID.")
     p_revoke.add_argument("--key-id", required=True, type=uuid.UUID, help="Key UUID.")
 
+    p_hash = subparsers.add_parser(
+        "hash-admin-password",
+        help="Generate a scrypt hash for READER_ADMIN_PASSWORD_HASH.",
+    )
+    p_hash.add_argument(
+        "--password",
+        default=None,
+        help="Plaintext password to hash (prompts interactively if omitted).",
+    )
+
     return parser
 
 
@@ -112,9 +124,26 @@ async def _run(args: argparse.Namespace) -> int:
         await async_engine.dispose()
 
 
+def _hash_admin_password_command(password_arg: str | None) -> int:
+    password = password_arg
+    if password is None:
+        password = getpass.getpass("Admin password: ")
+        confirm = getpass.getpass("Confirm password: ")
+        if password != confirm:
+            print("Passwords do not match.", file=sys.stderr)
+            return 1
+    if not password:
+        print("Password must not be empty.", file=sys.stderr)
+        return 1
+    print(hash_admin_password(password))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.command == "hash-admin-password":
+        return _hash_admin_password_command(args.password)
     return asyncio.run(_run(args))
 
 

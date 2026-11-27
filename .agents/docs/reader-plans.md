@@ -1,57 +1,87 @@
-# Reader plans
+# Reader architecture and publishing plans
 
-Discussed direction (2026-11-14), not implemented behavior or an approved
-design.
+Current status as of 2026-11-26:
+- **Implemented (`master`):** Translation output staging, right-panel review, and DB-side accept into translated novels ([outputs.py](../../backend/src/translations/outputs.py), [TranslationReviewPanel.tsx](../../frontend/src/edit/panels/translations/TranslationReviewPanel.tsx)).
+- **Implemented (`feature/reader-api`, PR #161):** Standalone [reader-api](../../reader-api/src/main.py) FastAPI service backed by its own PostgreSQL database (`reader_db`), plus [reader](../../reader/app/lib/api.server.ts) SSR app repointed to `reader-api`.
+- **Planned (Slices 3–5):** Studio publishing integration (`backend/src/publishing/` + Publish Dialog in `frontend/`) and anonymous rate-limited reader feedback with JSONL export for `analytics/`.
 
-## Shape
+## Service split and boundaries
 
-A separate server-rendered reader app in a top-level `reader/` directory of this
-monorepo, built with React Router v7 framework mode (same React, Vite, Tailwind,
-and Orval stack as `frontend/`). Its route loaders are the backend-for-frontend:
-they call the FastAPI API server-side. The reader must never access PostgreSQL
-directly, so caching, reader-specific tables, or a read replica can be added
-later behind the API without changing it. A separate read database was
-considered and deferred: it needs a sync pipeline and adds staleness for no
-current load. The reader gets its own Orval client generated from the same
-OpenAPI schema, not a shared one with `frontend/`.
+Studio stays private (local / Tailscale / home hardware for CPU-heavy workers and editing). The public Reader platform is an independent deployment with its own Postgres database and no network dependency back to Studio. Studio visibility (`novel_visibility` / `chapter_is_public`) is Studio-internal only; external publishing is an explicit stateless push.
 
-Wanted feel: plain-link previous/contents/next navigation that works before
-hydration, a single long chapter list, arrow-key navigation, reader settings
-(font size, spacing, dark mode) stored in a cookie so SSR renders them, and
-chapter-number URLs.
+```mermaid
+flowchart LR
+    subgraph Studio["Private Studio"]
+        FE["frontend (React SPA)"]
+        BE["backend (FastAPI)"]
+        SDB[("db (Studio Postgres)")]
+        WORKERS["workers + Garage S3"]
+        FE --> BE
+        BE --> SDB
+        BE --> WORKERS
+    end
 
-## Prerequisites
+    subgraph Public["Public Reader Platform"]
+        RAPI["reader-api (FastAPI)"]
+        RDB[("reader_db (Reader Postgres)")]
+        RSSR["reader (React Router SSR)"]
+        RAPI --> RDB
+        RSSR -->|"HTTP + JSON (ETag / Cache-Control)"| RAPI
+    end
 
-- Translation output never reaches chapters: actions only read `ChapterContent`
-  and write stage-output files (see [chapter translation](chapter-translation.md)).
-  An accept step that writes a translation into a translated novel is needed
-  before machine translations can be read. Per-chapter publishing already
-  exists (`chapter_is_public`, `POST /chapters/{id}/publish`), and
-  `GET /chapters/{id}/content` allows anonymous reads, so the reader can be
-  built against existing endpoints before the accept step lands.
-- Anonymous reads already exist through `get_optional_user` with visibility
-  filtering in [novels/router.py](../../backend/src/novels/router.py). Reader-shaped
-  endpoints (chapter N with its current text, previous/next, contents) should be
-  added to the API if the reader would otherwise compose several editor calls.
-  Test anonymous access: leaking private novels is the main risk.
+    BE -.->|"Planned: HTTPS + JSON (Bearer partner key)"| RAPI
+    BROWSER["Public Browser"] --> RSSR
+```
 
-## Robustness
+## Communication protocol (`protocolVersion: 1`)
 
-The user's main requirement is that the reader works and does not break
-easily. Planned checks: regenerate both Orval clients from
-`backend/openapi.yaml` on API changes and type-check both apps (the reader's
-config differs: internal backend base URL, server-side fetch wrapper, likely no
-Effect schemas, so clients stay separate rather than shared); backend tests for
-anonymous visibility on reader endpoints; one or two Playwright smoke tests in
-`e2e/` that load a chapter and follow next-chapter navigation.
+All endpoints live in [ingest/router.py](../../reader-api/src/ingest/router.py) and [public/router.py](../../reader-api/src/public/router.py) with camelCase JSON schemas in [schemas.py](../../reader-api/src/schemas.py) and Bearer partner-key auth in [auth.py](../../reader-api/src/auth.py). Partner keys are managed via [manage_partners.py](../../reader-api/scripts/manage_partners.py) (SHA-256 hashed in `reader_partner_keys`, multiple active keys per partner with `revoked_at` for zero-downtime rotation).
 
-## Division of work
+```mermaid
+sequenceDiagram
+    participant Studio as Studio backend (planned)
+    participant RAPI as reader-api
+    participant RDB as reader_db
+    participant SSR as reader SSR
 
-Review closely: the accept step (likely a migration; follows the backend
-permission pattern), reader endpoints and their visibility tests, and Compose
-or devcontainer changes. Suitable for agent-driven building in a worktree: the
-reader app itself, verified with Playwright screenshots at phone and desktop
-widths, reviewing only its loaders closely.
+    Note over Studio,RAPI: Auth: Authorization Bearer partner-key (Cache-Control: no-store)
+    Studio->>RAPI: GET /ingest/health
+    RAPI-->>Studio: ok, protocolVersion=1, name, publicBaseUrl
 
-This track is independent of the [evaluation plans](evaluation-plans.md) apart
-from later ideas (reader reports as eval cases, eval-gated publishing).
+    Studio->>RAPI: GET /ingest/novels/{externalId}/status
+    RAPI->>RDB: Read reader_novels + chapter hashes/versions
+    RAPI-->>Studio: exists, novelId, publicUrl, chapters[]
+
+    Studio->>RAPI: PUT /ingest/novels/{externalId}
+    RAPI->>RDB: Upsert reader_novels (bump toc_version)
+    RAPI-->>Studio: novelId, publicUrl
+
+    Studio->>RAPI: PUT /ingest/novels/{externalId}/chapters (chunked)
+    RAPI->>RDB: Upsert reader_chapters (sha256 content_hash, bump toc_version)
+    RAPI-->>Studio: novelId, publicUrl, upsertedChapterNums[]
+
+    Studio->>RAPI: DELETE /ingest/novels/{externalId}/chapters
+    RAPI->>RDB: Delete chapter_nums (bump toc_version)
+    RAPI-->>Studio: deletedChapterNums[]
+
+    SSR->>RAPI: GET /novels/{novelId}/chapters/{chapterNum} (If-None-Match)
+    RAPI->>RDB: Read chapter + prev/next nav
+    RAPI-->>SSR: 200 JSON + ETag + Cache-Control (or 304)
+```
+
+Key contract details:
+- `external_id` on `reader_novels` is nullable, immutable, partner-scoped (`UNIQUE(partner_id, external_id)`), and ingest-only — public endpoints never expose it.
+- `content_hash` (SHA-256 of `body`) is computed and owned by `reader-api` for ETag generation and analytics; `external_version` is an optional opaque string (Studio sends latest `chapter_content_id`) for live diffing without mirroring published state in Studio's DB.
+- `toc_version` on `reader_novels` increments on novel metadata updates and chapter upserts/deletes so TOC ETags invalidate cleanly.
+- `reader/` generates its Orval client from [reader-api/openapi.json](../../reader-api/openapi.json) via [reader/orval.config.ts](../../reader/orval.config.ts) and calls `reader-api` server-side through [backend-fetch.ts](../../reader/app/api/backend-fetch.ts) (`READER_BACKEND_URL`).
+
+## Schema and migrations
+
+Models live in [reader-api/src/models.py](../../reader-api/src/models.py) with Alembic migrations in [reader-api/alembic/versions](../../reader-api/alembic/versions/) (`compare_type=True` and `compare_server_default=True` in [reader-api/alembic/env.py](../../reader-api/alembic/env.py)). The test harness in [reader-api/tests/conftest.py](../../reader-api/tests/conftest.py) runs `alembic upgrade head` followed by `alembic check` against `reader_test` so model-migration drift fails tests.
+
+## Planned next slices
+
+- **Slice 3 (Studio publishing backend):** `backend/src/publishing/` with per-user `publishing_targets` (Fernet-encrypted API keys + env default target), SSRF guard, healthcheck-on-save (`GET /ingest/health`), live status diff (`GET /ingest/novels/{externalId}/status`), and chunked publish/unpublish endpoints.
+- **Slice 4 (Studio Publish Dialog):** Target management and novel/chapter publish status diff UI in `frontend/`.
+- **Slice 5 (Reader feedback):** Anonymous rate-limited `reader_feedback` table + endpoint in `reader-api/`, progressive-enhancement form in `reader/`, and `reader_feedback.v1` JSONL export for [analytics](analytics.md).
+- **CI / images:** Add `reader-api` ruff/pyrefly/pytest jobs and GHCR image builds (`noveltl-reader-api`, `noveltl-reader-api-dev`) to `.github/workflows/`.

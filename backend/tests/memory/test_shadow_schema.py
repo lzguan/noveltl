@@ -54,8 +54,8 @@ def _load_migration(name: str) -> ModuleType:
     return migration
 
 
-@pytest.fixture
-def shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
+@pytest.fixture(scope="module")
+def _module_shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
     migration = _load_migration("f8b2c4d6e901_add_memory_shadow_tables")
     provenance = _load_migration("74a4a10cb394_add_memory_chapter_provenance")
     with test_engine.begin() as connection:
@@ -87,6 +87,16 @@ def shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
             provenance.upgrade_shadow_tables()
             yield data
         connection.execute(DropSchema(schema, cascade=True))
+
+
+@pytest.fixture
+def shadow_schema(_module_shadow_schema: ShadowSchema) -> Iterator[ShadowSchema]:
+    savepoint = _module_shadow_schema.connection.begin_nested()
+    try:
+        yield _module_shadow_schema
+    finally:
+        if savepoint.is_active:
+            savepoint.rollback()
 
 
 def _workspace(data: ShadowSchema) -> UUID:

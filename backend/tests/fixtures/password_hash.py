@@ -10,9 +10,28 @@ class Hash(Protocol):
     def verify(self, password: str | bytes, hash: str | bytes) -> bool: ...
 
 
-@pytest.fixture
+class CachedPasswordHash(Hash):
+    def __init__(self, inner: PasswordHash) -> None:
+        self._inner = inner
+        self._cache: dict[str | bytes, str] = {}
+
+    def hash(self, password: str | bytes, *args: Any, **kwargs: Any) -> str:
+        if not args and not kwargs:
+            cached = self._cache.get(password)
+            if cached is not None:
+                return cached
+            hashed = self._inner.hash(password)
+            self._cache[password] = hashed
+            return hashed
+        return self._inner.hash(password, *args, **kwargs)
+
+    def verify(self, password: str | bytes, hash: str | bytes) -> bool:
+        return self._inner.verify(password, hash)
+
+
+@pytest.fixture(scope="session")
 def recommended_hash() -> Hash:
-    return PasswordHash.recommended()
+    return CachedPasswordHash(PasswordHash.recommended())
 
 
 class NoHash(Hash):

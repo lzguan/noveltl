@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Protocol
+from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
@@ -67,7 +68,6 @@ class ScenarioBuilder:
     def language(self, key: str, name: str, code: str) -> Language:
         language = Language(language_name=name, language_code=code)
         self.db.add(language)
-        self.db.flush()
         self.scenario.languages[key] = language
         return language
 
@@ -79,19 +79,18 @@ class ScenarioBuilder:
         user_type: UserType = UserType.USER,
     ) -> User:
         user = User(
+            user_id=uuid4(),
             user_name=name,
             user_hashed_password=self.password_hash.hash(password),
             user_type=user_type,
         )
         self.db.add(user)
-        self.db.flush()
         self.scenario.users[key] = user
         return user
 
     def source_work(self, key: str, title: str) -> SourceWork:
-        source_work = SourceWork(source_work_title=title)
+        source_work = SourceWork(source_work_id=uuid4(), source_work_title=title)
         self.db.add(source_work)
-        self.db.flush()
         self.scenario.source_works[key] = source_work
         return source_work
 
@@ -108,6 +107,7 @@ class ScenarioBuilder:
         author: str | None = None,
     ) -> Novel:
         novel = Novel(
+            novel_id=uuid4(),
             novel_title=title,
             novel_description=description,
             novel_author=author,
@@ -117,7 +117,6 @@ class ScenarioBuilder:
             source_work_id=self.scenario.source_works[source_work].source_work_id,
         )
         self.db.add(novel)
-        self.db.flush()
         self.scenario.novels[key] = novel
         return novel
 
@@ -156,7 +155,6 @@ class ScenarioBuilder:
             contributor_role=role,
         )
         self.db.add(contributor)
-        self.db.flush()
         self.scenario.contributors[key] = contributor
         return contributor
 
@@ -170,44 +168,44 @@ class ScenarioBuilder:
         is_public: bool,
     ) -> Chapter:
         chapter = Chapter(
+            chapter_id=uuid4(),
             novel_id=self.scenario.novels[novel].novel_id,
             chapter_num=number,
             chapter_title=title,
             chapter_is_public=is_public,
         )
         self.db.add(chapter)
-        self.db.flush()
         self.scenario.chapters[key] = chapter
         return chapter
 
     def content(self, key: str, *, chapter: str, version: int, text: str) -> ChapterContent:
         content = ChapterContent(
+            chapter_content_id=uuid4(),
             chapter_id=self.scenario.chapters[chapter].chapter_id,
             chapter_content_version=version,
             chapter_content_text=text,
         )
         self.db.add(content)
-        self.db.flush()
         self.scenario.contents[key] = content
         return content
 
     def label_group(self, key: str, *, novel: str, name: str) -> LabelGroup:
         group = LabelGroup(
+            label_group_id=uuid4(),
             label_group_name=name,
             novel_id=self.scenario.novels[novel].novel_id,
         )
         self.db.add(group)
-        self.db.flush()
         self.scenario.label_groups[key] = group
         return group
 
     def label_data(self, key: str, *, group: str, content: str) -> LabelData:
         label_data = LabelData(
+            label_data_id=uuid4(),
             label_group_id=self.scenario.label_groups[group].label_group_id,
             chapter_content_id=self.scenario.contents[content].chapter_content_id,
         )
         self.db.add(label_data)
-        self.db.flush()
         self.scenario.label_datas[key] = label_data
         return label_data
 
@@ -224,6 +222,7 @@ class ScenarioBuilder:
         dirty: bool = False,
     ) -> Label:
         label = Label(
+            label_id=uuid4(),
             label_data_id=self.scenario.label_datas[label_data].label_data_id,
             label_entity_group=entity_group,
             label_word=word,
@@ -233,6 +232,5 @@ class ScenarioBuilder:
             label_dirty=dirty,
         )
         self.db.add(label)
-        self.db.flush()
         self.scenario.labels[key] = label
         return label

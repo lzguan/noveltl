@@ -3,12 +3,12 @@ import asyncio
 import sys
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth import generate_api_key
 from src.database import AsyncSessionLocal, async_engine
-from src.models import ReaderPartner, ReaderPartnerKey, utcnow
+from src.models import ReaderPartner, ReaderPartnerKey
 
 
 async def create_partner(db: AsyncSession, name: str) -> ReaderPartner:
@@ -52,7 +52,11 @@ async def revoke_key(db: AsyncSession, key_id: uuid.UUID) -> ReaderPartnerKey:
     if key is None:
         raise ValueError(f"Key not found: {key_id}")
     if key.revoked_at is None:
-        key.revoked_at = utcnow()
+        await db.execute(
+            update(ReaderPartnerKey)
+            .where(ReaderPartnerKey.key_id == key_id, ReaderPartnerKey.revoked_at.is_(None))
+            .values(revoked_at=func.now())
+        )
         await db.commit()
         await db.refresh(key)
     return key

@@ -2,14 +2,14 @@ import hashlib
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth import require_partner
 from src.config import novel_public_url, reader_settings
 from src.database import get_async_db
-from src.models import ReaderChapter, ReaderNovel, ReaderPartner, utcnow
+from src.models import ReaderChapter, ReaderNovel, ReaderPartner
 from src.schemas import (
     IngestChaptersDeleteRequest,
     IngestChaptersDeleteResponse,
@@ -107,7 +107,6 @@ async def ingest_upsert_novel(
     partner: Annotated[ReaderPartner, Depends(require_partner)],
     db: Annotated[AsyncSession, Depends(get_async_db)],
 ) -> IngestNovelUpsertResponse:
-    now = utcnow()
     insert_stmt = pg_insert(ReaderNovel).values(
         partner_id=partner.partner_id,
         external_id=external_id,
@@ -116,8 +115,6 @@ async def ingest_upsert_novel(
         author=payload.author,
         language_code=payload.language_code,
         toc_version=1,
-        created_at=now,
-        updated_at=now,
     )
     upsert_stmt = insert_stmt.on_conflict_do_update(
         constraint="uq_reader_novels_partner_external_id",
@@ -127,7 +124,7 @@ async def ingest_upsert_novel(
             "author": insert_stmt.excluded.author,
             "language_code": insert_stmt.excluded.language_code,
             "toc_version": ReaderNovel.toc_version + 1,
-            "updated_at": now,
+            "updated_at": func.now(),
         },
     ).returning(ReaderNovel.novel_id)
 
@@ -161,7 +158,6 @@ async def ingest_upsert_chapters(
             upserted_chapter_nums=[],
         )
 
-    now = utcnow()
     deduped = {item.chapter_num: item for item in payload.chapters}
     rows = [
         {
@@ -171,8 +167,6 @@ async def ingest_upsert_chapters(
             "body": item.body,
             "content_hash": _hash_body(item.body),
             "external_version": item.external_version,
-            "published_at": now,
-            "updated_at": now,
         }
         for item in deduped.values()
     ]
@@ -185,12 +179,15 @@ async def ingest_upsert_chapters(
             "body": insert_stmt.excluded.body,
             "content_hash": insert_stmt.excluded.content_hash,
             "external_version": insert_stmt.excluded.external_version,
-            "updated_at": now,
+            "updated_at": func.now(),
         },
     )
     await db.execute(upsert_stmt)
-    novel.toc_version += 1
-    novel.updated_at = now
+    await db.execute(
+        update(ReaderNovel)
+        .where(ReaderNovel.novel_id == novel.novel_id)
+        .values(toc_version=ReaderNovel.toc_version + 1, updated_at=func.now())
+    )
     await db.commit()
 
     return IngestChaptersUpsertResponse(
@@ -229,8 +226,11 @@ async def ingest_delete_chapters(
     )
     deleted_nums = sorted((await db.execute(delete_stmt)).scalars().all())
     if deleted_nums:
-        novel.toc_version += 1
-        novel.updated_at = utcnow()
+        await db.execute(
+            update(ReaderNovel)
+            .where(ReaderNovel.novel_id == novel.novel_id)
+            .values(toc_version=ReaderNovel.toc_version + 1, updated_at=func.now())
+        )
     await db.commit()
 
     return IngestChaptersDeleteResponse(deleted_chapter_nums=deleted_nums)

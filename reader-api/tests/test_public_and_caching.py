@@ -14,20 +14,21 @@ def _seed_novel(
     title: str,
     chapters: list[dict[str, object]],
 ) -> str:
-    resp = client.put(
-        f"/ingest/novels/{external_id}",
+    resp = client.post(
+        f"/ingest/novels/{external_id}/sync",
         headers=headers,
-        json={"title": title, "description": f"Desc for {title}", "author": "Author", "languageCode": "en"},
+        json={
+            "novel": {
+                "title": title,
+                "description": f"Desc for {title}",
+                "author": "Author",
+                "languageCode": "en",
+            },
+            "upserts": chapters,
+        },
     )
     assert resp.status_code == 200
     novel_id: str = resp.json()["novelId"]
-    if chapters:
-        ch_resp = client.put(
-            f"/ingest/novels/{external_id}/chapters",
-            headers=headers,
-            json={"chapters": chapters},
-        )
-        assert ch_resp.status_code == 200
     return novel_id
 
 
@@ -153,10 +154,10 @@ def test_etag_304_and_cache_busting(
     assert ch1_304.headers["cache-control"] == CHAPTER_CACHE_CONTROL
 
     # Updating chapter 1 body busts chapter 1 ETag AND TOC ETag
-    client.put(
-        "/ingest/novels/ext-cache/chapters",
+    client.post(
+        "/ingest/novels/ext-cache/sync",
         headers=headers,
-        json={"chapters": [{"chapterNum": 1, "title": "One", "body": "Body one revised"}]},
+        json={"upserts": [{"chapterNum": 1, "title": "One", "body": "Body one revised"}]},
     )
     ch1_after_body = client.get(f"/novels/{novel_id}/chapters/1", headers={"If-None-Match": ch1_etag})
     assert ch1_after_body.status_code == 200
@@ -174,10 +175,10 @@ def test_etag_304_and_cache_busting(
     ch2_etag_v1 = ch2_before.headers["etag"]
     assert ch2_before.json()["next"] is None
 
-    client.put(
-        "/ingest/novels/ext-cache/chapters",
+    client.post(
+        "/ingest/novels/ext-cache/sync",
         headers=headers,
-        json={"chapters": [{"chapterNum": 3, "title": "Three", "body": "Body three"}]},
+        json={"upserts": [{"chapterNum": 3, "title": "Three", "body": "Body three"}]},
     )
     assert client.get(f"/novels/{novel_id}/chapters/1", headers={"If-None-Match": ch1_etag_v2}).status_code == 304
 

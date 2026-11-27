@@ -14,6 +14,204 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthzResponse'
+  /admin/login:
+    post:
+      tags:
+      - admin
+      summary: Admin Login
+      operationId: admin_login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminLoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminLoginResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/partners:
+    get:
+      tags:
+      - admin
+      summary: Admin List Partners
+      operationId: admin_list_partners
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AdminPartnerSummary'
+                type: array
+                title: Response Admin List Partners
+      security:
+      - HTTPBearer: []
+    post:
+      tags:
+      - admin
+      summary: Admin Create Partner
+      operationId: admin_create_partner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminPartnerCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPartnerCreateResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+  /admin/partners/{partnerId}/keys:
+    post:
+      tags:
+      - admin
+      summary: Admin Mint Partner Key
+      operationId: admin_mint_partner_key
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Partnerid
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMintKeyResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/keys/{keyId}:
+    delete:
+      tags:
+      - admin
+      summary: Admin Revoke Key
+      operationId: admin_revoke_key
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: keyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Keyid
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/novels:
+    get:
+      tags:
+      - admin
+      summary: Admin List Novels
+      operationId: admin_list_novels
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AdminNovelSummary'
+                type: array
+                title: Response Admin List Novels
+      security:
+      - HTTPBearer: []
+  /admin/novels/{novelId}:
+    delete:
+      tags:
+      - admin
+      summary: Admin Delete Novel
+      operationId: admin_delete_novel
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: novelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Novelid
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/novels/{novelId}/chapters/{chapterNum}:
+    delete:
+      tags:
+      - admin
+      summary: Admin Delete Chapter
+      operationId: admin_delete_chapter
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: novelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Novelid
+      - name: chapterNum
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+          title: Chapternum
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /ingest/health:
     get:
       tags:
@@ -59,12 +257,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /ingest/novels/{externalId}:
-    put:
+  /ingest/novels/{externalId}/sync:
+    post:
       tags:
       - ingest
-      summary: Ingest Upsert Novel
-      operationId: ingest_upsert_novel
+      summary: Ingest Sync Novel
+      operationId: ingest_sync_novel
       security:
       - HTTPBearer: []
       parameters:
@@ -81,85 +279,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/IngestNovelUpsertRequest'
+              $ref: '#/components/schemas/IngestNovelSyncRequest'
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IngestNovelUpsertResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /ingest/novels/{externalId}/chapters:
-    put:
-      tags:
-      - ingest
-      summary: Ingest Upsert Chapters
-      operationId: ingest_upsert_chapters
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: externalId
-        in: path
-        required: true
-        schema:
-          type: string
-          minLength: 1
-          maxLength: 128
-          title: Externalid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/IngestChaptersUpsertRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IngestChaptersUpsertResponse'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-    delete:
-      tags:
-      - ingest
-      summary: Ingest Delete Chapters
-      operationId: ingest_delete_chapters
-      security:
-      - HTTPBearer: []
-      parameters:
-      - name: externalId
-        in: path
-        required: true
-        schema:
-          type: string
-          minLength: 1
-          maxLength: 128
-          title: Externalid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/IngestChaptersDeleteRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IngestChaptersDeleteResponse'
+                $ref: '#/components/schemas/IngestNovelSyncResponse'
         '422':
           description: Validation Error
           content:
@@ -275,6 +402,195 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
+    AdminLoginRequest:
+      properties:
+        username:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Username
+        password:
+          type: string
+          maxLength: 1024
+          minLength: 1
+          title: Password
+      type: object
+      required:
+      - username
+      - password
+      title: AdminLoginRequest
+    AdminLoginResponse:
+      properties:
+        accessToken:
+          type: string
+          title: Accesstoken
+        expiresAt:
+          type: string
+          format: date-time
+          title: Expiresat
+      type: object
+      required:
+      - accessToken
+      - expiresAt
+      title: AdminLoginResponse
+    AdminMintKeyResponse:
+      properties:
+        keyId:
+          type: string
+          format: uuid
+          title: Keyid
+        keyPrefix:
+          type: string
+          title: Keyprefix
+        apiKey:
+          type: string
+          title: Apikey
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+      type: object
+      required:
+      - keyId
+      - keyPrefix
+      - apiKey
+      - createdAt
+      title: AdminMintKeyResponse
+    AdminNovelSummary:
+      properties:
+        novelId:
+          type: string
+          format: uuid
+          title: Novelid
+        title:
+          type: string
+          title: Title
+        author:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Author
+        languageCode:
+          type: string
+          title: Languagecode
+        partnerId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Partnerid
+        partnerName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Partnername
+        chapterCount:
+          type: integer
+          title: Chaptercount
+        updatedAt:
+          type: string
+          format: date-time
+          title: Updatedat
+        publicUrl:
+          type: string
+          title: Publicurl
+      type: object
+      required:
+      - novelId
+      - title
+      - author
+      - languageCode
+      - partnerId
+      - partnerName
+      - chapterCount
+      - updatedAt
+      - publicUrl
+      title: AdminNovelSummary
+    AdminPartnerCreateRequest:
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Name
+      type: object
+      required:
+      - name
+      title: AdminPartnerCreateRequest
+    AdminPartnerCreateResponse:
+      properties:
+        partnerId:
+          type: string
+          format: uuid
+          title: Partnerid
+        name:
+          type: string
+          title: Name
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+      type: object
+      required:
+      - partnerId
+      - name
+      - createdAt
+      title: AdminPartnerCreateResponse
+    AdminPartnerKeySummary:
+      properties:
+        keyId:
+          type: string
+          format: uuid
+          title: Keyid
+        keyPrefix:
+          type: string
+          title: Keyprefix
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        revokedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Revokedat
+      type: object
+      required:
+      - keyId
+      - keyPrefix
+      - createdAt
+      - revokedAt
+      title: AdminPartnerKeySummary
+    AdminPartnerSummary:
+      properties:
+        partnerId:
+          type: string
+          format: uuid
+          title: Partnerid
+        name:
+          type: string
+          title: Name
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        novelCount:
+          type: integer
+          title: Novelcount
+        keys:
+          items:
+            $ref: '#/components/schemas/AdminPartnerKeySummary'
+          type: array
+          title: Keys
+      type: object
+      required:
+      - partnerId
+      - name
+      - createdAt
+      - novelCount
+      - keys
+      title: AdminPartnerSummary
     HTTPValidationError:
       properties:
         detail:
@@ -292,31 +608,6 @@ components:
           default: true
       type: object
       title: HealthzResponse
-    IngestChapterItem:
-      properties:
-        chapterNum:
-          type: integer
-          minimum: 0.0
-          title: Chapternum
-        title:
-          type: string
-          maxLength: 512
-          title: Title
-        body:
-          type: string
-          title: Body
-        externalVersion:
-          anyOf:
-          - type: string
-            maxLength: 128
-          - type: 'null'
-          title: Externalversion
-      type: object
-      required:
-      - chapterNum
-      - title
-      - body
-      title: IngestChapterItem
     IngestChapterStatus:
       properties:
         chapterNum:
@@ -345,59 +636,31 @@ components:
       - externalVersion
       - updatedAt
       title: IngestChapterStatus
-    IngestChaptersDeleteRequest:
+    IngestChapterUpsertItem:
       properties:
-        chapterNums:
-          items:
-            type: integer
-          type: array
-          title: Chapternums
-      type: object
-      required:
-      - chapterNums
-      title: IngestChaptersDeleteRequest
-    IngestChaptersDeleteResponse:
-      properties:
-        deletedChapterNums:
-          items:
-            type: integer
-          type: array
-          title: Deletedchapternums
-      type: object
-      required:
-      - deletedChapterNums
-      title: IngestChaptersDeleteResponse
-    IngestChaptersUpsertRequest:
-      properties:
-        chapters:
-          items:
-            $ref: '#/components/schemas/IngestChapterItem'
-          type: array
-          title: Chapters
-      type: object
-      required:
-      - chapters
-      title: IngestChaptersUpsertRequest
-    IngestChaptersUpsertResponse:
-      properties:
-        novelId:
+        chapterNum:
+          type: integer
+          minimum: 0.0
+          title: Chapternum
+        title:
           type: string
-          format: uuid
-          title: Novelid
-        publicUrl:
+          maxLength: 512
+          title: Title
+        body:
           type: string
-          title: Publicurl
-        upsertedChapterNums:
-          items:
-            type: integer
-          type: array
-          title: Upsertedchapternums
+          title: Body
+        externalVersion:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Externalversion
       type: object
       required:
-      - novelId
-      - publicUrl
-      - upsertedChapterNums
-      title: IngestChaptersUpsertResponse
+      - chapterNum
+      - title
+      - body
+      title: IngestChapterUpsertItem
     IngestHealthResponse:
       properties:
         ok:
@@ -444,6 +707,40 @@ components:
       required:
       - exists
       title: IngestNovelStatusResponse
+    IngestNovelSyncRequest:
+      properties:
+        novel:
+          anyOf:
+          - $ref: '#/components/schemas/IngestNovelUpsertRequest'
+          - type: 'null'
+        upserts:
+          items:
+            $ref: '#/components/schemas/IngestChapterUpsertItem'
+          type: array
+          maxItems: 200
+          title: Upserts
+      type: object
+      title: IngestNovelSyncRequest
+    IngestNovelSyncResponse:
+      properties:
+        novelId:
+          type: string
+          format: uuid
+          title: Novelid
+        publicUrl:
+          type: string
+          title: Publicurl
+        upsertedChapterNums:
+          items:
+            type: integer
+          type: array
+          title: Upsertedchapternums
+      type: object
+      required:
+      - novelId
+      - publicUrl
+      - upsertedChapterNums
+      title: IngestNovelSyncResponse
     IngestNovelUpsertRequest:
       properties:
         title:
@@ -472,20 +769,6 @@ components:
       required:
       - title
       title: IngestNovelUpsertRequest
-    IngestNovelUpsertResponse:
-      properties:
-        novelId:
-          type: string
-          format: uuid
-          title: Novelid
-        publicUrl:
-          type: string
-          title: Publicurl
-      type: object
-      required:
-      - novelId
-      - publicUrl
-      title: IngestNovelUpsertResponse
     PublicChapterDetail:
       properties:
         novelId:

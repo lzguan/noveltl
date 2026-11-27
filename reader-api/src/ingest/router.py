@@ -1,8 +1,9 @@
 import hashlib
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,15 +12,11 @@ from src.config import novel_public_url, reader_settings
 from src.database import get_async_db
 from src.models import ReaderChapter, ReaderNovel, ReaderPartner
 from src.schemas import (
-    IngestChaptersDeleteRequest,
-    IngestChaptersDeleteResponse,
     IngestChapterStatus,
-    IngestChaptersUpsertRequest,
-    IngestChaptersUpsertResponse,
     IngestHealthResponse,
     IngestNovelStatusResponse,
-    IngestNovelUpsertRequest,
-    IngestNovelUpsertResponse,
+    IngestNovelSyncRequest,
+    IngestNovelSyncResponse,
 )
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
@@ -96,141 +93,92 @@ async def ingest_novel_status(
     )
 
 
-@router.put(
-    "/novels/{externalId}",
-    response_model=IngestNovelUpsertResponse,
-    operation_id="ingest_upsert_novel",
+@router.post(
+    "/novels/{externalId}/sync",
+    response_model=IngestNovelSyncResponse,
+    operation_id="ingest_sync_novel",
 )
-async def ingest_upsert_novel(
+async def ingest_sync_novel(
     external_id: ExternalIdPath,
-    payload: IngestNovelUpsertRequest,
+    payload: IngestNovelSyncRequest,
     partner: Annotated[ReaderPartner, Depends(require_partner)],
     db: Annotated[AsyncSession, Depends(get_async_db)],
-) -> IngestNovelUpsertResponse:
-    insert_stmt = pg_insert(ReaderNovel).values(
-        partner_id=partner.partner_id,
-        external_id=external_id,
-        title=payload.title,
-        description=payload.description,
-        author=payload.author,
-        language_code=payload.language_code,
-        toc_version=1,
-    )
-    upsert_stmt = insert_stmt.on_conflict_do_update(
-        constraint="uq_reader_novels_partner_external_id",
-        set_={
-            "title": insert_stmt.excluded.title,
-            "description": insert_stmt.excluded.description,
-            "author": insert_stmt.excluded.author,
-            "language_code": insert_stmt.excluded.language_code,
-            "toc_version": ReaderNovel.toc_version + 1,
-            "updated_at": func.now(),
-        },
-    ).returning(ReaderNovel.novel_id)
+) -> IngestNovelSyncResponse:
+    novel_id: uuid.UUID
+    novel_mutated = False
 
-    novel_id = (await db.execute(upsert_stmt)).scalar_one()
-    await db.commit()
-    return IngestNovelUpsertResponse(novel_id=novel_id, public_url=novel_public_url(novel_id))
-
-
-@router.put(
-    "/novels/{externalId}/chapters",
-    response_model=IngestChaptersUpsertResponse,
-    operation_id="ingest_upsert_chapters",
-)
-async def ingest_upsert_chapters(
-    external_id: ExternalIdPath,
-    payload: IngestChaptersUpsertRequest,
-    partner: Annotated[ReaderPartner, Depends(require_partner)],
-    db: Annotated[AsyncSession, Depends(get_async_db)],
-) -> IngestChaptersUpsertResponse:
-    novel = await _get_partner_novel(db, partner, external_id)
-    if novel is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Novel not found; create it with PUT /ingest/novels/{externalId} first",
+    if payload.novel is not None:
+        insert_stmt = pg_insert(ReaderNovel).values(
+            partner_id=partner.partner_id,
+            external_id=external_id,
+            title=payload.novel.title,
+            description=payload.novel.description,
+            author=payload.novel.author,
+            language_code=payload.novel.language_code,
+            toc_version=1,
         )
+        upsert_stmt = insert_stmt.on_conflict_do_update(
+            constraint="uq_reader_novels_partner_external_id",
+            set_={
+                "title": insert_stmt.excluded.title,
+                "description": insert_stmt.excluded.description,
+                "author": insert_stmt.excluded.author,
+                "language_code": insert_stmt.excluded.language_code,
+                "toc_version": ReaderNovel.toc_version + 1,
+                "updated_at": func.now(),
+            },
+        ).returning(ReaderNovel.novel_id)
+        novel_id = (await db.execute(upsert_stmt)).scalar_one()
+        novel_mutated = True
+    else:
+        novel = await _get_partner_novel(db, partner, external_id)
+        if novel is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Novel not found; include novel metadata to create it",
+            )
+        novel_id = novel.novel_id
 
-    if not payload.chapters:
-        return IngestChaptersUpsertResponse(
-            novel_id=novel.novel_id,
-            public_url=novel_public_url(novel.novel_id),
-            upserted_chapter_nums=[],
+    upserted_chapter_nums: list[int] = []
+    if payload.upserts:
+        deduped = {item.chapter_num: item for item in payload.upserts}
+        rows = [
+            {
+                "novel_id": novel_id,
+                "chapter_num": item.chapter_num,
+                "title": item.title,
+                "body": item.body,
+                "content_hash": _hash_body(item.body),
+                "external_version": item.external_version,
+            }
+            for item in deduped.values()
+        ]
+        chapter_insert = pg_insert(ReaderChapter).values(rows)
+        chapter_upsert = chapter_insert.on_conflict_do_update(
+            constraint="uq_reader_chapters_novel_chapter_num",
+            set_={
+                "title": chapter_insert.excluded.title,
+                "body": chapter_insert.excluded.body,
+                "content_hash": chapter_insert.excluded.content_hash,
+                "external_version": chapter_insert.excluded.external_version,
+                "updated_at": func.now(),
+            },
         )
+        await db.execute(chapter_upsert)
+        upserted_chapter_nums = sorted(deduped.keys())
 
-    deduped = {item.chapter_num: item for item in payload.chapters}
-    rows = [
-        {
-            "novel_id": novel.novel_id,
-            "chapter_num": item.chapter_num,
-            "title": item.title,
-            "body": item.body,
-            "content_hash": _hash_body(item.body),
-            "external_version": item.external_version,
-        }
-        for item in deduped.values()
-    ]
+        if not novel_mutated:
+            await db.execute(
+                update(ReaderNovel)
+                .where(ReaderNovel.novel_id == novel_id)
+                .values(toc_version=ReaderNovel.toc_version + 1, updated_at=func.now())
+            )
 
-    insert_stmt = pg_insert(ReaderChapter).values(rows)
-    upsert_stmt = insert_stmt.on_conflict_do_update(
-        constraint="uq_reader_chapters_novel_chapter_num",
-        set_={
-            "title": insert_stmt.excluded.title,
-            "body": insert_stmt.excluded.body,
-            "content_hash": insert_stmt.excluded.content_hash,
-            "external_version": insert_stmt.excluded.external_version,
-            "updated_at": func.now(),
-        },
+    if novel_mutated or upserted_chapter_nums:
+        await db.commit()
+
+    return IngestNovelSyncResponse(
+        novel_id=novel_id,
+        public_url=novel_public_url(novel_id),
+        upserted_chapter_nums=upserted_chapter_nums,
     )
-    await db.execute(upsert_stmt)
-    await db.execute(
-        update(ReaderNovel)
-        .where(ReaderNovel.novel_id == novel.novel_id)
-        .values(toc_version=ReaderNovel.toc_version + 1, updated_at=func.now())
-    )
-    await db.commit()
-
-    return IngestChaptersUpsertResponse(
-        novel_id=novel.novel_id,
-        public_url=novel_public_url(novel.novel_id),
-        upserted_chapter_nums=sorted(deduped.keys()),
-    )
-
-
-@router.delete(
-    "/novels/{externalId}/chapters",
-    response_model=IngestChaptersDeleteResponse,
-    operation_id="ingest_delete_chapters",
-)
-async def ingest_delete_chapters(
-    external_id: ExternalIdPath,
-    payload: IngestChaptersDeleteRequest,
-    partner: Annotated[ReaderPartner, Depends(require_partner)],
-    db: Annotated[AsyncSession, Depends(get_async_db)],
-) -> IngestChaptersDeleteResponse:
-    novel = await _get_partner_novel(db, partner, external_id)
-    if novel is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Novel not found")
-
-    unique_nums = sorted(set(payload.chapter_nums))
-    if not unique_nums:
-        return IngestChaptersDeleteResponse(deleted_chapter_nums=[])
-
-    delete_stmt = (
-        delete(ReaderChapter)
-        .where(
-            ReaderChapter.novel_id == novel.novel_id,
-            ReaderChapter.chapter_num.in_(unique_nums),
-        )
-        .returning(ReaderChapter.chapter_num)
-    )
-    deleted_nums = sorted((await db.execute(delete_stmt)).scalars().all())
-    if deleted_nums:
-        await db.execute(
-            update(ReaderNovel)
-            .where(ReaderNovel.novel_id == novel.novel_id)
-            .values(toc_version=ReaderNovel.toc_version + 1, updated_at=func.now())
-        )
-    await db.commit()
-
-    return IngestChaptersDeleteResponse(deleted_chapter_nums=deleted_nums)

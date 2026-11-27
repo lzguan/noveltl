@@ -42,34 +42,76 @@ class IngestNovelUpsertRequest(Model):
     language_code: str = Field(default="en", min_length=1, max_length=32)
 
 
-class IngestNovelUpsertResponse(Model):
-    novel_id: uuid.UUID
-    public_url: str
-
-
-class IngestChapterItem(Model):
+class IngestChapterUpsertItem(Model):
     chapter_num: int = Field(ge=0)
     title: str = Field(max_length=512)
     body: str
     external_version: str | None = Field(default=None, max_length=128)
 
 
-class IngestChaptersUpsertRequest(Model):
-    chapters: list[IngestChapterItem]
+class IngestNovelSyncRequest(Model):
+    novel: IngestNovelUpsertRequest | None = None
+    upserts: list[IngestChapterUpsertItem] = Field(default_factory=list, max_length=200)
 
 
-class IngestChaptersUpsertResponse(Model):
+class IngestNovelSyncResponse(Model):
     novel_id: uuid.UUID
     public_url: str
     upserted_chapter_nums: list[int]
 
 
-class IngestChaptersDeleteRequest(Model):
-    chapter_nums: list[int]
+class AdminLoginRequest(Model):
+    username: str = Field(min_length=1, max_length=255)
+    password: str = Field(min_length=1, max_length=1024)
 
 
-class IngestChaptersDeleteResponse(Model):
-    deleted_chapter_nums: list[int]
+class AdminLoginResponse(Model):
+    access_token: str
+    expires_at: datetime
+
+
+class AdminPartnerKeySummary(Model):
+    key_id: uuid.UUID
+    key_prefix: str
+    created_at: datetime
+    revoked_at: datetime | None
+
+
+class AdminPartnerSummary(Model):
+    partner_id: uuid.UUID
+    name: str
+    created_at: datetime
+    novel_count: int
+    keys: list[AdminPartnerKeySummary]
+
+
+class AdminPartnerCreateRequest(Model):
+    name: str = Field(min_length=1, max_length=255)
+
+
+class AdminPartnerCreateResponse(Model):
+    partner_id: uuid.UUID
+    name: str
+    created_at: datetime
+
+
+class AdminMintKeyResponse(Model):
+    key_id: uuid.UUID
+    key_prefix: str
+    api_key: str
+    created_at: datetime
+
+
+class AdminNovelSummary(Model):
+    novel_id: uuid.UUID
+    title: str
+    author: str | None
+    language_code: str
+    partner_id: uuid.UUID | None
+    partner_name: str | None
+    chapter_count: int
+    updated_at: datetime
+    public_url: str
 
 
 class PublicNovelSummary(Model):

@@ -70,20 +70,16 @@ def test_partner_isolation(
     headers_b = {"Authorization": f"Bearer {key_b}"}
 
     # Partner A publishes externalId="novel-1"
-    upsert_a = client.put(
-        "/ingest/novels/novel-1",
+    sync_a = client.post(
+        "/ingest/novels/novel-1/sync",
         headers=headers_a,
-        json={"title": "Partner A Novel", "author": "Author A"},
+        json={
+            "novel": {"title": "Partner A Novel", "author": "Author A"},
+            "upserts": [{"chapterNum": 1, "title": "Ch 1", "body": "Body A"}],
+        },
     )
-    assert upsert_a.status_code == 200
-    novel_id_a = upsert_a.json()["novelId"]
-
-    chapters_a = client.put(
-        "/ingest/novels/novel-1/chapters",
-        headers=headers_a,
-        json={"chapters": [{"chapterNum": 1, "title": "Ch 1", "body": "Body A"}]},
-    )
-    assert chapters_a.status_code == 200
+    assert sync_a.status_code == 200
+    novel_id_a = sync_a.json()["novelId"]
 
     # Partner B sees exists=False for the same externalId and cannot mutate Partner A's novel.
     status_b = client.get("/ingest/novels/novel-1/status", headers=headers_b)
@@ -91,31 +87,22 @@ def test_partner_isolation(
     assert status_b.json() == {"exists": False, "novelId": None, "publicUrl": None, "chapters": []}
 
     assert (
-        client.put(
-            "/ingest/novels/novel-1/chapters",
+        client.post(
+            "/ingest/novels/novel-1/sync",
             headers=headers_b,
-            json={"chapters": [{"chapterNum": 1, "title": "Hijack", "body": "Nope"}]},
-        ).status_code
-        == 404
-    )
-    assert (
-        client.request(
-            "DELETE",
-            "/ingest/novels/novel-1/chapters",
-            headers=headers_b,
-            json={"chapterNums": [1]},
+            json={"upserts": [{"chapterNum": 1, "title": "Hijack", "body": "Nope"}]},
         ).status_code
         == 404
     )
 
     # Partner B can create its own novel with the same externalId independently.
-    upsert_b = client.put(
-        "/ingest/novels/novel-1",
+    sync_b = client.post(
+        "/ingest/novels/novel-1/sync",
         headers=headers_b,
-        json={"title": "Partner B Novel"},
+        json={"novel": {"title": "Partner B Novel"}},
     )
-    assert upsert_b.status_code == 200
-    novel_id_b = upsert_b.json()["novelId"]
+    assert sync_b.status_code == 200
+    novel_id_b = sync_b.json()["novelId"]
     assert novel_id_b != novel_id_a
 
     # Partner A's novel and chapter remain untouched.

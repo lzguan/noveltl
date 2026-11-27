@@ -4,6 +4,7 @@ import {
 	AnchoredFeedbackSheet,
 	ChapterFeedbackWidget,
 	type FeedbackActionData,
+	FeedbackModeDock,
 } from "../components/ChapterFeedback";
 import { revalidateUnlessSettings } from "../components/SettingsBar";
 import { SiteHeader } from "../components/SiteHeader";
@@ -291,7 +292,7 @@ export default function ChapterPage({ loaderData }: Route.ComponentProps) {
 					: "border-line text-muted hover:bg-hover hover:text-ink"
 			}`}
 		>
-			{feedbackMode ? "Feedback mode: On" : "Feedback mode"}
+			{feedbackMode ? "Feedback: On" : "Feedback"}
 		</button>
 	);
 
@@ -311,22 +312,6 @@ export default function ChapterPage({ loaderData }: Route.ComponentProps) {
 						{title === `Chapter ${chapterNum}` ? title : `${chapterNum}. ${title}`}
 					</h1>
 				</header>
-
-				{feedbackMode ? (
-					<div
-						role="status"
-						className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-line bg-hover px-3.5 py-2 text-xs text-ink"
-					>
-						<span>Feedback mode active — tap any word to flag an issue.</span>
-						<button
-							type="button"
-							onClick={toggleFeedbackMode}
-							className="shrink-0 rounded border border-line bg-page px-2 py-0.5 font-medium text-ink hover:bg-hover"
-						>
-							Done
-						</button>
-					</div>
-				) : null}
 
 				<article
 					className={
@@ -355,6 +340,10 @@ export default function ChapterPage({ loaderData }: Route.ComponentProps) {
 					<ChapterNav prev={prev} next={next} contentsHref={contentsHref} />
 				</div>
 			</main>
+
+			{feedbackMode && !activeAnchor ? (
+				<FeedbackModeDock onExit={toggleFeedbackMode} />
+			) : null}
 
 			{activeAnchor ? (
 				<AnchoredFeedbackSheet

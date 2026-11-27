@@ -95,8 +95,168 @@ body {
 	}
 }
 
+@keyframes inky-glow {
+	0% {
+		filter: drop-shadow(0 0 0 transparent);
+		transform: scale(1);
+	}
+	40% {
+		filter: drop-shadow(0 0 10px color-mix(in srgb, var(--rd-link-ink) 70%, transparent));
+		transform: scale(1.1);
+	}
+	100% {
+		filter: drop-shadow(0 0 4px color-mix(in srgb, var(--rd-link-ink) 28%, transparent));
+		transform: scale(1);
+	}
+}
+
+@keyframes inky-circle-pop {
+	0% {
+		opacity: 0;
+		transform: translateX(-8px) scale(0.6);
+	}
+	100% {
+		opacity: 1;
+		transform: translateX(0) scale(1);
+	}
+}
+
+@keyframes inky-pop-up {
+	0% {
+		opacity: 0;
+		transform: translateY(16px) scale(0.92);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes inky-react-love {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	30% {
+		transform: translateY(-4px) scale(1.14);
+	}
+	60% {
+		transform: translateY(0) scale(0.96);
+	}
+	80% {
+		transform: translateY(-2px) scale(1.05);
+	}
+}
+
+@keyframes inky-react-funny {
+	0%,
+	100% {
+		transform: rotate(0deg);
+	}
+	20% {
+		transform: rotate(-10deg) translateY(-2px);
+	}
+	40% {
+		transform: rotate(10deg) translateY(-3px);
+	}
+	60% {
+		transform: rotate(-7deg) translateY(-1px);
+	}
+	80% {
+		transform: rotate(5deg);
+	}
+}
+
+@keyframes inky-react-shocked {
+	0% {
+		transform: scale(1);
+	}
+	25% {
+		transform: translateY(-7px) scale(0.92, 1.14);
+	}
+	55% {
+		transform: translateY(1px) scale(1.06, 0.94);
+	}
+	100% {
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes inky-react-sad {
+	0% {
+		transform: translateY(0) scale(1);
+	}
+	45% {
+		transform: translateY(3px) scale(1.04, 0.93);
+	}
+	100% {
+		transform: translateY(1px) scale(1);
+	}
+}
+
+@keyframes inky-react-confused {
+	0%,
+	100% {
+		transform: rotate(0deg);
+	}
+	35% {
+		transform: rotate(12deg);
+	}
+	70% {
+		transform: rotate(-6deg);
+	}
+}
+
 .inky-mascot {
 	animation: inky-float 3.2s ease-in-out infinite;
+}
+
+.inky-mascot-happy {
+	animation:
+		inky-react-love 480ms ease-out,
+		inky-float 3.2s ease-in-out 480ms infinite;
+}
+
+.inky-react-love {
+	animation:
+		inky-react-love 520ms ease-out,
+		inky-float 3.2s ease-in-out 520ms infinite;
+}
+
+.inky-react-funny {
+	animation:
+		inky-react-funny 520ms ease-in-out,
+		inky-float 3.2s ease-in-out 520ms infinite;
+}
+
+.inky-react-shocked {
+	animation:
+		inky-react-shocked 460ms ease-out,
+		inky-float 3.2s ease-in-out 460ms infinite;
+}
+
+.inky-react-sad {
+	animation:
+		inky-react-sad 600ms ease-in-out,
+		inky-float 3.2s ease-in-out 600ms infinite;
+}
+
+.inky-react-confused {
+	animation:
+		inky-react-confused 560ms ease-in-out,
+		inky-float 3.2s ease-in-out 560ms infinite;
+}
+
+.inky-mascot-glow {
+	animation: inky-glow 450ms ease-out both;
+}
+
+.inky-option-circle {
+	animation: inky-circle-pop 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.inky-pop-up {
+	animation: inky-pop-up 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .inky-mascot-eyes {
@@ -107,6 +267,15 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
 	.inky-mascot,
+	.inky-mascot-happy,
+	.inky-react-love,
+	.inky-react-funny,
+	.inky-react-shocked,
+	.inky-react-sad,
+	.inky-react-confused,
+	.inky-mascot-glow,
+	.inky-option-circle,
+	.inky-pop-up,
 	.inky-mascot-eyes {
 		animation: none;
 	}

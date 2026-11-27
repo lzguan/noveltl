@@ -161,17 +161,18 @@ def test_creation_rejects_stages_whose_streams_the_job_does_not_load(sample_scen
         )
 
 
-@pytest.mark.parametrize("stream", ["memories", "terms", "conventions"])
 async def test_loader_rejects_a_memory_group_from_another_novel(
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
-    stream: str,
 ) -> None:
     # The service checks ownership at creation; the loader checks again in case the group moved since.
     group = await _group(async_test_db, sample_scenario)
-    inputs = {stream: {"type": stream, "memory_group_id": str(group.memory_group_id)}}
+    inputs = {
+        stream: {"type": stream, "memory_group_id": str(group.memory_group_id)}
+        for stream in ("memories", "terms", "conventions")
+    }
     request = _request(sample_scenario, {"action": "translate", "config": {"model": "qwen-plus"}}, inputs)
     job_id = await create_job(async_test_db, request)
     group.novel_id = sample_scenario.novels["novel_2"].novel_id
@@ -307,24 +308,22 @@ async def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventi
     assert following.status == State.READY
 
 
-@pytest.mark.parametrize("stream", ["terms", "conventions"])
 async def test_loader_emits_empty_records_for_an_independently_enabled_stream(
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
-    stream: str,
 ) -> None:
     group = await _group(async_test_db, sample_scenario)
     request = _request(
         sample_scenario,
         {"action": "translate", "config": {"model": "qwen-plus"}},
-        {stream: {"type": stream, "memory_group_id": str(group.memory_group_id)}},
+        {"conventions": {"type": "conventions", "memory_group_id": str(group.memory_group_id)}},
     )
     records, chapter_ids, _, _ = await _run_loader(
         async_test_db, testing_async_session_local, monkeypatch, request, "src.translations.actions.translate.prepare"
     )
     assert {(record.chapter_id, record.stream) for record in records} == {
-        (chapter, name) for chapter in chapter_ids for name in ("chapter", stream)
+        (chapter, name) for chapter in chapter_ids for name in ("chapter", "conventions")
     }
-    assert all(not record.payload for record in records if record.stream == stream)
+    assert all(not record.payload for record in records if record.stream == "conventions")

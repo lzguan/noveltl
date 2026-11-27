@@ -154,7 +154,7 @@ async def _seed_glossary_query_scenario(db: AsyncSession) -> GlossaryQueryScenar
     )
 
 
-async def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(async_test_db: AsyncSession) -> None:
+async def test_glossary_term_and_memory_queries(async_test_db: AsyncSession) -> None:
     scenario = await _seed_glossary_query_scenario(async_test_db)
 
     page = await query_glossary_terms(
@@ -165,7 +165,6 @@ async def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(as
         skip=0,
         limit=10,
     )
-
     assert page.count == 4
     assert [(row.term, row.associated_memory_count) for row in page.rows] == [
         ("Gamma", 3),
@@ -180,11 +179,7 @@ async def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(as
         "OldOnly": None,
     }
 
-
-async def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(async_test_db: AsyncSession) -> None:
-    scenario = await _seed_glossary_query_scenario(async_test_db)
-
-    page = await query_glossary_terms(
+    chapter_page = await query_glossary_terms(
         async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
@@ -193,18 +188,13 @@ async def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(
         limit=10,
         chapter_id=scenario.chapter.chapter_id,
     )
-
-    assert page.count == 2
-    assert [(row.term, row.associated_memory_count) for row in page.rows] == [
+    assert chapter_page.count == 2
+    assert [(row.term, row.associated_memory_count) for row in chapter_page.rows] == [
         ("Alpha", 1),
         ("Beta", 0),
     ]
 
-
-async def test_glossary_term_search_and_pagination_apply_after_count_ordering(async_test_db: AsyncSession) -> None:
-    scenario = await _seed_glossary_query_scenario(async_test_db)
-
-    page = await query_glossary_terms(
+    search_page = await query_glossary_terms(
         async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
@@ -213,18 +203,11 @@ async def test_glossary_term_search_and_pagination_apply_after_count_ordering(as
         limit=2,
         search="a",
     )
-
-    assert page.count == 3
-    assert [(row.term, row.associated_memory_count) for row in page.rows] == [
+    assert search_page.count == 3
+    assert [(row.term, row.associated_memory_count) for row in search_page.rows] == [
         ("Alpha", 2),
         ("Beta", 0),
     ]
-
-
-async def test_memories_for_term_can_be_scoped_to_active_memories_at_a_chapter(
-    async_test_db: AsyncSession,
-) -> None:
-    scenario = await _seed_glossary_query_scenario(async_test_db)
 
     all_memories = await query_memories_for_term(
         async_test_db,
@@ -239,7 +222,6 @@ async def test_memories_for_term_can_be_scoped_to_active_memories_at_a_chapter(
         scenario.alpha_term_id,
         chapter_id=scenario.chapter.chapter_id,
     )
-
     assert all_memories.count == 2
     assert active_memories.count == 1
     assert [row.memory.memory_content for row in active_memories.rows] == ["Alpha has one persistent memory."]

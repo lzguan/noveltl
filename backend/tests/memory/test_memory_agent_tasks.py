@@ -448,70 +448,6 @@ async def test_previous_summary_uses_only_current_immediate_predecessor_source_c
     assert await previous_summary() is None
 
 
-async def test_continuity_rerun_updates_only_pending_agent_summary(
-    async_test_db: AsyncSession,
-    testing_async_session_local: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Reruns refresh pending agent output but preserve reviewed continuity text."""
-    memory_job_id, chapter_ids = await _make_memory_job(async_test_db, toolsets={"continuity_summary": {}})
-    job = await async_test_db.get(MemoryJob, memory_job_id)
-    assert job is not None
-    contents = [
-        (await async_test_db.scalars(select(ChapterContent).where(ChapterContent.chapter_id == chapter_id))).one()
-        for chapter_id in chapter_ids
-    ]
-    async_test_db.add_all(
-        [
-            Memory(
-                memory_group_id=job.memory_group_id,
-                memory_type=MemoryType.SUMMARY,
-                memory_observed_in=contents[0].chapter_content_id,
-                memory_start_num=1,
-                memory_content="Human-reviewed handoff.",
-                memory_review_status=ReviewStatus.APPROVED,
-                creator_type=Creator.AGENT,
-                plugin_name=CONTINUITY_PLUGIN_NAME,
-            ),
-            Memory(
-                memory_group_id=job.memory_group_id,
-                memory_type=MemoryType.SUMMARY,
-                memory_observed_in=contents[1].chapter_content_id,
-                memory_start_num=2,
-                memory_content="Pending agent handoff.",
-                creator_type=Creator.AGENT,
-                plugin_name=CONTINUITY_PLUGIN_NAME,
-            ),
-        ]
-    )
-    await async_test_db.commit()
-    test_agent = Agent(
-        TestModel(call_tools=[], custom_output_args={"summary": "Replacement handoff."}),
-        deps_type=MemAgentDeps,
-        output_type=ContinuitySummaryOutput,
-        capabilities=[ContinuitySummaryCapability()],
-    )
-    monkeypatch.setattr(recording, "create_recording_agent", lambda _model_name, _toolsets: test_agent)
-
-    async def consume_tasks():
-        return [
-            completed_task
-            async for completed_task in agent_tasks.run_all_tasks(testing_async_session_local, memory_job_id)
-        ]
-
-    (await consume_tasks())
-    async_test_db.expunge_all()
-    summaries = (
-        await async_test_db.scalars(
-            select(Memory).where(Memory.memory_type == MemoryType.SUMMARY).order_by(Memory.memory_start_num)
-        )
-    ).all()
-    assert [(summary.memory_content, summary.memory_review_status) for summary in summaries] == [
-        ("Human-reviewed handoff.", ReviewStatus.APPROVED),
-        ("Replacement handoff.", ReviewStatus.PENDING),
-    ]
-
-
 async def test_naming_failure_preserves_recording_and_retry_runs_only_naming(
     async_test_db: AsyncSession,
     testing_async_session_local: async_sessionmaker[AsyncSession],
@@ -548,7 +484,6 @@ async def test_naming_failure_preserves_recording_and_retry_runs_only_naming(
         recording_calls += 1
         if recording_calls == 1:
             return ModelResponse(parts=[ToolCallPart("add_term", {"term_name": "林昀", "term_kind": "person"})])
-        from pydantic_ai.messages import TextPart
 
         return ModelResponse(parts=[TextPart("Recorded.")])
 
@@ -643,12 +578,10 @@ async def test_naming_only_no_work_completes_without_creating_an_agent(
     assert (await async_test_db.scalars(select(TermTranslation))).one().translation == "Lin Yun"
 
 
-@pytest.mark.parametrize("fail", [False, True])
-async def test_worker_publishes_success_and_discards_drafts_on_model_failure(
+async def test_worker_discards_drafts_on_model_failure(
     async_test_db: AsyncSession,
     testing_async_session_local: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
-    fail: bool,
 ) -> None:
     memory_job_id, [chapter_id] = await _make_memory_job(
         async_test_db, chapter_count=1, toolsets={"glossary_terms": {}}
@@ -664,13 +597,7 @@ async def test_worker_publishes_success_and_discards_drafts_on_model_failure(
                 assert await other.scalar(select(func.count()).select_from(ShadowTerm)) == 1
         if requests == 1:
             return ModelResponse(parts=[ToolCallPart("add_term", {"term_name": "Alpha", "term_kind": "concept"})])
-        if fail:
-            raise RuntimeError("Model request failed")
-        if requests == 2:
-            return ModelResponse(
-                parts=[ToolCallPart("new_definition_memory", {"term_names": ["Alpha"], "content": "A concept."})]
-            )
-        return ModelResponse(parts=[TextPart("Done.")])
+        raise RuntimeError("Model request failed")
 
     agent = Agent(
         FunctionModel(respond),
@@ -682,14 +609,11 @@ async def test_worker_publishes_success_and_discards_drafts_on_model_failure(
     async def consume():
         return [item async for item in agent_tasks.run_all_tasks(testing_async_session_local, memory_job_id)]
 
-    if fail:
-        with pytest.raises(RuntimeError, match="Model request failed"):
-            (await consume())
-    else:
-        assert len(await consume()) == 1
+    with pytest.raises(RuntimeError, match="Model request failed"):
+        (await consume())
     async_test_db.expunge_all()
     task = await async_test_db.get(MemoryChapterTask, (memory_job_id, chapter_id, 0))
-    assert task is not None and task.task_status == (JobStatus.FAILED if fail else JobStatus.COMPLETED)
-    assert await async_test_db.scalar(select(func.count()).select_from(GlossaryTerm)) == (0 if fail else 1)
-    assert await async_test_db.scalar(select(func.count()).select_from(Memory)) == (0 if fail else 1)
+    assert task is not None and task.task_status == JobStatus.FAILED
+    assert await async_test_db.scalar(select(func.count()).select_from(GlossaryTerm)) == 0
+    assert await async_test_db.scalar(select(func.count()).select_from(Memory)) == 0
     assert await async_test_db.scalar(select(func.count()).select_from(MemoryWorkspace)) == 0

@@ -1,7 +1,6 @@
 from datetime import timedelta
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -67,35 +66,46 @@ def test_batch_read_is_scoped_and_includes_rejected_mappings_for_review(
     )
 
 
-@pytest.mark.parametrize("review_status", list(ReviewStatus))
 def test_manual_save_preserves_review_status_and_marks_creator_as_user(
-    client: TestClient, test_db: Session, novel_permission_scenario: DatabaseScenario, review_status: ReviewStatus
+    client: TestClient, test_db: Session, novel_permission_scenario: DatabaseScenario
 ):
     scenario = novel_permission_scenario
     memory_group = group(test_db, scenario)
-    term = GlossaryTerm(memory_group_id=memory_group.memory_group_id, term="Alpha", review_status=ReviewStatus.APPROVED)
-    test_db.add(term)
-    test_db.flush()
-    test_db.add(
-        TermTranslation(
-            term_id=term.term_id, translation="Old", creator_type=Creator.AGENT, review_status=review_status
+    entries = []
+    for review_status in ReviewStatus:
+        term = GlossaryTerm(
+            memory_group_id=memory_group.memory_group_id,
+            term=f"Alpha-{review_status.value}",
+            review_status=ReviewStatus.APPROVED,
         )
-    )
+        test_db.add(term)
+        test_db.flush()
+        test_db.add(
+            TermTranslation(
+                term_id=term.term_id, translation="Old", creator_type=Creator.AGENT, review_status=review_status
+            )
+        )
+        entries.append((review_status, term))
     test_db.commit()
-    url = f"/memory-groups/{memory_group.memory_group_id}/translations/{term.term_id}"
-    response = client.put(url, json={"translation": "  New rendering  "}, headers=auth(scenario.users["owner"]))
-    assert response.status_code == 200
-    assert response.json()["translation"] == "New rendering"
-    assert response.json()["reviewStatus"] == review_status.value
-    assert response.json()["creatorType"] == "user"
+
+    for review_status, term in entries:
+        url = f"/memory-groups/{memory_group.memory_group_id}/translations/{term.term_id}"
+        response = client.put(url, json={"translation": "  New rendering  "}, headers=auth(scenario.users["owner"]))
+        assert response.status_code == 200
+        assert response.json()["translation"] == "New rendering"
+        assert response.json()["reviewStatus"] == review_status.value
+        assert response.json()["creatorType"] == "user"
+
+    first_term = entries[0][1]
+    url = f"/memory-groups/{memory_group.memory_group_id}/translations/{first_term.term_id}"
     test_db.expire_all()
-    source_term = test_db.get(GlossaryTerm, term.term_id)
+    source_term = test_db.get(GlossaryTerm, first_term.term_id)
     assert source_term is not None and source_term.review_status == ReviewStatus.APPROVED
     assert client.put(url, json={"translation": "Blocked"}, headers=auth(scenario.users["other"])).status_code == 404
     assert client.put(url, json={"translation": "Blocked"}).status_code == 401
     assert client.put(url, json={"translation": " \n "}, headers=auth(scenario.users["owner"])).status_code == 422
     test_db.expire_all()
-    saved = test_db.get(TermTranslation, term.term_id)
+    saved = test_db.get(TermTranslation, first_term.term_id)
     assert saved is not None and saved.translation == "New rendering"
 
 
@@ -128,9 +138,8 @@ def test_editor_can_fill_missing_mapping_without_creating_duplicates_or_crossing
     )
 
 
-@pytest.mark.parametrize("review_status", list(ReviewStatus))
 def test_editor_can_review_translation_independently_of_source_term(
-    client: TestClient, test_db: Session, novel_permission_scenario: DatabaseScenario, review_status: ReviewStatus
+    client: TestClient, test_db: Session, novel_permission_scenario: DatabaseScenario
 ):
     scenario = novel_permission_scenario
     memory_group = group(test_db, scenario, "oe")
@@ -139,24 +148,24 @@ def test_editor_can_review_translation_independently_of_source_term(
     test_db.flush()
     test_db.add(TermTranslation(term_id=term.term_id, translation="Existing", creator_type=Creator.AGENT))
     test_db.commit()
-    response = client.patch(
-        f"/memory-groups/{memory_group.memory_group_id}/translations/{term.term_id}/review-status",
-        json={"reviewStatus": review_status.value},
-        headers=auth(scenario.users["other"]),
-    )
-    assert response.status_code == 200
-    assert response.json()["reviewStatus"] == review_status.value
-    assert response.json()["translation"] == "Existing"
-    assert response.json()["creatorType"] == "agent"
-    test_db.expire_all()
-    saved = test_db.get(TermTranslation, term.term_id)
-    assert saved is not None and saved.review_status == review_status
-    assert term.review_status == ReviewStatus.REJECTED
+    for review_status in (ReviewStatus.APPROVED, ReviewStatus.REJECTED, ReviewStatus.PENDING):
+        response = client.patch(
+            f"/memory-groups/{memory_group.memory_group_id}/translations/{term.term_id}/review-status",
+            json={"reviewStatus": review_status.value},
+            headers=auth(scenario.users["other"]),
+        )
+        assert response.status_code == 200
+        assert response.json()["reviewStatus"] == review_status.value
+        assert response.json()["translation"] == "Existing"
+        assert response.json()["creatorType"] == "agent"
+        test_db.expire_all()
+        saved = test_db.get(TermTranslation, term.term_id)
+        assert saved is not None and saved.review_status == review_status
+        assert term.review_status == ReviewStatus.REJECTED
 
 
-@pytest.mark.parametrize("method", ["PATCH", "DELETE"])
 def test_translation_review_and_deletion_require_edit_access_to_the_requested_group(
-    client: TestClient, test_db: Session, novel_permission_scenario: DatabaseScenario, method: str
+    client: TestClient, test_db: Session, novel_permission_scenario: DatabaseScenario
 ):
     scenario = novel_permission_scenario
     primary, other = group(test_db, scenario), group(test_db, scenario)
@@ -166,21 +175,23 @@ def test_translation_review_and_deletion_require_edit_access_to_the_requested_gr
     test_db.flush()
     test_db.add(TermTranslation(term_id=term.term_id, translation="Existing", creator_type=Creator.AGENT))
     test_db.commit()
-    suffix = "/review-status" if method == "PATCH" else ""
-    body = {"reviewStatus": "approved"} if method == "PATCH" else None
-    url = f"/memory-groups/{primary.memory_group_id}/translations/{term.term_id}{suffix}"
-    assert client.request(method, url, json=body).status_code == 401
-    assert client.request(method, url, headers=auth(scenario.users["other"]), json=body).status_code == 404
-    for group_id, term_id in [(other.memory_group_id, term.term_id), (primary.memory_group_id, missing.term_id)]:
-        assert (
-            client.request(
-                method,
-                f"/memory-groups/{group_id}/translations/{term_id}{suffix}",
-                headers=auth(scenario.users["owner"]),
-                json=body,
-            ).status_code
-            == 404
-        )
+    for method, suffix, body in (
+        ("PATCH", "/review-status", {"reviewStatus": "approved"}),
+        ("DELETE", "", None),
+    ):
+        url = f"/memory-groups/{primary.memory_group_id}/translations/{term.term_id}{suffix}"
+        assert client.request(method, url, json=body).status_code == 401
+        assert client.request(method, url, headers=auth(scenario.users["other"]), json=body).status_code == 404
+        for group_id, term_id in [(other.memory_group_id, term.term_id), (primary.memory_group_id, missing.term_id)]:
+            assert (
+                client.request(
+                    method,
+                    f"/memory-groups/{group_id}/translations/{term_id}{suffix}",
+                    headers=auth(scenario.users["owner"]),
+                    json=body,
+                ).status_code
+                == 404
+            )
     test_db.expire_all()
     saved = test_db.get(TermTranslation, term.term_id)
     assert saved is not None and saved.translation == "Existing" and saved.review_status == ReviewStatus.PENDING

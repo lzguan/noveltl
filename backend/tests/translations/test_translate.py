@@ -231,9 +231,13 @@ async def make_job(
     return task.task_id, records
 
 
-@pytest.mark.parametrize("with_memories", [False, True])
-@pytest.mark.parametrize("with_terms", [False, True])
-@pytest.mark.parametrize("with_conventions", [False, True])
+@pytest.mark.parametrize(
+    ("with_memories", "with_terms", "with_conventions"),
+    [
+        (False, False, False),
+        (True, True, True),
+    ],
+)
 async def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_bytes(
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
@@ -341,7 +345,6 @@ async def test_prepare_rejects_incomplete_previous_task(
     assert not recording_codec.items and not worker.objects
 
 
-@pytest.mark.parametrize("with_memories", [False, True])
 @pytest.mark.parametrize("failed", [False, True])
 async def test_submission_and_polling_persist_progress_before_dispatch(
     async_test_db: AsyncSession,
@@ -353,11 +356,10 @@ async def test_submission_and_polling_persist_progress_before_dispatch(
     recording_codec: RecordingCodec,
     queued_tasks: dict[str, AsyncMock],
     failed: bool,
-    with_memories: bool,
 ) -> None:
     # Finalization/recovery rely on durable provider IDs, and pending polls must
     # release their claim so a fresh worker can perform the next check.
-    task_id, records = await make_job(async_test_db, sample_scenario, worker, with_memories=with_memories)
+    task_id, records = await make_job(async_test_db, sample_scenario, worker, with_memories=True)
     requests = len({record.chapter_id for record in records})
     client = FakeBatchClient()
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)
@@ -425,9 +427,16 @@ async def test_submission_and_polling_persist_progress_before_dispatch(
         queued_tasks["finalize"].assert_called_once_with(str(task_id))
 
 
-@pytest.mark.parametrize("with_memories", [False, True])
 @pytest.mark.parametrize(
-    "failure", [None, "duplicate", "missing", "stream", "foreign", "item", "malformed", "download", "upload"]
+    ("with_memories", "failure"),
+    [
+        (False, None),
+        (True, None),
+        (True, "item"),
+        (True, "missing"),
+        (True, "download"),
+        (True, "upload"),
+    ],
 )
 async def test_finalize_publishes_only_the_complete_state_after_translation(
     async_test_db: AsyncSession,

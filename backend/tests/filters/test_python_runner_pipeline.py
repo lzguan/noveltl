@@ -247,16 +247,27 @@ def _run_pipeline(
 def test_label_filter_map_rename_group_pipeline(
     test_db: Session, testing_session_local: sessionmaker[Session], filter_scenario: DatabaseScenario
 ) -> None:
-    test_db.add(
-        Label(
-            label_data_id=filter_scenario.label_datas["labels"].label_data_id,
-            label_entity_group="MISC",
-            label_word="world",
-            label_start=27,
-            label_end=32,
-            label_score=0.2,
-            label_dirty=False,
-        )
+    test_db.add_all(
+        [
+            Label(
+                label_data_id=filter_scenario.label_datas["labels"].label_data_id,
+                label_entity_group="MISC",
+                label_word="world",
+                label_start=27,
+                label_end=32,
+                label_score=0.2,
+                label_dirty=False,
+            ),
+            Label(
+                label_data_id=filter_scenario.label_datas["labels"].label_data_id,
+                label_entity_group="LOC",
+                label_word="青石城",
+                label_start=33,
+                label_end=36,
+                label_score=0.2,
+                label_dirty=False,
+            ),
+        ]
     )
 
     source_count, filtered_count, assignments = _run_pipeline(
@@ -266,25 +277,6 @@ def test_label_filter_map_rename_group_pipeline(
         0.6,
     )
 
-    assert source_count == len(filter_scenario.labels) + 1
-    assert filtered_count == 10
-    assert Counter(assignments) == Counter({"traveler": 4, "world": 4, "test": 1, "city": 1})
-
-
-def test_catalog_xianxia_data_flows_through_runner_pipeline(
-    test_db: Session,
-    testing_session_local: sessionmaker[Session],
-    xianxia_labels_scenario: DatabaseScenario,
-) -> None:
-    label_group = xianxia_labels_scenario.label_groups["labels"]
-
-    source_count, filtered_count, assignments = _run_pipeline(
-        test_db,
-        testing_session_local,
-        label_group.label_group_id,
-        0.985,
-    )
-
-    assert source_count == len(xianxia_labels_scenario.labels) == 2
-    assert filtered_count == 1
-    assert assignments == ["青石城"]
+    assert source_count == len(filter_scenario.labels) + 2
+    assert filtered_count == 11
+    assert Counter(assignments) == Counter({"traveler": 4, "world": 4, "test": 1, "city": 1, "青石城": 1})

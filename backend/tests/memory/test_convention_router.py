@@ -1,7 +1,6 @@
 from datetime import timedelta
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -95,24 +94,27 @@ def test_create_strips_input_and_requires_edit_access(
         assert client.post(url, json=body | blank, headers=editor).status_code == 422
 
 
-@pytest.mark.parametrize("review_status", list(ReviewStatus))
 def test_manual_edit_preserves_review_status_and_takes_ownership_from_agent(
-    client: TestClient, test_db: Session, novel_permission_scenario: DatabaseScenario, review_status: ReviewStatus
+    client: TestClient, test_db: Session, novel_permission_scenario: DatabaseScenario
 ):
     """Agent writers will only modify their own pending rows, so a human edit must claim the row."""
     scenario = novel_permission_scenario
     memory_group = group(test_db, scenario)
-    row = convention(test_db, memory_group, review_status=review_status)
+    rows = [
+        (review_status, convention(test_db, memory_group, review_status=review_status))
+        for review_status in ReviewStatus
+    ]
     test_db.commit()
-    url = f"/memory-groups/{memory_group.memory_group_id}/conventions/{row.convention_id}"
     body = {"category": "style", "title": "Honorifics", "rule": "Keep -senpai.", "rationale": "Genre norm."}
 
-    response = client.put(url, json=body, headers=auth(scenario.users["owner"]))
-    assert response.status_code == 200
-    assert response.json()["reviewStatus"] == review_status.value
-    assert response.json()["creatorType"] == "user"
+    for review_status, row in rows:
+        url = f"/memory-groups/{memory_group.memory_group_id}/conventions/{row.convention_id}"
+        response = client.put(url, json=body, headers=auth(scenario.users["owner"]))
+        assert response.status_code == 200
+        assert response.json()["reviewStatus"] == review_status.value
+        assert response.json()["creatorType"] == "user"
     test_db.expire_all()
-    saved = test_db.get(TranslationConvention, row.convention_id)
+    saved = test_db.get(TranslationConvention, rows[0][1].convention_id)
     assert saved is not None
     assert (saved.category, saved.title, saved.rule, saved.rationale) == (
         ConventionCategory.STYLE,

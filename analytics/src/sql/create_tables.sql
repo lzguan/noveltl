@@ -50,3 +50,17 @@ CREATE TABLE IF NOT EXISTS streams (
     output_file_id UUID NOT NULL,
     PRIMARY KEY (job_id, chapter_id, stage, stream, data_name)
 );
+
+CREATE TABLE IF NOT EXISTS reader_feedback (
+    feedback_id UUID PRIMARY KEY,
+    ingest_id UUID NOT NULL REFERENCES ingests (ingest_id),
+    novel_id UUID NOT NULL,
+    chapter_id UUID NOT NULL,
+    chapter_num INTEGER NOT NULL,
+    content_hash TEXT NOT NULL,
+    external_version TEXT,
+    kind TEXT NOT NULL,
+    payload JSON NOT NULL,
+    client_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);

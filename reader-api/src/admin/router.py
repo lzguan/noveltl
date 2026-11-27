@@ -1,8 +1,13 @@
+import base64
+import json
 import uuid
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Response, status
-from sqlalchemy import delete, func, select, update
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
+from fastapi.responses import StreamingResponse
+from sqlalchemy import delete, func, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -10,8 +15,10 @@ from src.admin.auth import create_admin_token, require_admin, verify_admin_crede
 from src.auth import generate_api_key
 from src.config import novel_public_url, reader_settings
 from src.database import get_async_db
-from src.models import ReaderChapter, ReaderNovel, ReaderPartner, ReaderPartnerKey
+from src.models import ReaderChapter, ReaderFeedback, ReaderNovel, ReaderPartner, ReaderPartnerKey
 from src.schemas import (
+    AdminFeedbackItem,
+    AdminFeedbackListResponse,
     AdminLoginRequest,
     AdminLoginResponse,
     AdminMintKeyResponse,
@@ -20,6 +27,7 @@ from src.schemas import (
     AdminPartnerCreateResponse,
     AdminPartnerKeySummary,
     AdminPartnerSummary,
+    FeedbackKind,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -279,3 +287,166 @@ async def admin_delete_chapter(
     )
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+EXPORT_BATCH_SIZE = 500
+
+
+def _encode_feedback_cursor(created_at: datetime, feedback_id: uuid.UUID) -> str:
+    raw = f"{created_at.isoformat()}|{feedback_id}".encode()
+    return base64.urlsafe_b64encode(raw).decode("ascii")
+
+
+def _decode_feedback_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    try:
+        decoded = base64.urlsafe_b64decode(cursor.encode("ascii")).decode()
+        ts_part, id_part = decoded.split("|", 1)
+        parsed_ts = datetime.fromisoformat(ts_part)
+        if parsed_ts.tzinfo is None:
+            parsed_ts = parsed_ts.replace(tzinfo=UTC)
+        parsed_id = uuid.UUID(id_part)
+        return parsed_ts, parsed_id
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Invalid pagination cursor",
+        ) from exc
+
+
+def _normalize_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
+@router.get(
+    "/feedback",
+    response_model=AdminFeedbackListResponse,
+    operation_id="admin_list_feedback",
+)
+async def admin_list_feedback(
+    _admin: Annotated[str, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    novel_id: Annotated[uuid.UUID | None, Query(alias="novelId")] = None,
+    kind: Annotated[FeedbackKind | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    before: Annotated[str | None, Query()] = None,
+) -> AdminFeedbackListResponse:
+    stmt = select(
+        ReaderFeedback.feedback_id,
+        ReaderFeedback.novel_id,
+        ReaderNovel.title.label("novel_title"),
+        ReaderFeedback.chapter_id,
+        ReaderFeedback.chapter_num,
+        ReaderFeedback.content_hash,
+        ReaderFeedback.external_version,
+        ReaderFeedback.kind,
+        ReaderFeedback.payload,
+        ReaderFeedback.client_hash,
+        ReaderFeedback.created_at,
+    ).join(ReaderNovel, ReaderFeedback.novel_id == ReaderNovel.novel_id)
+
+    if novel_id is not None:
+        stmt = stmt.where(ReaderFeedback.novel_id == novel_id)
+    if kind is not None:
+        stmt = stmt.where(ReaderFeedback.kind == kind)
+    if before is not None:
+        cursor_ts, cursor_id = _decode_feedback_cursor(before)
+        stmt = stmt.where(tuple_(ReaderFeedback.created_at, ReaderFeedback.feedback_id) < (cursor_ts, cursor_id))
+
+    stmt = stmt.order_by(ReaderFeedback.created_at.desc(), ReaderFeedback.feedback_id.desc()).limit(limit + 1)
+    rows = (await db.execute(stmt)).all()
+
+    has_more = len(rows) > limit
+    page_rows = rows[:limit]
+    next_cursor = (
+        _encode_feedback_cursor(page_rows[-1].created_at, page_rows[-1].feedback_id)
+        if has_more and page_rows
+        else None
+    )
+
+    items = [
+        AdminFeedbackItem(
+            feedback_id=row.feedback_id,
+            novel_id=row.novel_id,
+            novel_title=row.novel_title,
+            chapter_id=row.chapter_id,
+            chapter_num=row.chapter_num,
+            content_hash=row.content_hash,
+            external_version=row.external_version,
+            kind=row.kind,
+            payload=row.payload,
+            client_hash=row.client_hash,
+            created_at=row.created_at,
+        )
+        for row in page_rows
+    ]
+    return AdminFeedbackListResponse(items=items, next_cursor=next_cursor)
+
+
+@router.get(
+    "/feedback/export",
+    operation_id="admin_export_feedback",
+    responses={
+        200: {
+            "description": "Newline-delimited JSON feedback export",
+            "content": {"application/x-ndjson": {}},
+        }
+    },
+)
+async def admin_export_feedback(
+    _admin: Annotated[str, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    since: Annotated[datetime | None, Query()] = None,
+    until: Annotated[datetime | None, Query()] = None,
+) -> StreamingResponse:
+    if until is None:
+        effective_until: datetime = (await db.execute(select(func.now()))).scalar_one()
+    else:
+        effective_until = _normalize_utc(until)
+    effective_since = _normalize_utc(since) if since is not None else None
+
+    async def _ndjson_stream() -> AsyncIterator[str]:
+        last_cursor: tuple[datetime, uuid.UUID] | None = None
+        while True:
+            stmt = select(ReaderFeedback).where(ReaderFeedback.created_at <= effective_until)
+            if effective_since is not None:
+                stmt = stmt.where(ReaderFeedback.created_at > effective_since)
+            if last_cursor is not None:
+                stmt = stmt.where(tuple_(ReaderFeedback.created_at, ReaderFeedback.feedback_id) > last_cursor)
+            stmt = stmt.order_by(ReaderFeedback.created_at.asc(), ReaderFeedback.feedback_id.asc()).limit(
+                EXPORT_BATCH_SIZE
+            )
+            batch = (await db.execute(stmt)).scalars().all()
+            if not batch:
+                break
+            for row in batch:
+                line = json.dumps(
+                    {
+                        "feedbackId": str(row.feedback_id),
+                        "novelId": str(row.novel_id),
+                        "chapterId": str(row.chapter_id),
+                        "chapterNum": row.chapter_num,
+                        "contentHash": row.content_hash,
+                        "externalVersion": row.external_version,
+                        "kind": row.kind,
+                        "payload": row.payload,
+                        "clientHash": row.client_hash,
+                        "createdAt": row.created_at.isoformat(),
+                    },
+                    separators=(",", ":"),
+                )
+                yield f"{line}\n"
+            if len(batch) < EXPORT_BATCH_SIZE:
+                break
+            last_row = batch[-1]
+            last_cursor = (last_row.created_at, last_row.feedback_id)
+
+    return StreamingResponse(
+        _ndjson_stream(),
+        media_type="application/x-ndjson",
+        headers={
+            "X-Export-Until": effective_until.isoformat(),
+            "Cache-Control": "no-store",
+        },
+    )

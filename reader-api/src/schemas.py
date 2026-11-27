@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -147,3 +148,93 @@ class PublicChapterDetail(Model):
     external_version: str | None
     prev: PublicChapterNav | None
     next: PublicChapterNav | None
+
+
+FeedbackEmoji = Literal["love", "funny", "shocked", "sad", "confused"]
+FeedbackIssueCategory = Literal["typo", "mistranslation", "name_consistency", "formatting", "other"]
+FeedbackKind = Literal["reaction", "issue", "comment"]
+
+
+class FeedbackAnchor(Model):
+    paragraph_index: int = Field(ge=0)
+    start_offset: int = Field(ge=0)
+    end_offset: int = Field(gt=0)
+    quote: str = Field(min_length=1, max_length=300)
+
+    @field_validator("quote", mode="before")
+    @classmethod
+    def strip_quote(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @model_validator(mode="after")
+    def validate_offsets(self) -> FeedbackAnchor:
+        if self.end_offset <= self.start_offset:
+            raise ValueError("endOffset must be greater than startOffset")
+        return self
+
+
+class FeedbackReactionCreateRequest(Model):
+    kind: Literal["reaction"]
+    emoji: FeedbackEmoji
+    content_hash: str | None = Field(default=None, max_length=128)
+
+
+class FeedbackIssueCreateRequest(Model):
+    kind: Literal["issue"]
+    category: FeedbackIssueCategory
+    message: str = Field(min_length=1, max_length=2000)
+    anchor: FeedbackAnchor | None = None
+    content_hash: str | None = Field(default=None, max_length=128)
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def strip_message(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+
+class FeedbackCommentCreateRequest(Model):
+    kind: Literal["comment"]
+    message: str = Field(min_length=1, max_length=2000)
+    anchor: FeedbackAnchor | None = None
+    content_hash: str | None = Field(default=None, max_length=128)
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def strip_message(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+
+FeedbackCreateRequest = Annotated[
+    FeedbackReactionCreateRequest | FeedbackIssueCreateRequest | FeedbackCommentCreateRequest,
+    Field(discriminator="kind"),
+]
+
+
+class FeedbackCreateResponse(Model):
+    feedback_id: uuid.UUID
+    created_at: datetime
+
+
+class AdminFeedbackItem(Model):
+    feedback_id: uuid.UUID
+    novel_id: uuid.UUID
+    novel_title: str
+    chapter_id: uuid.UUID
+    chapter_num: int
+    content_hash: str
+    external_version: str | None
+    kind: str
+    payload: dict[str, Any]
+    client_hash: str
+    created_at: datetime
+
+
+class AdminFeedbackListResponse(Model):
+    items: list[AdminFeedbackItem]
+    next_cursor: str | None

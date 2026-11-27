@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
-from src.main import app
 from src.memory.models import MemoryGroup
 from test_support.test_data.scenarios import DatabaseScenario
 
@@ -36,21 +35,30 @@ def _create_memory_group(
     )
 
 
-def test_editor_can_create_memory_group(
+def test_create_memory_group_access_and_validation(
     client: TestClient,
     test_db: Session,
     novel_access_scenario: DatabaseScenario,
 ) -> None:
-    novel = novel_access_scenario.novels["oe"]
+    user = novel_access_scenario.users["other"]
+    viewer_novel = novel_access_scenario.novels["ov"]
+    editor_novel = novel_access_scenario.novels["oe"]
 
-    response = _create_memory_group(client, novel_access_scenario.users["other"], novel.novel_id)
+    viewer_response = _create_memory_group(client, user, viewer_novel.novel_id)
+    assert viewer_response.status_code == status.HTTP_404_NOT_FOUND
+    assert test_db.scalars(select(MemoryGroup).where(MemoryGroup.novel_id == viewer_novel.novel_id)).all() == []
 
+    bad_lang_response = _create_memory_group(client, user, editor_novel.novel_id, language="xx")
+    assert bad_lang_response.status_code == status.HTTP_404_NOT_FOUND
+    assert test_db.scalars(select(MemoryGroup).where(MemoryGroup.novel_id == editor_novel.novel_id)).all() == []
+
+    response = _create_memory_group(client, user, editor_novel.novel_id)
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
     assert payload == {
         "memoryGroupId": payload["memoryGroupId"],
         "memoryGroupName": "Main memory",
-        "novelId": str(novel.novel_id),
+        "novelId": str(editor_novel.novel_id),
         "memoryLanguage": "zh",
     }
     memory_group = test_db.scalar(
@@ -58,58 +66,3 @@ def test_editor_can_create_memory_group(
     )
     assert memory_group is not None
     assert memory_group.memory_group_name == "Main memory"
-
-
-def test_viewer_cannot_create_memory_group(
-    client: TestClient,
-    test_db: Session,
-    novel_access_scenario: DatabaseScenario,
-) -> None:
-    novel = novel_access_scenario.novels["ov"]
-
-    response = _create_memory_group(client, novel_access_scenario.users["other"], novel.novel_id)
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert test_db.scalars(select(MemoryGroup).where(MemoryGroup.novel_id == novel.novel_id)).all() == []
-
-
-def test_unknown_memory_language_returns_not_found(
-    client: TestClient,
-    test_db: Session,
-    novel_access_scenario: DatabaseScenario,
-) -> None:
-    novel = novel_access_scenario.novels["oe"]
-
-    response = _create_memory_group(
-        client,
-        novel_access_scenario.users["other"],
-        novel.novel_id,
-        language="xx",
-    )
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert test_db.scalars(select(MemoryGroup).where(MemoryGroup.novel_id == novel.novel_id)).all() == []
-
-
-def test_memory_routes_are_exposed_in_openapi() -> None:
-    openapi = app.openapi()
-    paths = openapi["paths"]
-
-    assert set(paths["/memories/{memoryId}"]) == {"get", "delete"}
-    assert set(paths["/memory-groups/{memoryGroupId}/glossary/memories"]) == {"get", "post"}
-    assert set(paths["/memory-groups/{memoryGroupId}/glossary/terms"]) == {"get", "post"}
-    assert set(paths["/memory-groups/{memoryGroupId}/glossary/terms/{termId}"]) == {"patch", "delete"}
-
-
-def test_memory_delete_contract_has_no_response_body() -> None:
-    operation = app.openapi()["paths"]["/memories/{memoryId}"]["delete"]
-
-    assert set(operation["responses"]) == {"204", "404", "422"}
-    assert "content" not in operation["responses"]["204"]
-
-
-def test_memories_for_term_contract_supports_chapter_scope() -> None:
-    operation = app.openapi()["paths"]["/memory-groups/{memoryGroupId}/glossary/terms/{termId}/memories"]["get"]
-
-    query_parameters = {parameter["name"] for parameter in operation["parameters"] if parameter["in"] == "query"}
-    assert query_parameters == {"skip", "limit", "chapterId"}

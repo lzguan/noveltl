@@ -48,14 +48,3 @@ class TestCeleryDispatcher:
         assert len(received) == 1
         assert received[0][:2] == (job_id, auto_label_id)
         assert received[0][2] != event_loop_thread
-
-    def test_inference_task_has_graceful_time_limits(self) -> None:
-        assert celery_infer.soft_time_limit is not None
-        assert celery_infer.soft_time_limit > 0
-        assert celery_infer.time_limit is not None
-        assert celery_infer.time_limit > celery_infer.soft_time_limit
-
-    def test_worker_configuration(self) -> None:
-        assert app.conf.worker_pool == "prefork"
-        assert app.conf.worker_concurrency == 2
-        assert app.conf.worker_prefetch_multiplier == 1

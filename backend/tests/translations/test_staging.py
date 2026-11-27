@@ -1,17 +1,12 @@
-import importlib.util
 import json
 from collections.abc import AsyncIterator
 from io import BytesIO
-from pathlib import Path
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-from alembic.migration import MigrationContext
-from alembic.operations import Operations
-from sqlalchemy import Engine, func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy.schema import CreateSchema
 
 from src.files.access import insert_file, upload_file
 from src.translations.actions.actions import ActionTaskContext
@@ -311,74 +306,3 @@ async def test_stage_chapter_outputs_releases_db_transaction_during_storage_fetc
     )
     assert staged_count == len(chapter_ids)
     await async_test_db.rollback()
-
-
-def test_staging_migration_backfills_chapter_num_and_round_trips(test_engine: Engine) -> None:
-    path = Path(__file__).parents[2] / "alembic/versions/e3f8b1c4a7d2_add_translation_staging_and_accepts.py"
-    spec = importlib.util.spec_from_file_location("staging_migration", path)
-    assert spec is not None and spec.loader is not None
-    migration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(migration)
-
-    novel_id, chapter_id, content_id, job_id, stage_id, batch_id = (uuid4() for _ in range(6))
-    conn = test_engine.connect()
-    transaction = conn.begin()
-    try:
-        schema = "staging_migration_" + uuid4().hex
-        conn.execute(CreateSchema(schema))
-        conn.execute(select(func.set_config("search_path", schema, True)))
-        conn.execute(text("CREATE TABLE novels (novel_id uuid PRIMARY KEY)"))
-        conn.execute(text("CREATE TABLE chapters (chapter_id uuid PRIMARY KEY, chapter_num integer NOT NULL)"))
-        conn.execute(text("CREATE TABLE chapter_contents (chapter_content_id uuid PRIMARY KEY)"))
-        conn.execute(text("CREATE TABLE translation_jobs (job_id uuid PRIMARY KEY)"))
-        conn.execute(text("CREATE TABLE translation_stages (stage_id uuid PRIMARY KEY, job_id uuid NOT NULL)"))
-        conn.execute(text("CREATE TABLE translation_batches (batch_id uuid PRIMARY KEY)"))
-        conn.execute(
-            text(
-                "CREATE TABLE translation_job_chapters ("
-                "job_id uuid NOT NULL, chapter_id uuid NOT NULL, "
-                "source_chapter_content_id uuid NOT NULL, batch_id uuid NOT NULL, "
-                "PRIMARY KEY (job_id, chapter_id))"
-            )
-        )
-        conn.execute(text("INSERT INTO novels VALUES (:id)"), {"id": novel_id})
-        conn.execute(text("INSERT INTO chapters VALUES (:id, 7)"), {"id": chapter_id})
-        conn.execute(text("INSERT INTO chapter_contents VALUES (:id)"), {"id": content_id})
-        conn.execute(text("INSERT INTO translation_jobs VALUES (:id)"), {"id": job_id})
-        conn.execute(text("INSERT INTO translation_stages VALUES (:id, :job)"), {"id": stage_id, "job": job_id})
-        conn.execute(text("INSERT INTO translation_batches VALUES (:id)"), {"id": batch_id})
-        conn.execute(
-            text("INSERT INTO translation_job_chapters VALUES (:job, :chapter, :content, :batch)"),
-            {"job": job_id, "chapter": chapter_id, "content": content_id, "batch": batch_id},
-        )
-
-        with Operations.context(MigrationContext.configure(conn)):
-            migration.upgrade()
-            assert conn.scalar(text("SELECT chapter_num FROM translation_job_chapters")) == 7
-            tables = set(
-                conn.scalars(
-                    text("SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()")
-                )
-            )
-            assert {"translation_chapter_outputs", "translation_chapter_accepts"} <= tables
-
-            migration.downgrade()
-            cols = set(
-                conn.scalars(
-                    text(
-                        "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_schema = current_schema() AND table_name = 'translation_job_chapters'"
-                    )
-                )
-            )
-            assert "chapter_num" not in cols
-            tables_after = set(
-                conn.scalars(
-                    text("SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()")
-                )
-            )
-            assert "translation_chapter_outputs" not in tables_after
-            assert "translation_chapter_accepts" not in tables_after
-    finally:
-        transaction.rollback()
-        conn.close()

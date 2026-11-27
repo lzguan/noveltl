@@ -181,6 +181,8 @@ async def test_exitpoint_starts_the_next_action_after_committing_it_ready(
                 task = await db.get(TranslationTask, x)
                 assert task is not None and task.status == State.READY
             started.append(x)
+            if len(started) == 1:
+                raise ConnectionError("broker unavailable")
 
     callbacks = TaskiqActionCallbacks(
         broker, RecordingSource(), {"prune_memories": NextAction(broker, RecordingSource(), {})}
@@ -189,8 +191,39 @@ async def test_exitpoint_starts_the_next_action_after_committing_it_ready(
         await db.execute(
             update(TranslationTask).where(TranslationTask.task_id == task_id).values(status=State.COMPLETE)
         )
+    with pytest.raises(ConnectionError, match="broker unavailable"):
+        await callbacks.exitpoint(task_id)
     await callbacks.exitpoint(task_id)
-    assert started == [next_task_id]
+    assert started == [next_task_id, next_task_id]
+
+
+async def test_exitpoint_does_not_advance_ineligible_tasks(
+    task_id: UUID,  # noqa: F811
+    next_task_id: UUID,  # noqa: F811
+    broker: InMemoryBroker,
+    testing_async_session_local: async_sessionmaker[AsyncSession],
+) -> None:
+    callbacks = TaskiqActionCallbacks(broker, RecordingSource(), {})
+    for current_status, next_status, failed in (
+        (State.FINALIZING, State.WAITING, False),
+        (State.COMPLETE, State.PREPARING, False),
+        (State.COMPLETE, State.COMPLETE, False),
+        (State.COMPLETE, State.WAITING, True),
+    ):
+        async with testing_async_session_local.begin() as db:
+            await db.execute(
+                update(TranslationTask).where(TranslationTask.task_id == task_id).values(status=current_status)
+            )
+            await db.execute(
+                update(TranslationTask)
+                .where(TranslationTask.task_id == next_task_id)
+                .values(status=next_status, failed_at=func.clock_timestamp() if failed else None)
+            )
+        await callbacks.exitpoint(task_id)
+        async with testing_async_session_local() as db:
+            task = await db.get(TranslationTask, next_task_id)
+            assert task is not None and task.status == next_status
+            assert (task.failed_at is not None) == failed
 
 
 @pytest.fixture

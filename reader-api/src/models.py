@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import UUID
 
@@ -94,3 +96,30 @@ class ReaderChapter(Base):
     )
 
     novel: Mapped[ReaderNovel] = relationship(back_populates="chapters")
+
+
+class ReaderFeedback(Base):
+    __tablename__ = "reader_feedback"
+    __table_args__ = (
+        Index("ix_reader_feedback_novel_chapter_created", "novel_id", "chapter_num", "created_at"),
+        Index("ix_reader_feedback_created_id", "created_at", "feedback_id"),
+    )
+
+    feedback_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid()
+    )
+    novel_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reader_novels.novel_id", ondelete="CASCADE"), nullable=False
+    )
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reader_chapters.chapter_id", ondelete="CASCADE"), nullable=False
+    )
+    chapter_num: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    external_version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    client_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

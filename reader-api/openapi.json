@@ -349,6 +349,181 @@
         }
       }
     },
+    "/admin/feedback": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin List Feedback",
+        "operationId": "admin_list_feedback",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "reaction",
+                    "issue",
+                    "comment"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminFeedbackListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/feedback/export": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Export Feedback",
+        "operationId": "admin_export_feedback",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Newline-delimited JSON feedback export",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/x-ndjson": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ingest/health": {
       "get": {
         "tags": [
@@ -650,10 +825,195 @@
           }
         }
       }
+    },
+    "/novels/{novelId}/chapters/{chapterNum}/feedback": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Create Chapter Feedback",
+        "operationId": "create_chapter_feedback",
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "chapterNum",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "Chapternum"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/FeedbackReactionCreateRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/FeedbackIssueCreateRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/FeedbackCommentCreateRequest"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "reaction": "#/components/schemas/FeedbackReactionCreateRequest",
+                    "issue": "#/components/schemas/FeedbackIssueCreateRequest",
+                    "comment": "#/components/schemas/FeedbackCommentCreateRequest"
+                  }
+                },
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AdminFeedbackItem": {
+        "properties": {
+          "feedbackId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Feedbackid"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "novelTitle": {
+            "type": "string",
+            "title": "Noveltitle"
+          },
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "contentHash": {
+            "type": "string",
+            "title": "Contenthash"
+          },
+          "externalVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Externalversion"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "clientHash": {
+            "type": "string",
+            "title": "Clienthash"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feedbackId",
+          "novelId",
+          "novelTitle",
+          "chapterId",
+          "chapterNum",
+          "contentHash",
+          "externalVersion",
+          "kind",
+          "payload",
+          "clientHash",
+          "createdAt"
+        ],
+        "title": "AdminFeedbackItem"
+      },
+      "AdminFeedbackListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminFeedbackItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "title": "AdminFeedbackListResponse"
+      },
       "AdminLoginRequest": {
         "properties": {
           "username": {
@@ -917,6 +1277,195 @@
           "keys"
         ],
         "title": "AdminPartnerSummary"
+      },
+      "FeedbackAnchor": {
+        "properties": {
+          "paragraphIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Paragraphindex"
+          },
+          "startOffset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Startoffset"
+          },
+          "endOffset": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Endoffset"
+          },
+          "quote": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Quote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paragraphIndex",
+          "startOffset",
+          "endOffset",
+          "quote"
+        ],
+        "title": "FeedbackAnchor"
+      },
+      "FeedbackCommentCreateRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "comment",
+            "title": "Kind"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message"
+          },
+          "anchor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackAnchor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contentHash": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contenthash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "message"
+        ],
+        "title": "FeedbackCommentCreateRequest"
+      },
+      "FeedbackCreateResponse": {
+        "properties": {
+          "feedbackId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Feedbackid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feedbackId",
+          "createdAt"
+        ],
+        "title": "FeedbackCreateResponse"
+      },
+      "FeedbackIssueCreateRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "issue",
+            "title": "Kind"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "typo",
+              "mistranslation",
+              "name_consistency",
+              "formatting",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message"
+          },
+          "anchor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackAnchor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contentHash": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contenthash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "category",
+          "message"
+        ],
+        "title": "FeedbackIssueCreateRequest"
+      },
+      "FeedbackReactionCreateRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "reaction",
+            "title": "Kind"
+          },
+          "emoji": {
+            "type": "string",
+            "enum": [
+              "love",
+              "funny",
+              "shocked",
+              "sad",
+              "confused"
+            ],
+            "title": "Emoji"
+          },
+          "contentHash": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contenthash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "emoji"
+        ],
+        "title": "FeedbackReactionCreateRequest"
       },
       "HTTPValidationError": {
         "properties": {

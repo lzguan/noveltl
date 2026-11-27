@@ -16,6 +16,7 @@ class ReaderSettings(BaseSettings):
     READER_ADMIN_PASSWORD_HASH: str = Field(default="")
     READER_ADMIN_SECRET: str = Field(default="")
     READER_ADMIN_TOKEN_TTL_SECONDS: int = Field(default=86400, ge=60)
+    READER_FEEDBACK_HASH_SALT: str = Field(default="")
 
     @property
     def normalized_public_base_url(self) -> str:
@@ -28,6 +29,14 @@ class ReaderSettings(BaseSettings):
             and self.READER_ADMIN_PASSWORD_HASH.strip()
             and self.READER_ADMIN_SECRET.strip()
         )
+
+    @property
+    def feedback_hash_salt(self) -> str:
+        if self.READER_FEEDBACK_HASH_SALT.strip():
+            return self.READER_FEEDBACK_HASH_SALT.strip()
+        if self.READER_ADMIN_SECRET.strip():
+            return self.READER_ADMIN_SECRET.strip()
+        return "noveltl-reader-dev-feedback-salt"
 
 
 reader_settings = ReaderSettings()

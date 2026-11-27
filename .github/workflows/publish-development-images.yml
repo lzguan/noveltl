@@ -54,6 +54,10 @@ jobs:
             context: ./reader
             file: ./reader/Dockerfile
             target: base
+          - image: noveltl-reader-api-dev
+            context: ./reader-api
+            file: ./reader-api/Dockerfile
+            target: reader-api
 
     steps:
       - name: Checkout repository

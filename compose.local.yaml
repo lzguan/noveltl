@@ -37,3 +37,19 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: filters-worker
+
+  reader-api:
+    image: noveltl-reader-api-dev:local
+    pull_policy: build
+    build:
+      context: ./reader-api
+      dockerfile: Dockerfile
+      target: reader-api
+
+  reader:
+    image: noveltl-reader-dev:local
+    pull_policy: build
+    build:
+      context: ./reader
+      dockerfile: Dockerfile
+      target: base

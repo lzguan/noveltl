@@ -1,18 +1,18 @@
 import { defineConfig } from "orval";
 
 export default defineConfig({
-	backend: {
+	readerApi: {
 		input: {
-			target: "../backend/openapi.yaml",
+			target: "../reader-api/openapi.yaml",
 			// Generate only the operations the reader calls; add an ID here when a
 			// route needs another endpoint.
 			filters: {
 				mode: "include",
 				operationIds: [
-					"read_novels_novels_get",
-					"read_novel_novels__novelId__get",
-					"read_chapters_by_novel_chapters_get",
-					"read_chapter_content_chapters__chapterId__content_get",
+					"list_novels",
+					"get_novel",
+					"list_novel_chapters",
+					"get_novel_chapter",
 				],
 			},
 		},

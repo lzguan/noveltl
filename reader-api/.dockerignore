@@ -1,0 +1,11 @@
+**/__pycache__
+**/.venv
+**/.dockerignore
+**/.env
+**/.git
+**/.gitignore
+**/.pytest_cache
+**/.ruff_cache
+tests
+scripts/*
+!scripts/manage_partners.py

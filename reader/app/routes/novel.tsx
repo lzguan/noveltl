@@ -14,9 +14,9 @@ export async function loader({ params }: Route.LoaderArgs) {
 			{
 				novel: {
 					novelId: novel.novelId,
-					novelTitle: novel.novelTitle,
-					novelAuthor: novel.novelAuthor ?? null,
-					novelDescription: novel.novelDescription ?? null,
+					novelTitle: novel.title,
+					novelAuthor: novel.author ?? null,
+					novelDescription: novel.description ?? null,
 				},
 				chapters: sortChapters(chapters).map((chapter) => ({
 					chapterNum: chapter.chapterNum,

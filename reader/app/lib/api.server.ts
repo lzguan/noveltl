@@ -1,17 +1,17 @@
 import { data } from "react-router";
 import { BackendError, BackendUnavailableError } from "../api/backend-fetch";
 import {
-	readChapterContentChaptersChapterIdContentGet,
-	readChaptersByNovelChaptersGet,
-	readNovelNovelsNovelIdGet,
-	readNovelsNovelsGet,
-} from "../api/endpoints/default/default";
+	getNovel as fetchNovel,
+	getNovelChapter as fetchNovelChapter,
+	listNovelChapters as fetchNovelChapters,
+	listNovels as fetchNovels,
+} from "../api/endpoints/public/public";
 
-export const listNovels = () => readNovelsNovelsGet();
-export const getNovel = (novelId: string) => readNovelNovelsNovelIdGet(novelId);
-export const listChapters = (novelId: string) => readChaptersByNovelChaptersGet({ novelId });
-export const getChapterContent = (chapterId: string) =>
-	readChapterContentChaptersChapterIdContentGet(chapterId);
+export const listNovels = () => fetchNovels();
+export const getNovel = (novelId: string) => fetchNovel(novelId);
+export const listChapters = (novelId: string) => fetchNovelChapters(novelId);
+export const getChapter = (novelId: string, chapterNum: number) =>
+	fetchNovelChapter(novelId, chapterNum);
 
 export function notFound(message = "Not found"): never {
 	throw data(message, { status: 404 });

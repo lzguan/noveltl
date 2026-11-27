@@ -2,18 +2,11 @@ import { useEffect } from "react";
 import { data, Link, useNavigate } from "react-router";
 import { SiteHeader } from "../components/SiteHeader";
 import { revalidateUnlessSettings } from "../components/SettingsBar";
-import {
-	getChapterContent,
-	getNovel,
-	listChapters,
-	notFound,
-	toRouteError,
-} from "../lib/api.server";
+import { getChapter, notFound, toRouteError } from "../lib/api.server";
 import {
 	chapterHref,
 	chapterLabel,
 	isUuid,
-	locateChapter,
 	parseChapterNum,
 	splitParagraphs,
 } from "../lib/chapters";
@@ -24,27 +17,22 @@ export async function loader({ params }: Route.LoaderArgs) {
 	const chapterNum = parseChapterNum(params.chapterNum);
 	if (!isUuid(novelId) || chapterNum === null) notFound();
 	try {
-		const [novel, chapters] = await Promise.all([getNovel(novelId), listChapters(novelId)]);
-		const position = locateChapter(chapters, chapterNum);
-		if (!position) notFound();
-		const content = await getChapterContent(position.current.chapterId);
-		const link = (chapter: typeof position.prev) =>
-			chapter
-				? { href: chapterHref(novelId, chapter.chapterNum), label: chapterLabel(chapter) }
-				: null;
+		const chapter = await getChapter(novelId, chapterNum);
+		const link = (nav: typeof chapter.prev) =>
+			nav ? { href: chapterHref(novelId, nav.chapterNum), label: chapterLabel(nav) } : null;
 		return data(
 			{
-				novelTitle: novel.novelTitle,
+				novelTitle: chapter.novelTitle,
 				contentsHref: `/novel/${novelId}`,
-				chapterNum: position.current.chapterNum,
-				title: chapterLabel(position.current),
-				paragraphs: splitParagraphs(content.chapterContentText),
-				prev: link(position.prev),
-				next: link(position.next),
+				chapterNum: chapter.chapterNum,
+				title: chapterLabel(chapter),
+				paragraphs: splitParagraphs(chapter.body),
+				prev: link(chapter.prev),
+				next: link(chapter.next),
 			},
 			{
 				headers: {
-					"Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=600",
+					"Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=3600",
 					Vary: "Cookie",
 				},
 			},

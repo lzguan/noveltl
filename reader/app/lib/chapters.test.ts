@@ -1,29 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { locateChapter, parseChapterNum, splitParagraphs } from "./chapters";
+import { chapterLabel, parseChapterNum, sortChapters, splitParagraphs } from "./chapters";
 
-const chapter = (chapterNum: number) => ({
-	chapterId: `id-${chapterNum}`,
-	chapterNum,
-	chapterTitle: `Title ${chapterNum}`,
+describe("sortChapters", () => {
+	it("orders chapters by chapter number across gaps without mutating input", () => {
+		const chapters = [
+			{ chapterNum: 5, title: "Title 5" },
+			{ chapterNum: 1, title: "Title 1" },
+			{ chapterNum: 2, title: "Title 2" },
+		];
+		expect(sortChapters(chapters).map((chapter) => chapter.chapterNum)).toEqual([1, 2, 5]);
+		expect(chapters.map((chapter) => chapter.chapterNum)).toEqual([5, 1, 2]);
+	});
 });
 
-describe("locateChapter", () => {
-	const chapters = [chapter(5), chapter(1), chapter(2)];
-
-	it("finds neighbours by chapter number across gaps and unsorted input", () => {
-		const position = locateChapter(chapters, 2);
-		expect(position?.current.chapterId).toBe("id-2");
-		expect(position?.prev?.chapterNum).toBe(1);
-		expect(position?.next?.chapterNum).toBe(5);
-	});
-
-	it("has no prev at the start and no next at the end", () => {
-		expect(locateChapter(chapters, 1)?.prev).toBeNull();
-		expect(locateChapter(chapters, 5)?.next).toBeNull();
-	});
-
-	it("returns null for a missing chapter", () => {
-		expect(locateChapter(chapters, 3)).toBeNull();
+describe("chapterLabel", () => {
+	it("uses trimmed title or falls back to chapter number", () => {
+		expect(chapterLabel({ chapterNum: 3, title: "  Awakening  " })).toBe("Awakening");
+		expect(chapterLabel({ chapterNum: 3, title: "   " })).toBe("Chapter 3");
 	});
 });
 

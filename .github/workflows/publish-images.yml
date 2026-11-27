@@ -51,6 +51,10 @@ jobs:
             context: ./reader
             file: ./reader/Dockerfile
             target: production
+          - image: noveltl-reader-api
+            context: ./reader-api
+            file: ./reader-api/Dockerfile
+            target: reader-api
           - image: noveltl-translations-worker
             context: ./backend
             file: ./backend/Dockerfile

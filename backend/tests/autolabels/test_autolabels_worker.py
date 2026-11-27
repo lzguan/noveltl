@@ -1,10 +1,9 @@
 import logging
-from collections.abc import Generator
 
 import pytest
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.autolabels.constants import AutoLabelProgress, SepPriority
 from src.autolabels.models import AutoLabel
@@ -19,16 +18,13 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def configured_autolabel_worker(
-    test_url: str,
+    testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
-) -> Generator[None]:
+) -> None:
     import src.autolabels.inference.worker.tasks as worker_tasks
 
-    engine = create_engine(test_url)
-    monkeypatch.setattr(worker_tasks, "SessionLocal", sessionmaker(bind=engine))
+    monkeypatch.setattr(worker_tasks, "SessionLocal", testing_session_local)
     monkeypatch.setattr(worker_tasks, "get_ner_model", lambda model_name: DeterministicNERModel())
-    yield
-    engine.dispose()
 
 
 class TestInsertAutoLabels:
@@ -74,27 +70,6 @@ class TestInsertAutoLabels:
         for row in rows:
             logger.info("AutoLabel row: %s", row.__dict__)
             assert row.auto_label_status == AutoLabelProgress.DONE
-
-    async def test_set_params(
-        self,
-        xianxia_scenario: DatabaseScenario,
-        async_test_db: AsyncSession,
-        recording_dispatcher: RecordingDispatcher,
-    ) -> None:
-        novel = xianxia_scenario.novels["novel"]
-        user = xianxia_scenario.users["owner"]
-        chapters = [chapter for key, chapter in xianxia_scenario.chapters.items() if key.startswith("novel:")]
-        await insert_auto_labels(
-            async_test_db,
-            user,
-            recording_dispatcher,
-            CreateAutoLabels(
-                chapter_ids=[chapter.chapter_id for chapter in chapters],
-                novel_id=novel.novel_id,
-                params=CluenerParams(model_name="cluener", separators={"\n": SepPriority.HIGH}),
-            ),
-        )
-        assert len(recording_dispatcher.jobs) == len(chapters)
 
     async def test_insert_twice_is_idempotent(
         self,

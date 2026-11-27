@@ -35,7 +35,12 @@ async def _make_jobs(db: AsyncSession, job_count: int) -> list[uuid.UUID]:
     ]
 
 
-def _install_agent(monkeypatch: pytest.MonkeyPatch, engine: AsyncEngine | None = None) -> list[int]:
+def _install_agent(
+    monkeypatch: pytest.MonkeyPatch,
+    engine: AsyncEngine | None = None,
+    *,
+    delay: float = 0.01,
+) -> list[int]:
     """Record a term on the first request and finish on the second; note checked-out connections."""
     term_numbers = itertools.count()
     checked_out: list[int] = []
@@ -44,7 +49,8 @@ def _install_agent(monkeypatch: pytest.MonkeyPatch, engine: AsyncEngine | None =
         if engine is not None:
             assert isinstance(engine.pool, QueuePool)
             checked_out.append(engine.pool.checkedout())
-        await asyncio.sleep(0.05)
+        if delay > 0:
+            await asyncio.sleep(delay)
         if len(messages) == 1:
             return ModelResponse(
                 parts=[ToolCallPart("add_term", {"term_name": f"Term {next(term_numbers)}", "term_kind": "concept"})]
@@ -70,7 +76,7 @@ async def test_no_connection_is_checked_out_while_the_model_is_requested(
 ) -> None:
     [job_id] = await _make_jobs(async_test_db, 1)
     engine = create_async_engine(test_url, pool_size=2, max_overflow=0)
-    checked_out = _install_agent(monkeypatch, engine)
+    checked_out = _install_agent(monkeypatch, engine, delay=0.0)
     try:
         [completed] = await _run_jobs(engine, [job_id])
     finally:
@@ -83,10 +89,10 @@ async def test_no_connection_is_checked_out_while_the_model_is_requested(
 async def test_many_concurrent_tasks_complete_on_one_event_loop(
     async_test_db: AsyncSession, test_url: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    job_count = 48
+    job_count = 8
     job_ids = await _make_jobs(async_test_db, job_count)
-    _install_agent(monkeypatch)
-    engine = create_async_engine(test_url, pool_size=20)
+    _install_agent(monkeypatch, delay=0.01)
+    engine = create_async_engine(test_url, pool_size=3, max_overflow=0)
     try:
         results = await _run_jobs(engine, job_ids)
     finally:

@@ -197,8 +197,10 @@ def test_filter_router_maps_permissions_readiness_and_invalid_query_errors(
     assert invalid_limit.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
-def test_filter_openapi_exposes_locked_read_routes(client: TestClient) -> None:
-    schema = client.get("/openapi.json").json()
+def test_filter_openapi_exposes_locked_read_routes() -> None:
+    from src.main import app
+
+    schema = app.openapi()
     paths = schema["paths"]
 
     assert "/filters/functions" in paths

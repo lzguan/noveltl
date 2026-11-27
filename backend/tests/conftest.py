@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, text
+from sqlalchemy import Engine, TextClause, create_engine, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -71,7 +71,7 @@ pytest_plugins = [
 ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_url() -> str:
     ret = os.getenv("TEST_URL")
     if ret is None:
@@ -97,7 +97,7 @@ def fake_ttl_cache_redis(monkeypatch: pytest.MonkeyPatch, ttl_cache_store: dict[
     return {"sync": sync_redis, "async": async_redis, "store": ttl_cache_store}
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_engine(test_url: str) -> Generator[Engine]:
     engine = create_engine(test_url)
     try:
@@ -106,14 +106,14 @@ def test_engine(test_url: str) -> Generator[Engine]:
         engine.dispose()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def testing_session_local(test_engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
 # NullPool: TestClient runs the app on its own event loop, and pooled async
 # connections cannot move between loops.
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_async_engine(test_url: str) -> Generator[AsyncEngine]:
     engine = create_async_engine(test_url, poolclass=NullPool)
     try:
@@ -122,36 +122,43 @@ def test_async_engine(test_url: str) -> Generator[AsyncEngine]:
         engine.sync_engine.dispose()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def testing_async_session_local(test_async_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(test_async_engine, autoflush=False, expire_on_commit=False)
 
 
 @pytest.fixture(scope="session")
-def database_schema() -> Generator[None]:
-    url = os.getenv("TEST_URL")
-    if url is None:
-        raise OSError("TEST_URL environment variable not set for tests.")
-    engine = create_engine(url)
-    try:
-        with engine.begin() as connection:
-            connection.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
-        Base.metadata.drop_all(bind=engine)
-        Base.metadata.create_all(bind=engine)
-        yield
-    finally:
-        engine.dispose()
+def database_schema(test_engine: Engine) -> Generator[None]:
+    with test_engine.begin() as connection:
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
+    Base.metadata.drop_all(bind=test_engine)
+    Base.metadata.create_all(bind=test_engine)
+    yield
+
+
+@pytest.fixture(scope="session")
+def _table_reset_plan(database_schema: None, test_engine: Engine) -> tuple[list[str], TextClause]:
+    preparer = test_engine.dialect.identifier_preparer
+    formatted_tables = [preparer.format_table(t) for t in Base.metadata.sorted_tables]
+    non_empty_query = text(
+        " UNION ALL ".join(f"(SELECT {i} AS idx FROM {t} LIMIT 1)" for i, t in enumerate(formatted_tables))
+    )
+    return formatted_tables, non_empty_query
 
 
 @pytest.fixture(scope="function")
 def test_db(
-    database_schema: None, test_engine: Engine, testing_session_local: sessionmaker[Session]
+    _table_reset_plan: tuple[list[str], TextClause],
+    test_engine: Engine,
+    testing_session_local: sessionmaker[Session],
 ) -> Generator[Session]:
     """Creates a new database session for a test."""
-    # The schema is built once per session; emptying every table is much cheaper than rebuilding it.
+    formatted_tables, non_empty_query = _table_reset_plan
     with test_engine.begin() as connection:
-        tables = ", ".join(connection.dialect.identifier_preparer.format_table(t) for t in Base.metadata.sorted_tables)
-        connection.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+        dirty_indexes = [i for i in connection.scalars(non_empty_query) if isinstance(i, int)]
+        if dirty_indexes:
+            delete_sql = "; ".join(f"DELETE FROM {formatted_tables[i]}" for i in reversed(dirty_indexes))
+            connection.execute(text(delete_sql))
 
     db = testing_session_local()
     try:

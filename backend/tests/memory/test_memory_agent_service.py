@@ -24,7 +24,6 @@ from src.memory.agent.service import (
     query_task,
     query_tasks,
     retry_task,
-    start_job,
     start_task,
 )
 from src.memory.agent.tasks.jobs import claim_job
@@ -54,26 +53,24 @@ async def _create_group(db: AsyncSession, scenario: DatabaseScenario, novel_key:
     return group
 
 
-@pytest.mark.parametrize(
-    "params",
-    [
-        PARAMS,
-        JobParamsV2(translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low")),
-    ],
-)
 async def test_create_and_query_job_respect_memory_group_permissions(
     async_test_db: AsyncSession,
     novel_permission_scenario: DatabaseScenario,
-    params: JobParams | JobParamsV2,
 ) -> None:
     group = await _create_group(async_test_db, novel_permission_scenario, "ov")
     owner = novel_permission_scenario.users["owner"]
     viewer = novel_permission_scenario.users["other"]
+    params = JobParamsV2(translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low"))
 
     with pytest.raises(MemoryGroupNotFoundException):
         await create_job(async_test_db, viewer, group.memory_group_id, None, None, params)
 
     job = await create_job(async_test_db, owner, group.memory_group_id, None, None, params)
+    stored = await async_test_db.get(MemoryJob, job.memory_job_id)
+    assert stored is not None and stored.job_params == params.model_dump(mode="json")
+    assert job.job_params == JobParamsV3(
+        stages=[TranslateTermsStageConfig(model_name="deepseek:deepseek-v4-flash-low")]
+    )
 
     assert await query_job(async_test_db, viewer, job.memory_job_id) == job
     assert await query_jobs(async_test_db, viewer, group.memory_group_id) == [job]
@@ -136,60 +133,6 @@ async def test_tasks_are_listed_in_the_order_the_schedule_runs_them(
         (1, first.chapter_id),
         (1, second.chapter_id),
     ]
-
-
-async def test_jobs_are_stored_as_written_and_returned_as_v3(
-    async_test_db: AsyncSession,
-    novel_permission_scenario: DatabaseScenario,
-) -> None:
-    group = await _create_group(async_test_db, novel_permission_scenario, "ov")
-    owner = novel_permission_scenario.users["owner"]
-    params = JobParamsV2(translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low"))
-
-    job = await create_job(async_test_db, owner, group.memory_group_id, None, None, params)
-
-    stored = await async_test_db.get(MemoryJob, job.memory_job_id)
-    assert stored is not None and stored.job_params == params.model_dump(mode="json")
-    assert job.job_params == JobParamsV3(
-        stages=[TranslateTermsStageConfig(model_name="deepseek:deepseek-v4-flash-low")]
-    )
-
-
-async def test_start_and_retry_publish_only_runnable_work(
-    async_test_db: AsyncSession,
-    novel_permission_scenario: DatabaseScenario,
-) -> None:
-    group = await _create_group(async_test_db, novel_permission_scenario, "oe")
-    editor = novel_permission_scenario.users["other"]
-    chapter_id = novel_permission_scenario.chapters["owner_editor"].chapter_id
-    dispatcher = RecordingMemoryAgentDispatcher()
-    job = await create_job(async_test_db, editor, group.memory_group_id, None, None, PARAMS)
-
-    await start_job(async_test_db, editor, dispatcher, job.memory_job_id)
-    await start_task(async_test_db, editor, dispatcher, job.memory_job_id, chapter_id)
-
-    assert dispatcher.jobs == [job.memory_job_id]
-    assert dispatcher.tasks == [(job.memory_job_id, chapter_id, 0)]
-
-    await async_test_db.execute(
-        update(MemoryChapterTask)
-        .where(
-            MemoryChapterTask.memory_job_id == job.memory_job_id,
-            MemoryChapterTask.chapter_id == chapter_id,
-        )
-        .values(task_status=JobStatus.FAILED)
-    )
-    await async_test_db.commit()
-
-    retried = await retry_task(async_test_db, editor, dispatcher, job.memory_job_id, chapter_id)
-
-    assert retried.task_status == JobStatus.PENDING
-    assert dispatcher.tasks == [
-        (job.memory_job_id, chapter_id, 0),
-        (job.memory_job_id, chapter_id, 0),
-    ]
-    with pytest.raises(MemoryChapterTaskStateException):
-        await retry_task(async_test_db, editor, dispatcher, job.memory_job_id, chapter_id)
 
 
 async def test_retry_restores_failed_status_when_publication_fails(

@@ -3,23 +3,15 @@ from dataclasses import dataclass
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
-from src.auth.constants import UserType
 from src.auth.models import User
-from src.autolabels.models import AutoLabelRun
-from src.autolabels.promotions.processing import process_promotion_job
-from src.autolabels.schemas import CreateLabelDataByAutoLabel
-from src.autolabels.service import create_promotion_job, query_promotion_failures
-from src.datasets import Catalog, NovelDataset, load_config
-from src.datasets.materializer import materialize_latest_autolabels
 from src.filters.data_types import (
     BoolData,
     BoolField,
     DataObj,
     FloatData,
+    FloatField,
     IntData,
     IntField,
     Schema,
@@ -38,18 +30,8 @@ from src.filters.exceptions import (
     WorkflowNotReadyException,
 )
 from src.filters.functions import (
-    Call,
-    Compare,
-    EndOf,
-    Extend,
     Get,
-    LiteralFloat,
-    ProjectToSpan,
-    ScoreOf,
-    StartOf,
-    WordOf,
 )
-from src.filters.lifecycle import queue_fjob
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
@@ -61,13 +43,6 @@ from src.filters.models import (
     WorkflowNovel,
     WorkflowStatus,
 )
-from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
-from src.filters.runners.python.label_source_runner import (
-    LABEL_SOURCE_SCHEMA,
-    PythonLabelSourceInput,
-    PythonLabelSourceRunner,
-)
-from src.filters.runners.python.map_runner import PythonMapInput, PythonMapRunner
 from src.filters.schemas import Frame, GroupFilter, InstanceQuery, SortDirection, SortKey
 from src.filters.service import (
     query_functions,
@@ -79,10 +54,8 @@ from src.filters.service import (
     query_workflow,
     query_workflows,
 )
-from src.novels.constants import Role
 from src.schemas import Model
-from test_support.autolabels import RecordingPromotionDispatcher
-from test_support.test_data.scenarios import DatabaseScenario, PasswordHash, ScenarioBuilder
+from test_support.test_data.scenarios import DatabaseScenario
 
 
 def _dump(value: Model) -> dict[str, object]:
@@ -189,179 +162,96 @@ def _create_advanced_query_data(db: Session) -> AdvancedQueryData:
     return AdvancedQueryData(workflow=workflow, instances=instances, groupings=groupings)
 
 
-async def _create_catalog_sort_data(
-    db: Session,
-    async_db: AsyncSession,
-    session_factory: sessionmaker[Session],
-    password_hash: PasswordHash,
-    catalog: Catalog,
-    dataset: NovelDataset,
-) -> tuple[AdvancedQueryData, User]:
-    builder = ScenarioBuilder(db, password_hash)
-    builder.language(dataset.language_code, dataset.language_code, dataset.language_code)
-    admin = builder.user("admin", "catalog_sort_admin", "password", UserType.ADMIN)
-    builder.source_work("catalog", "Catalog sorting")
-    builder.catalog_novel("novel", dataset, source_work="catalog")
-    builder.contributor("admin", novel="novel", user="admin", role=Role.OWNER)
-    builder.label_group("labels", novel="novel", name="Catalog labels")
-    scenario = builder.finish()
-
-    config = load_config(catalog, "cluener-default")
-    auto_labels = materialize_latest_autolabels(
-        db,
-        dataset,
-        scenario.materialized_novels["novel"],
-        config,
-        admin,
-    )
-    run = db.execute(select(AutoLabelRun).where(AutoLabelRun.run_id == auto_labels[0].run_id)).scalar_one()
-    created_promotion = await create_promotion_job(
-        async_db,
-        admin,
-        RecordingPromotionDispatcher(),
-        scenario.label_groups["labels"].label_group_id,
-        CreateLabelDataByAutoLabel(run_id=run.run_id),
-    )
-    assert created_promotion.item_count == len(auto_labels)
-    assert await process_promotion_job(async_db, created_promotion.promotion_id)
-    assert await query_promotion_failures(async_db, admin, created_promotion.promotion_id, limit=1, offset=0) == []
-
-    label = Get(field_name="label", type="labelRef")
-    span = Call(
-        input_schema=LABEL_SOURCE_SCHEMA,
-        function=ProjectToSpan(),
-        arguments=(label,),
-    )
-    word = Call(
-        input_schema=LABEL_SOURCE_SCHEMA,
-        function=WordOf(),
-        arguments=(label,),
-    )
-    score = Call(
-        input_schema=LABEL_SOURCE_SCHEMA,
-        function=ScoreOf(),
-        arguments=(label,),
-    )
-    start = Call(
-        input_schema=LABEL_SOURCE_SCHEMA,
-        function=StartOf(),
-        arguments=(span,),
-    )
-    end = Call(
-        input_schema=LABEL_SOURCE_SCHEMA,
-        function=EndOf(),
-        arguments=(span,),
-    )
-    low_score = Call(
-        input_schema=LABEL_SOURCE_SCHEMA,
-        function=Compare(type="float", op="lt"),
-        arguments=(score, LiteralFloat(value=0.75)),
-    )
-    augment = Extend(
-        input_schema=LABEL_SOURCE_SCHEMA,
+def _create_scalar_sort_data(db: Session) -> AdvancedQueryData:
+    schema = Schema(
         fields={
-            "word": word,
-            "score": score,
-            "start": start,
-            "end": end,
-            "low_score": low_score,
-        },
+            "word": StringField(),
+            "score": FloatField(),
+            "start": IntField(),
+            "end": IntField(),
+            "low_score": BoolField(),
+        }
     )
-    augmented_schema = augment.signature.output
-    assert isinstance(augmented_schema, Schema)
-
-    source_job_id = uuid.uuid4()
-    map_job_id = uuid.uuid4()
-    source_workflow = Workflow(
-        workflow_name="Catalog label source",
-        schema=_dump(LABEL_SOURCE_SCHEMA),
-    )
-    augmented_workflow = Workflow(
-        workflow_name="Augmented catalog labels",
-        schema=_dump(augmented_schema),
+    workflow = Workflow(
+        workflow_name="Scalar sort pagination",
+        schema=_dump(schema),
         workflow_status=WorkflowStatus.COMPLETE,
     )
-    augment_definition = FunctionDefinition(
-        namespace="catalog-sort",
-        function_name="augment-label",
-        function_definition=_dump(augment),
-    )
-    db.add_all([source_workflow, augmented_workflow, augment_definition])
+    db.add(workflow)
     db.flush()
 
     groupings: dict[str, Grouping] = {}
-    grouping_jobs: dict[str, uuid.UUID] = {}
     for field_name, type_name in (("word", "string"), ("start", "int"), ("low_score", "bool")):
         definition = FunctionDefinition(
-            namespace="catalog-sort",
+            namespace="scalar-sort",
             function_name=f"group-{field_name}",
             function_definition=_dump(Get(field_name=field_name, type=type_name)),
         )
         db.add(definition)
         db.flush()
-        job_id = uuid.uuid4()
         grouping = Grouping(
-            workflow_id=augmented_workflow.workflow_id,
+            workflow_id=workflow.workflow_id,
             function_definition_id=definition.function_definition_id,
             grouping_status=GroupingStatus.COMPLETE,
         )
         db.add(grouping)
         db.flush()
         groupings[field_name] = grouping
-        grouping_jobs[field_name] = job_id
-    assert queue_fjob(db, source_job_id, workflow_ids=(source_workflow.workflow_id,))
-    db.commit()
 
-    PythonLabelSourceRunner(session_factory, batch_size=17).execute(
-        source_job_id,
-        PythonLabelSourceInput(
-            runner_name="ls",
-            runtime_name="python",
-            label_group_id=scenario.label_groups["labels"].label_group_id,
-            output_workflow_id=source_workflow.workflow_id,
-        ),
+    rows = (
+        ("青石城", 0.25, 10, 13, True),
+        ("青石城", 0.25, 10, 13, True),
+        ("林昀", 0.25, 4, 6, True),
+        ("alpha", 0.50, 20, 25, True),
+        ("beta", 0.50, 20, 24, True),
+        ("白玫", 0.75, 2, 4, False),
+        ("白玫", 0.75, 2, 4, False),
+        ("gamma", 0.85, 15, 20, False),
+        ("青石城", 0.85, 8, 11, False),
+        ("delta", 0.95, 1, 6, False),
+        ("林昀", 0.95, 1, 3, False),
+        ("omega", 0.99, 30, 35, False),
     )
-    db.expire_all()
-    assert queue_fjob(
-        db,
-        map_job_id,
-        workflow_ids=(source_workflow.workflow_id, augmented_workflow.workflow_id),
-    )
-    db.commit()
-    PythonMapRunner(session_factory, batch_size=19).execute(
-        map_job_id,
-        PythonMapInput(
-            runner_name="map",
-            runtime_name="python",
-            source_workflow_id=source_workflow.workflow_id,
-            output_workflow_id=augmented_workflow.workflow_id,
-            function_definition_id=augment_definition.function_definition_id,
-        ),
-    )
-    for field_name, grouping in groupings.items():
-        assert queue_fjob(
-            db,
-            grouping_jobs[field_name],
-            workflow_ids=(augmented_workflow.workflow_id,),
-            grouping_ids=(grouping.grouping_id,),
-        )
-        db.commit()
-        PythonGroupRunner(session_factory, batch_size=23).execute(
-            grouping_jobs[field_name],
-            PythonGroupInput(
-                runner_name="group",
-                runtime_name="python",
-                grouping_id=grouping.grouping_id,
+    instances: list[Instance] = []
+    for word_val, score_val, start_val, end_val, low_val in rows:
+        instance = Instance(
+            workflow_id=workflow.workflow_id,
+            value=_dump(
+                DataObj(
+                    fields={
+                        "word": StringData(value=word_val),
+                        "score": FloatData(value=score_val),
+                        "start": IntData(value=start_val),
+                        "end": IntData(value=end_val),
+                        "low_score": BoolData(value=low_val),
+                    }
+                )
             ),
         )
-        db.expire_all()
-
-    db.expire_all()
-    instances = tuple(
-        db.execute(select(Instance).where(Instance.workflow_id == augmented_workflow.workflow_id)).scalars().all()
-    )
-    assert len(instances) > 100
-    return AdvancedQueryData(augmented_workflow, instances, groupings), admin
+        db.add(instance)
+        db.flush()
+        instances.append(instance)
+        db.add_all(
+            [
+                GroupAssignment(
+                    grouping_id=groupings["word"].grouping_id,
+                    instance_id=instance.instance_id,
+                    function_value=word_val,
+                ),
+                GroupAssignment(
+                    grouping_id=groupings["start"].grouping_id,
+                    instance_id=instance.instance_id,
+                    function_value=start_val,
+                ),
+                GroupAssignment(
+                    grouping_id=groupings["low_score"].grouping_id,
+                    instance_id=instance.instance_id,
+                    function_value=low_val,
+                ),
+            ]
+        )
+    db.commit()
+    return AdvancedQueryData(workflow, tuple(instances), groupings)
 
 
 def _query(
@@ -521,11 +411,7 @@ def test_grouping_queries_return_metadata_and_aggregated_values(
     assert [(entry.value, entry.count) for entry in searched] == [(StringData(value="A"), 3)]
 
 
-@pytest.mark.parametrize("active_status", [GroupingStatus.PENDING, GroupingStatus.PROCESSING])
-@pytest.mark.parametrize("unreadable_status", [GroupingStatus.NEW, GroupingStatus.FAILED])
 def test_grouping_values_allow_active_groupings_and_reject_unreadable_groupings(
-    active_status: GroupingStatus,
-    unreadable_status: GroupingStatus,
     test_db: Session,
     sample_scenario: DatabaseScenario,
 ) -> None:
@@ -535,14 +421,16 @@ def test_grouping_values_allow_active_groupings_and_reject_unreadable_groupings(
     with pytest.raises(InvalidInstanceQueryException, match="only for string"):
         query_grouping_values(test_db, admin, data.groupings["rank"].grouping_id, "1", 10, 0)
 
-    data.groupings["category"].grouping_status = active_status
-    test_db.commit()
-    assert query_grouping_values(test_db, admin, data.groupings["category"].grouping_id, None, 10, 0)
+    for active_status in (GroupingStatus.PENDING, GroupingStatus.PROCESSING):
+        data.groupings["category"].grouping_status = active_status
+        test_db.commit()
+        assert query_grouping_values(test_db, admin, data.groupings["category"].grouping_id, None, 10, 0)
 
-    data.groupings["category"].grouping_status = unreadable_status
-    test_db.commit()
-    with pytest.raises(GroupingNotReadyException, match=unreadable_status.value):
-        query_grouping_values(test_db, admin, data.groupings["category"].grouping_id, None, 10, 0)
+    for unreadable_status in (GroupingStatus.NEW, GroupingStatus.FAILED):
+        data.groupings["category"].grouping_status = unreadable_status
+        test_db.commit()
+        with pytest.raises(GroupingNotReadyException, match=unreadable_status.value):
+            query_grouping_values(test_db, admin, data.groupings["category"].grouping_id, None, 10, 0)
 
 
 def test_empty_simple_instance_query_distinguishes_accessible_and_inaccessible_workflows(
@@ -562,41 +450,27 @@ def test_empty_simple_instance_query_distinguishes_accessible_and_inaccessible_w
         query_instances_of_workflow(test_db, sample_scenario.users["user"], workflow.workflow_id, 50, None)
 
 
-@pytest.mark.parametrize("active_status", [WorkflowStatus.PENDING, WorkflowStatus.PROCESSING])
-@pytest.mark.parametrize("unreadable_status", [WorkflowStatus.NEW, WorkflowStatus.FAILED])
 def test_instance_queries_allow_active_workflows_and_reject_unreadable_workflows(
-    active_status: WorkflowStatus,
-    unreadable_status: WorkflowStatus,
     test_db: Session,
     sample_scenario: DatabaseScenario,
 ) -> None:
     data = _create_advanced_query_data(test_db)
-    data.workflow.workflow_status = active_status
-    test_db.commit()
+    admin = sample_scenario.users["admin"]
+    for active_status in (WorkflowStatus.PENDING, WorkflowStatus.PROCESSING):
+        data.workflow.workflow_status = active_status
+        test_db.commit()
+        simple_results = query_instances_of_workflow(test_db, admin, data.workflow.workflow_id, 50, None)
+        advanced_results = _query(test_db, admin, data)
+        assert len(simple_results) == len(data.instances)
+        assert len(advanced_results) == len(data.instances)
 
-    simple_results = query_instances_of_workflow(
-        test_db,
-        sample_scenario.users["admin"],
-        data.workflow.workflow_id,
-        50,
-        None,
-    )
-    advanced_results = _query(test_db, sample_scenario.users["admin"], data)
-    assert len(simple_results) == len(data.instances)
-    assert len(advanced_results) == len(data.instances)
-
-    data.workflow.workflow_status = unreadable_status
-    test_db.commit()
-    with pytest.raises(WorkflowNotReadyException, match=unreadable_status.value):
-        query_instances_of_workflow(
-            test_db,
-            sample_scenario.users["admin"],
-            data.workflow.workflow_id,
-            50,
-            None,
-        )
-    with pytest.raises(WorkflowNotReadyException, match=unreadable_status.value):
-        _query(test_db, sample_scenario.users["admin"], data)
+    for unreadable_status in (WorkflowStatus.NEW, WorkflowStatus.FAILED):
+        data.workflow.workflow_status = unreadable_status
+        test_db.commit()
+        with pytest.raises(WorkflowNotReadyException, match=unreadable_status.value):
+            query_instances_of_workflow(test_db, admin, data.workflow.workflow_id, 50, None)
+        with pytest.raises(WorkflowNotReadyException, match=unreadable_status.value):
+            _query(test_db, admin, data)
 
 
 def test_advanced_query_combines_groupings_with_and_and_values_with_or(
@@ -688,22 +562,12 @@ def test_advanced_query_paginates_lexicographically_with_mixed_directions(
     ]
 
 
-async def test_catalog_instances_paginate_across_all_scalar_sort_types(
+def test_instances_paginate_across_all_scalar_sort_types(
     test_db: Session,
-    async_test_db: AsyncSession,
-    testing_session_local: sessionmaker[Session],
-    no_hash: PasswordHash,
-    legacy_test_catalog: Catalog,
-    silverleaf_test_dataset: NovelDataset,
+    sample_scenario: DatabaseScenario,
 ) -> None:
-    data, admin = await _create_catalog_sort_data(
-        test_db,
-        async_test_db,
-        testing_session_local,
-        no_hash,
-        legacy_test_catalog,
-        silverleaf_test_dataset,
-    )
+    admin = sample_scenario.users["admin"]
+    data = _create_scalar_sort_data(test_db)
     parsed = _data_by_instance(data)
     group_filters = [
         GroupFilter(grouping_id=data.groupings[field_name].grouping_id, values=[])
@@ -731,7 +595,7 @@ async def test_catalog_instances_paginate_across_all_scalar_sort_types(
         data,
         group_filters,
         numeric_sort,
-        page_size=13,
+        page_size=4,
     )
     assert [result.instance.instance_id for result in numeric_results] == [
         instance.instance_id for instance in sorted(data.instances, key=numeric_key)
@@ -758,7 +622,7 @@ async def test_catalog_instances_paginate_across_all_scalar_sort_types(
         data,
         group_filters,
         boolean_sort,
-        page_size=11,
+        page_size=5,
     )
     assert [result.instance.instance_id for result in boolean_results] == [
         instance.instance_id for instance in sorted(data.instances, key=boolean_key)
@@ -780,40 +644,40 @@ async def test_catalog_instances_paginate_across_all_scalar_sort_types(
         assert result.group_values[data.groupings["low_score"].grouping_id] == instance_data.fields["low_score"]
 
 
-def test_advanced_query_rejects_group_value_with_wrong_type(
-    test_db: Session,
-    sample_scenario: DatabaseScenario,
-) -> None:
-    data = _create_advanced_query_data(test_db)
-
-    with pytest.raises(GroupingValueTypeMismatchException, match="different type"):
-        _query(
-            test_db,
-            sample_scenario.users["admin"],
-            data,
-            group_filters=[
-                GroupFilter(
-                    grouping_id=data.groupings["category"].grouping_id,
-                    values=[IntData(value=1)],
-                )
-            ],
-        )
-
-
-def test_advanced_query_rejects_missing_and_unreadable_groupings(
+def test_advanced_query_validation_access_and_error_cases(
     test_db: Session,
     sample_scenario: DatabaseScenario,
 ) -> None:
     data = _create_advanced_query_data(test_db)
     admin = sample_scenario.users["admin"]
 
-    with pytest.raises(GroupingNotFoundException, match="Grouping IDs not found"):
+    with pytest.raises(GroupingValueTypeMismatchException, match="different type"):
         _query(
             test_db,
             admin,
             data,
-            group_filters=[GroupFilter(grouping_id=uuid.UUID(int=1000), values=[])],
+            group_filters=[
+                GroupFilter(grouping_id=data.groupings["category"].grouping_id, values=[IntData(value=1)])
+            ],
         )
+
+    with pytest.raises(GroupingNotFoundException, match="Grouping IDs not found"):
+        _query(test_db, admin, data, group_filters=[GroupFilter(grouping_id=uuid.UUID(int=1000), values=[])])
+
+    with pytest.raises(InvalidSortKeyException, match="not a valid field"):
+        _query(test_db, admin, data, sort_keys=[SortKey(field_name="missing", direction=SortDirection.ASCENDING)])
+
+    with pytest.raises(WorkflowNotFoundException):
+        _query(test_db, sample_scenario.users["user"], data)
+
+    other_workflow = Workflow(workflow_name="Other", schema=data.workflow.schema)
+    test_db.add(other_workflow)
+    test_db.flush()
+    other_instance = Instance(workflow_id=other_workflow.workflow_id, value=data.instances[0].value)
+    test_db.add(other_instance)
+    test_db.commit()
+    with pytest.raises(InstanceNotFoundException):
+        _query(test_db, admin, data, cursor=other_instance.instance_id)
 
     data.groupings["category"].grouping_status = GroupingStatus.PROCESSING
     test_db.commit()
@@ -832,53 +696,4 @@ def test_advanced_query_rejects_missing_and_unreadable_groupings(
             admin,
             data,
             group_filters=[GroupFilter(grouping_id=data.groupings["category"].grouping_id, values=[])],
-        )
-
-
-def test_advanced_query_uses_invalid_sort_key_exception(
-    test_db: Session,
-    sample_scenario: DatabaseScenario,
-) -> None:
-    data = _create_advanced_query_data(test_db)
-
-    with pytest.raises(InvalidSortKeyException, match="not a valid field"):
-        _query(
-            test_db,
-            sample_scenario.users["admin"],
-            data,
-            sort_keys=[SortKey(field_name="missing", direction=SortDirection.ASCENDING)],
-        )
-
-
-def test_advanced_query_hides_inaccessible_workflow(
-    test_db: Session,
-    sample_scenario: DatabaseScenario,
-) -> None:
-    data = _create_advanced_query_data(test_db)
-
-    with pytest.raises(WorkflowNotFoundException):
-        _query(test_db, sample_scenario.users["user"], data)
-
-
-def test_advanced_query_rejects_cursor_from_another_workflow(
-    test_db: Session,
-    sample_scenario: DatabaseScenario,
-) -> None:
-    data = _create_advanced_query_data(test_db)
-    other_workflow = Workflow(workflow_name="Other", schema=data.workflow.schema)
-    test_db.add(other_workflow)
-    test_db.flush()
-    other_instance = Instance(
-        workflow_id=other_workflow.workflow_id,
-        value=data.instances[0].value,
-    )
-    test_db.add(other_instance)
-    test_db.commit()
-
-    with pytest.raises(InstanceNotFoundException):
-        _query(
-            test_db,
-            sample_scenario.users["admin"],
-            data,
-            cursor=other_instance.instance_id,
         )

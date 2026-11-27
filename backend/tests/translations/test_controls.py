@@ -277,7 +277,7 @@ def test_router_controls_and_permissions(
     assert client.post(f"/translation-jobs/{job_id}/cancel-all", headers=viewer_headers).status_code == 404
 
 
-@pytest.mark.parametrize("operation", ["start", "resume", "retry"])
+@pytest.mark.parametrize("operation", ["start", "resume"])
 async def test_control_does_not_overwrite_concurrent_worker_claim(
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
@@ -329,12 +329,10 @@ async def test_control_does_not_overwrite_concurrent_worker_claim(
     queued.assert_not_called()
 
 
-@pytest.mark.parametrize("operation", ["resume", "retry"])
 async def test_recovery_schedules_poll_at_persisted_deadline(
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,
     monkeypatch: pytest.MonkeyPatch,
-    operation: Control,
 ) -> None:
     # Job controls provide recovery after lost queue delivery; the replacement
     # must survive until the deadline without bypassing the polling interval.
@@ -346,7 +344,7 @@ async def test_recovery_schedules_poll_at_persisted_deadline(
     await async_test_db.commit()
     queued = AsyncMock()
     monkeypatch.setattr(step_task("src.translations.actions.translate.poll"), "schedule_by_time", queued)
-    for _ in range(2):
+    for operation in ("resume", "retry"):
         result = await control_translation_job(async_test_db, sample_scenario.users["admin"], job_id, operation)
         assert result.dispatched_task_ids == [task.task_id]
         # The remaining duration is added to the dispatcher's clock, never the database

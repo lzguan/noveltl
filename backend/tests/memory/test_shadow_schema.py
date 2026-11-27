@@ -54,8 +54,8 @@ def _load_migration(name: str) -> ModuleType:
     return migration
 
 
-@pytest.fixture
-def shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
+@pytest.fixture(scope="module")
+def _module_shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
     migration = _load_migration("f8b2c4d6e901_add_memory_shadow_tables")
     provenance = _load_migration("74a4a10cb394_add_memory_chapter_provenance")
     with test_engine.begin() as connection:
@@ -87,6 +87,16 @@ def shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
             provenance.upgrade_shadow_tables()
             yield data
         connection.execute(DropSchema(schema, cascade=True))
+
+
+@pytest.fixture
+def shadow_schema(_module_shadow_schema: ShadowSchema) -> Iterator[ShadowSchema]:
+    savepoint = _module_shadow_schema.connection.begin_nested()
+    try:
+        yield _module_shadow_schema
+    finally:
+        if savepoint.is_active:
+            savepoint.rollback()
 
 
 def _workspace(data: ShadowSchema) -> UUID:
@@ -193,13 +203,12 @@ def test_workspaces_require_a_real_task(shadow_schema: ShadowSchema):
         )
 
 
-@pytest.mark.parametrize("payload_index", range(5))
-def test_tombstones_can_stage_deletions(shadow_schema: ShadowSchema, payload_index: int):
+def test_tombstones_can_stage_deletions(shadow_schema: ShadowSchema):
     data = shadow_schema
     workspace_id = _workspace(data)
-    model, payload = _payloads(data)[payload_index]
-    data.connection.execute(insert(model).values(workspace_id=workspace_id, deleted=True, **payload))
-    assert data.connection.scalar(select(model.deleted)) is True
+    for model, payload in _payloads(data):
+        data.connection.execute(insert(model).values(workspace_id=workspace_id, deleted=True, **payload))
+        assert data.connection.scalar(select(model.deleted)) is True
 
 
 def test_active_term_names_are_unique_but_tombstones_allow_replacement(shadow_schema: ShadowSchema):
@@ -215,27 +224,27 @@ def test_active_term_names_are_unique_but_tombstones_allow_replacement(shadow_sc
     assert data.connection.scalar(select(func.count()).select_from(ShadowTerm).where(~ShadowTerm.deleted)) == 1
 
 
-@pytest.mark.parametrize("invalid", ["interval", "translation", "title", "rule", "summary"])
-def test_shadow_payloads_keep_published_content_constraints(shadow_schema: ShadowSchema, invalid: str):
+def test_shadow_payloads_keep_published_content_constraints(shadow_schema: ShadowSchema):
     data = shadow_schema
     workspace_id = _workspace(data)
-    payloads = _payloads(data)
-    if invalid in ("interval", "summary"):
-        model, payload = payloads[0]
-        if invalid == "interval":
-            payload["memory_end_num"] = payload["memory_start_num"]
+    for invalid in ("interval", "translation", "title", "rule", "summary"):
+        payloads = _payloads(data)
+        if invalid in ("interval", "summary"):
+            model, payload = payloads[0]
+            if invalid == "interval":
+                payload["memory_end_num"] = payload["memory_start_num"]
+            else:
+                payload.update(memory_type=MemoryType.SUMMARY, plugin_name="continuity")
+                data.connection.execute(insert(model).values(workspace_id=workspace_id, **payload))
+                payload["memory_id"] = uuid4()
+        elif invalid == "translation":
+            model, payload = payloads[3]
+            payload["translation"] = "   "
         else:
-            payload.update(memory_type=MemoryType.SUMMARY, plugin_name="continuity")
+            model, payload = payloads[4]
+            payload[invalid] = "   "
+        with pytest.raises(IntegrityError), data.connection.begin_nested():
             data.connection.execute(insert(model).values(workspace_id=workspace_id, **payload))
-            payload["memory_id"] = uuid4()
-    elif invalid == "translation":
-        model, payload = payloads[3]
-        payload["translation"] = "   "
-    else:
-        model, payload = payloads[4]
-        payload[invalid] = "   "
-    with pytest.raises(IntegrityError), data.connection.begin_nested():
-        data.connection.execute(insert(model).values(workspace_id=workspace_id, **payload))
 
 
 def test_downgrade_refuses_workspaces_and_preserves_parent_tables(shadow_schema: ShadowSchema):

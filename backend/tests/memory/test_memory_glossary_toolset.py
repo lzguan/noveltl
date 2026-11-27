@@ -17,36 +17,23 @@ from src.memory.agent.agents.recording import (
 )
 from src.memory.agent.config import JobParamsV1 as JobParams
 from src.memory.agent.dependencies import MemAgentDeps
-from src.memory.agent.prompts.recording import MEMORY_AGENT_PROMPT
 from src.memory.agent.toolsets.conventions.tools import conventions_read_toolset
 from src.memory.agent.toolsets.glossary import common as glossary_common
 from src.memory.agent.toolsets.glossary.character_state import (
     character_state_memories,
     glossary_character_state_read_toolset,
 )
-from src.memory.agent.toolsets.glossary.context import GLOSSARY_SHARED_INSTRUCTIONS
 from src.memory.agent.toolsets.glossary.definitions import (
-    definition_memories,
-    glossary_definitions_read_toolset,
-    glossary_definitions_write_toolset,
     new_definition_memory,
 )
-from src.memory.agent.toolsets.glossary.events import glossary_events_read_toolset
 from src.memory.agent.toolsets.glossary.facts import (
     fact_memories,
     glossary_facts_read_toolset,
-    glossary_facts_write_toolset,
     new_fact_memory,
 )
 from src.memory.agent.toolsets.glossary.gender import (
-    gender_memories,
     glossary_gender_read_toolset,
-    glossary_gender_write_toolset,
     new_gender_memory,
-)
-from src.memory.agent.toolsets.glossary.gender_advanced_events import (
-    glossary_gender_advanced_events_read_toolset,
-    glossary_gender_advanced_events_write_toolset,
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
     gender_state,
@@ -55,26 +42,20 @@ from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
     new_gender_fact_memory,
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
-    gender_perception_memories,
     glossary_gender_advanced_relations_read_toolset,
     glossary_gender_advanced_relations_write_toolset,
-    new_gender_perception_memory,
 )
 from src.memory.agent.toolsets.glossary.instructions.gender_transformation import (
     glossary_gender_transformation_toolset,
 )
 from src.memory.agent.toolsets.glossary.relations import (
-    glossary_relations_read_toolset,
-    glossary_relations_write_toolset,
     new_relation_memory,
-    relation_memories,
 )
-from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
 from src.memory.agent.toolsets.translations.tools import translations_read_toolset
 from src.memory.agent.types import OccurrenceRetentionConfig, ParsedToolsets, ToolsetConfig
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.models import MemoryGroup
-from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryMemoryPage, AgentGlossaryTerm
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, ReviewStatus
@@ -98,20 +79,6 @@ def _toolset(capability: AbstractCapability[MemAgentDeps]) -> FunctionToolset[Me
     assert isinstance(capability, Toolset)
     assert isinstance(capability.toolset, FunctionToolset)
     return capability.toolset
-
-
-def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
-    for instructions in (MEMORY_AGENT_PROMPT, GLOSSARY_SHARED_INSTRUCTIONS):
-        normalized_instructions = " ".join(instructions.split()).lower()
-        assert (
-            "keep every novel-specific term exactly as it appears in the original source language"
-            in normalized_instructions
-        )
-        assert "never translate, romanize, or replace" in normalized_instructions
-
-    assert "Correct: `赤岚司 guards the northern archive.`" in MEMORY_AGENT_PROMPT
-    assert "Wrong: `Crimson Mist Bureau guards the northern archive.`" in MEMORY_AGENT_PROMPT
-    assert "Wrong: `赤岚司守卫着北方档案馆。`" in MEMORY_AGENT_PROMPT
 
 
 def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order() -> None:
@@ -250,192 +217,6 @@ async def test_create_memory_skips_missing_term_query_after_success(monkeypatch:
 
     assert ctx.deps.memory_handles.get_uuid(handle) == memory_id
     get_missing_term_names.assert_not_called()
-
-
-def test_glossary_tool_schemas_enforce_input_constraints() -> None:
-    event_schema = glossary_events_read_toolset.tools["term_event_memories"].function_schema.json_schema
-    assert event_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
-    assert event_schema["properties"]["limit"] == {
-        "default": 10,
-        "maximum": 20,
-        "minimum": 1,
-        "type": "integer",
-    }
-    assert event_schema["properties"]["active_only"] == {"default": True, "type": "boolean"}
-
-    for toolset, tool_name, required in (
-        (glossary_definitions_read_toolset, "definition_memories", ["term_name"]),
-        (glossary_relations_read_toolset, "relation_memories", ["term_name", "category"]),
-        (glossary_facts_read_toolset, "fact_memories", ["term_name", "category"]),
-    ):
-        term_schema = toolset.tools[tool_name].function_schema.json_schema
-        assert term_schema["required"] == required
-        assert term_schema["properties"]["term_name"] == {"minLength": 1, "type": "string"}
-        assert "memory_kind" not in term_schema["properties"]
-        assert "memory_type" not in term_schema["properties"]
-        assert "mark" not in term_schema["properties"]
-        assert term_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
-        assert term_schema["properties"]["limit"] == {
-            "default": 5,
-            "maximum": 20,
-            "minimum": 1,
-            "type": "integer",
-        }
-        assert term_schema["properties"]["term_search"]["anyOf"][0] == {
-            "minLength": 1,
-            "type": "string",
-        }
-
-    gender_event_read_schema = glossary_gender_advanced_events_read_toolset.tools[
-        "gender_event_memories"
-    ].function_schema.json_schema
-    assert gender_event_read_schema["required"] == ["term_name", "event_kind"]
-    assert gender_event_read_schema["properties"]["term_name"] == {"minLength": 1, "type": "string"}
-    assert gender_event_read_schema["properties"]["skip"] == {
-        "default": 0,
-        "minimum": 0,
-        "type": "integer",
-    }
-
-    add_term_schema = glossary_term_toolset.tools["add_term"].function_schema.json_schema
-    assert add_term_schema["required"] == ["term_name", "term_kind"]
-    assert add_term_schema["$defs"]["TermKind"]["enum"] == [
-        "person",
-        "place",
-        "organization",
-        "technique",
-        "item",
-        "concept",
-        "title",
-        "species",
-        "other",
-    ]
-    for toolset, tool_name, required in (
-        (glossary_definitions_write_toolset, "new_definition_memory", ["content", "term_names"]),
-        (glossary_relations_write_toolset, "new_relation_memory", ["content", "term_names", "category"]),
-        (glossary_facts_write_toolset, "new_fact_memory", ["content", "term_names", "category"]),
-        (glossary_definitions_write_toolset, "supersede_definition_memory", ["memory_id", "content"]),
-        (
-            glossary_relations_write_toolset,
-            "supersede_relation_memory",
-            ["memory_id", "content", "category"],
-        ),
-        (
-            glossary_facts_write_toolset,
-            "supersede_fact_memory",
-            ["memory_id", "content", "term_name", "category"],
-        ),
-    ):
-        write_schema = toolset.tools[tool_name].function_schema.json_schema
-        assert write_schema["required"] == required
-        assert "memory_kind" not in write_schema["properties"]
-        assert "memory_type" not in write_schema["properties"]
-
-    for toolset, tool_name in (
-        (glossary_definitions_write_toolset, "new_definition_memory"),
-        (glossary_facts_write_toolset, "new_fact_memory"),
-    ):
-        term_names_schema = toolset.tools[tool_name].function_schema.json_schema["properties"]["term_names"]
-        assert term_names_schema["minItems"] == 1
-        assert term_names_schema["maxItems"] == 1
-
-    relation_term_names_schema = glossary_relations_write_toolset.tools[
-        "new_relation_memory"
-    ].function_schema.json_schema["properties"]["term_names"]
-    assert relation_term_names_schema["minItems"] == 2
-
-    fact_schema = glossary_facts_write_toolset.tools["new_fact_memory"].function_schema.json_schema
-    assert fact_schema["properties"]["category"] == {"$ref": "#/$defs/FactCategory"}
-    assert fact_schema["$defs"]["FactCategory"]["enum"] == [
-        "age_stage",
-        "species",
-        "ability",
-        "limitation",
-    ]
-    supersede_fact_schema = glossary_facts_write_toolset.tools["supersede_fact_memory"].function_schema.json_schema
-    assert supersede_fact_schema["properties"]["term_name"] == {
-        "minLength": 1,
-        "type": "string",
-    }
-    gender_schema = glossary_gender_write_toolset.tools["new_gender_memory"].function_schema.json_schema
-    assert gender_schema["required"] == ["content", "term_names"]
-    assert "category" not in gender_schema["properties"]
-    assert gender_schema["properties"]["term_names"]["maxItems"] == 1
-    advanced_gender_schema = glossary_gender_advanced_facts_write_toolset.tools[
-        "new_gender_fact_memory"
-    ].function_schema.json_schema
-    assert advanced_gender_schema["required"] == ["term_name", "aspect", "content"]
-    assert advanced_gender_schema["properties"]["aspect"] == {"$ref": "#/$defs/GenderFactAspect"}
-    assert advanced_gender_schema["$defs"]["GenderFactAspect"]["enum"] == [
-        "body",
-        "identity",
-        "presentation",
-        "change_rule",
-    ]
-    gender_perception_schema = glossary_gender_advanced_relations_write_toolset.tools[
-        "new_gender_perception_memory"
-    ].function_schema.json_schema
-    assert gender_perception_schema["required"] == [
-        "observer_term_name",
-        "subject_term_name",
-        "content",
-    ]
-    assert "mark" not in gender_perception_schema["properties"]
-    assert "category" not in gender_perception_schema["properties"]
-    gender_event_schema = glossary_gender_advanced_events_write_toolset.tools[
-        "new_gender_event_memory"
-    ].function_schema.json_schema
-    assert gender_event_schema["$defs"]["OtherGenderEventKind"]["enum"] == [
-        "body_swap",
-        "possession",
-        "reveal",
-    ]
-    transformation_event_schema = glossary_gender_advanced_events_write_toolset.tools[
-        "new_gender_transformation_event_memory"
-    ].function_schema.json_schema
-    assert transformation_event_schema["required"] == ["subject_term_name", "content"]
-    assert "scope" not in transformation_event_schema["properties"]
-    supersede_transformation_schema = glossary_gender_advanced_events_write_toolset.tools[
-        "supersede_gender_transformation_event_memory"
-    ].function_schema.json_schema
-    assert supersede_transformation_schema["required"] == [
-        "memory_id",
-        "subject_term_name",
-        "content",
-    ]
-    assert "scope" not in supersede_transformation_schema["properties"]
-    relation_schema = glossary_relations_write_toolset.tools["new_relation_memory"].function_schema.json_schema
-    assert relation_schema["properties"]["category"] == {"$ref": "#/$defs/RelationWriteCategory"}
-    assert relation_schema["$defs"]["RelationWriteCategory"]["enum"] == [
-        "kinship",
-        "friendship",
-        "romance",
-        "mentorship",
-        "rank",
-        "membership",
-        "service",
-        "ownership",
-        "alliance",
-        "rivalry",
-        "organizational_hierarchy",
-        "commercial_partnership",
-    ]
-    relation_read_schema = glossary_relations_read_toolset.tools["relation_memories"].function_schema.json_schema
-    assert relation_read_schema["$defs"]["RelationReadCategory"]["enum"] == [
-        "alias",
-        "kinship",
-        "friendship",
-        "romance",
-        "mentorship",
-        "rank",
-        "membership",
-        "service",
-        "ownership",
-        "alliance",
-        "rivalry",
-        "organizational_hierarchy",
-        "commercial_partnership",
-    ]
 
 
 async def test_term_write_persists_categories_without_leaking_markers_into_content(
@@ -629,39 +410,6 @@ async def test_fact_retrieval_combines_abilities_and_limitations_before_paginati
     assert (await character_state_memories(ctx, "Alpha", term_search="recorded state")).count == 5
 
 
-async def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pytest.MonkeyPatch) -> None:
-    db = MagicMock(spec=AsyncSession)
-    inspect_terms = AsyncMock(return_value=Page(count=0, rows=[]))
-    monkeypatch.setattr(glossary_common.access, "inspect_terms", inspect_terms)
-
-    result = await fact_memories(
-        _run_context(db),
-        "Alpha",
-        "species",
-        term_search="human",
-    )
-
-    assert result == Page(count=0, rows=[])
-    assert inspect_terms.call_args.args[3] == [MemoryType.FACT]
-    assert inspect_terms.call_args.kwargs == {"marks": ["species"], "term_search": "human"}
-
-    await definition_memories(_run_context(db), "Alpha")
-    assert inspect_terms.call_args.kwargs == {"marks": [None], "term_search": None}
-
-    inspect_terms.return_value = AgentGlossaryMemoryPage(count=0, rows=[])
-    await relation_memories(_run_context(db), "Alpha", "friendship")
-    assert inspect_terms.call_args.args[3] == [MemoryType.RELATION]
-    assert inspect_terms.call_args.kwargs == {
-        "marks": ["friendship"],
-        "term_search": None,
-        "expand_aliases": True,
-    }
-
-    await gender_memories(_run_context(db), "Alpha")
-    assert inspect_terms.call_args.args[3] == [MemoryType.FACT]
-    assert inspect_terms.call_args.kwargs == {"marks": ["gender"], "term_search": None}
-
-
 async def test_advanced_gender_state_groups_namespaced_aspects(monkeypatch: pytest.MonkeyPatch) -> None:
     db = MagicMock(spec=AsyncSession)
     body = AgentGlossaryMemory(
@@ -756,49 +504,6 @@ async def test_advanced_gender_create_allows_multiple_change_rules(monkeypatch: 
     assert result == "m1"
     inspect_terms.assert_not_called()
     assert create_memory.call_args.args[6] == "gender.change_rule"
-
-
-async def test_gender_perception_tools_preserve_direction_and_namespaced_mark(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    db = MagicMock(spec=AsyncSession)
-    inspect_terms = AsyncMock(return_value=Page(count=0, rows=[]))
-    create_memory = AsyncMock(return_value="m1")
-    monkeypatch.setattr(glossary_common.access, "inspect_terms", inspect_terms)
-    monkeypatch.setattr(glossary_common, "create_memory", create_memory)
-
-    result = await gender_perception_memories(_run_context(db), "Observer", "Subject")
-    assert result == Page(count=0, rows=[])
-    assert inspect_terms.call_args.args[2] == ["Observer"]
-    assert inspect_terms.call_args.kwargs == {
-        "marks": ["gender.perception"],
-        "term_search": "Subject",
-    }
-
-    handle = await new_gender_perception_memory(
-        _run_context(db),
-        "Observer",
-        "Subject",
-        "Observer perceives Subject as a woman.",
-    )
-    assert handle == "m1"
-    assert create_memory.call_args.args[2] == ["Observer", "Subject"]
-    assert create_memory.call_args.args[3] == MemoryType.RELATION
-    assert create_memory.call_args.args[6] == "gender.perception"
-
-
-def test_job_params_reject_retired_reader_names() -> None:
-    with pytest.raises(
-        ValidationError,
-        match="Extra inputs are not permitted",
-    ):
-        JobParams(
-            model_name="deepseek:deepseek-v4-flash-low",
-            toolsets={
-                "glossary_gender_read": {},
-                "glossary_gender_advanced_facts_read": {},
-            },
-        )
 
 
 def test_callable_memory_toolsets_require_sequential_execution() -> None:

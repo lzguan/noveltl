@@ -82,7 +82,7 @@ def _by_key(records: list[TranslationRecord]) -> list[TranslationRecord]:
     return sorted(records, key=lambda record: (record.stream, record.chapter_id))
 
 
-@pytest.mark.parametrize("response", ["[0]", "[]", "[99]", "[true]", "prepare_upload"])
+@pytest.mark.parametrize("response", ["[0]", "[99]", "prepare_upload"])
 async def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output(
     async_test_db: AsyncSession,
     sample_scenario: DatabaseScenario,

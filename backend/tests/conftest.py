@@ -17,9 +17,11 @@ from src.filters.dependencies import get_dispatcher as get_filter_dispatcher
 from src.main import app
 from src.memory.agent.dispatch.dependencies import get_dispatcher as get_memory_agent_dispatcher
 from src.models import Base
+from src.publishing.dependencies import get_publish_dispatcher
 from test_support.autolabels import RecordingDispatcher, RecordingPromotionDispatcher
 from test_support.filters import RecordingRunnerDispatcher
 from test_support.memory import RecordingMemoryAgentDispatcher
+from test_support.publishing import RecordingPublishDispatcher
 
 SYNTHETIC_DATA_ROOT = Path(__file__).parent / "test_data" / "datasets" / "synthetic-smoke"
 LEGACY_DATA_ROOT = Path(__file__).parent / "test_data" / "datasets" / "legacy-corpora"
@@ -196,6 +198,11 @@ def recording_memory_agent_dispatcher() -> RecordingMemoryAgentDispatcher:
 
 
 @pytest.fixture
+def recording_publish_dispatcher() -> RecordingPublishDispatcher:
+    return RecordingPublishDispatcher()
+
+
+@pytest.fixture
 def client(
     test_db: Session,
     testing_async_session_local: async_sessionmaker[AsyncSession],
@@ -203,6 +210,7 @@ def client(
     recording_promotion_dispatcher: RecordingPromotionDispatcher,
     recording_runner_dispatcher: RecordingRunnerDispatcher,
     recording_memory_agent_dispatcher: RecordingMemoryAgentDispatcher,
+    recording_publish_dispatcher: RecordingPublishDispatcher,
 ):
     def override_get_db():
         yield test_db
@@ -217,6 +225,7 @@ def client(
     app.dependency_overrides[get_promotion_dispatcher] = lambda: recording_promotion_dispatcher
     app.dependency_overrides[get_filter_dispatcher] = lambda: recording_runner_dispatcher
     app.dependency_overrides[get_memory_agent_dispatcher] = lambda: recording_memory_agent_dispatcher
+    app.dependency_overrides[get_publish_dispatcher] = lambda: recording_publish_dispatcher
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

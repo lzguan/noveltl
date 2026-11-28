@@ -8852,6 +8852,653 @@
           }
         }
       }
+    },
+    "/publishing/targets": {
+      "get": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Read Publishing Targets",
+        "operationId": "read_publishing_targets_publishing_targets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublishingTargetRead"
+                  },
+                  "type": "array",
+                  "title": "Response Read Publishing Targets Publishing Targets Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Create Publishing Target",
+        "operationId": "create_publishing_target_publishing_targets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePublishingTarget"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishingTargetRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/publishing/targets/{targetId}/test": {
+      "post": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Test Publishing Target",
+        "operationId": "test_publishing_target_publishing_targets__targetId__test_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Targetid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishingTargetTestResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/publishing/targets/{targetId}": {
+      "patch": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Update Publishing Target",
+        "operationId": "update_publishing_target_publishing_targets__targetId__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Targetid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePublishingTarget"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishingTargetRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Delete Publishing Target",
+        "operationId": "delete_publishing_target_publishing_targets__targetId__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Targetid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/publishing/targets/{targetId}/members": {
+      "get": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Read Publishing Target Members",
+        "operationId": "read_publishing_target_members_publishing_targets__targetId__members_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Targetid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublishingTargetMemberRead"
+                  },
+                  "title": "Response Read Publishing Target Members Publishing Targets  Targetid  Members Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Upsert Publishing Target Member",
+        "operationId": "upsert_publishing_target_member_publishing_targets__targetId__members_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Targetid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPublishingTargetMember"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishingTargetMemberRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/publishing/targets/{targetId}/members/{userId}": {
+      "delete": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Delete Publishing Target Member",
+        "operationId": "delete_publishing_target_member_publishing_targets__targetId__members__userId__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Targetid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Userid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}/publish/status": {
+      "get": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Read Novel Publish Status",
+        "operationId": "read_novel_publish_status_novels__novelId__publish_status_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Targetid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NovelPublishStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}/publish": {
+      "post": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Start Novel Publish",
+        "operationId": "start_novel_publish_novels__novelId__publish_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishJobRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}/publish/jobs": {
+      "get": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Read Novel Publish Jobs",
+        "operationId": "read_novel_publish_jobs_novels__novelId__publish_jobs_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Targetid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublishJobRead"
+                  },
+                  "title": "Response Read Novel Publish Jobs Novels  Novelid  Publish Jobs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}/publish/jobs/{jobId}": {
+      "get": {
+        "tags": [
+          "publishing"
+        ],
+        "summary": "Read Novel Publish Job",
+        "operationId": "read_novel_publish_job_novels__novelId__publish_jobs__jobId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishJobRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10078,6 +10725,35 @@
         ],
         "title": "CreateNovel",
         "description": "Pydantic schema to validate forms for creating a novel.\n\nAttributes:\n    novel_title: Novel title to create.\n    novel_description: Description of novel we are creating.\n    novel_author: Author of novel we are creating.\n    novel_visibility: Visibility level of novel we are creating.\n    novel_type: Type of novel we are creating.\n    language_code: String code key to language of novel we are creating.\n    source_work_id: Optional source work to attach to. If None, a new source work is auto-created."
+      },
+      "CreatePublishingTarget": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "apiBaseUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Apibaseurl"
+          },
+          "apiKey": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Apikey"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "apiBaseUrl",
+          "apiKey"
+        ],
+        "title": "CreatePublishingTarget"
       },
       "CreateSourceWork": {
         "properties": {
@@ -12344,6 +13020,96 @@
         "title": "NovelContributor",
         "description": "Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id: UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role: Role of the user in the novel."
       },
+      "NovelPublishStatus": {
+        "properties": {
+          "existsOnReader": {
+            "type": "boolean",
+            "title": "Existsonreader"
+          },
+          "readerNovelId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readernovelid"
+          },
+          "publicUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publicurl"
+          },
+          "studioChapterCount": {
+            "type": "integer",
+            "title": "Studiochaptercount"
+          },
+          "readerChapterCount": {
+            "type": "integer",
+            "title": "Readerchaptercount"
+          },
+          "newCount": {
+            "type": "integer",
+            "title": "Newcount"
+          },
+          "outdatedCount": {
+            "type": "integer",
+            "title": "Outdatedcount"
+          },
+          "upToDateCount": {
+            "type": "integer",
+            "title": "Uptodatecount"
+          },
+          "readerOnlyCount": {
+            "type": "integer",
+            "title": "Readeronlycount"
+          },
+          "activeJob": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublishJobRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latestJob": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublishJobRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "existsOnReader",
+          "readerNovelId",
+          "publicUrl",
+          "studioChapterCount",
+          "readerChapterCount",
+          "newCount",
+          "outdatedCount",
+          "upToDateCount",
+          "readerOnlyCount",
+          "activeJob",
+          "latestJob"
+        ],
+        "title": "NovelPublishStatus"
+      },
       "NovelTermSearch": {
         "properties": {
           "totalChapters": {
@@ -12558,6 +13324,310 @@
           "glossary",
           "continuity"
         ]
+      },
+      "PublishJobRead": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Jobid"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "targetId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Targetid"
+          },
+          "initiatedByUserId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initiatedbyuserid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PublishJobStatus"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PublishMode"
+          },
+          "startChapter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startchapter"
+          },
+          "endChapter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endchapter"
+          },
+          "includeNovelMetadata": {
+            "type": "boolean",
+            "title": "Includenovelmetadata"
+          },
+          "cursorChapterNum": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursorchapternum"
+          },
+          "totalChapters": {
+            "type": "integer",
+            "title": "Totalchapters"
+          },
+          "syncedChapters": {
+            "type": "integer",
+            "title": "Syncedchapters"
+          },
+          "readerNovelId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readernovelid"
+          },
+          "publicUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publicurl"
+          },
+          "errorMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errormessage"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId",
+          "novelId",
+          "targetId",
+          "initiatedByUserId",
+          "status",
+          "mode",
+          "startChapter",
+          "endChapter",
+          "includeNovelMetadata",
+          "cursorChapterNum",
+          "totalChapters",
+          "syncedChapters",
+          "readerNovelId",
+          "publicUrl",
+          "errorMessage",
+          "createdAt",
+          "updatedAt",
+          "completedAt"
+        ],
+        "title": "PublishJobRead"
+      },
+      "PublishJobStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processing",
+          "completed",
+          "failed"
+        ]
+      },
+      "PublishMode": {
+        "type": "string",
+        "enum": [
+          "all",
+          "outdated",
+          "range"
+        ]
+      },
+      "PublishingTargetMemberRead": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "userName": {
+            "type": "string",
+            "title": "Username"
+          },
+          "role": {
+            "$ref": "#/components/schemas/TargetRole"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "userName",
+          "role",
+          "createdAt"
+        ],
+        "title": "PublishingTargetMemberRead"
+      },
+      "PublishingTargetRead": {
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Targetid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "apiBaseUrl": {
+            "type": "string",
+            "title": "Apibaseurl"
+          },
+          "publicBaseUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publicbaseurl"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "title": "Keyprefix"
+          },
+          "role": {
+            "$ref": "#/components/schemas/TargetRole"
+          },
+          "createdByUserId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdbyuserid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "targetId",
+          "name",
+          "apiBaseUrl",
+          "publicBaseUrl",
+          "keyPrefix",
+          "role",
+          "createdByUserId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "PublishingTargetRead"
+      },
+      "PublishingTargetTestResult": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "protocolVersion": {
+            "type": "integer",
+            "title": "Protocolversion"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "publicBaseUrl": {
+            "type": "string",
+            "title": "Publicbaseurl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "protocolVersion",
+          "name",
+          "publicBaseUrl"
+        ],
+        "title": "PublishingTargetTestResult"
       },
       "PythonAnnotationRequest": {
         "properties": {
@@ -13112,6 +14182,53 @@
           }
         }
       },
+      "StartPublishRequest": {
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Targetid"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/PublishMode",
+            "default": "outdated"
+          },
+          "startChapter": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startchapter"
+          },
+          "endChapter": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endchapter"
+          },
+          "includeNovelMetadata": {
+            "type": "boolean",
+            "title": "Includenovelmetadata",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "targetId"
+        ],
+        "title": "StartPublishRequest"
+      },
       "StreamType": {
         "type": "string",
         "enum": [
@@ -13229,6 +14346,13 @@
           "modelName"
         ],
         "title": "SummarizeConventionsStageConfig"
+      },
+      "TargetRole": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "publisher"
+        ]
       },
       "TermKind": {
         "type": "string",
@@ -15014,6 +16138,51 @@
         "title": "UpdateNovel",
         "description": "Pydantic schema to validate forms for updating a novel. The novel id will be passed into the router endpoint.\n\nAttributes:\n    novel_title: Updated title to novel we are updating. If None, then do not update.\n    novel_description: Updated description of novel we are updating. If None, then do not update.\n    novel_author: Author of novel we are creating. If None, then do not update.\n    novel_visibility: Updated visibility level of novel we are updating. If None, then do not update.\n    novel_type: Updated novel type. If None, then do not update."
       },
+      "UpdatePublishingTarget": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "apiBaseUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apibaseurl"
+          },
+          "apiKey": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apikey"
+          }
+        },
+        "type": "object",
+        "title": "UpdatePublishingTarget"
+      },
       "UpdateReviewStatus": {
         "properties": {
           "reviewStatus": {
@@ -15075,6 +16244,41 @@
           "isPublic"
         ],
         "title": "UpdatedChaptersVisibility"
+      },
+      "UpsertPublishingTargetMember": {
+        "properties": {
+          "userId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Userid"
+          },
+          "userName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "role": {
+            "$ref": "#/components/schemas/TargetRole",
+            "default": "publisher"
+          }
+        },
+        "type": "object",
+        "title": "UpsertPublishingTargetMember"
       },
       "User": {
         "properties": {

@@ -916,6 +916,29 @@ components:
       - languageCode
       title: CreateNovel
       type: object
+    CreatePublishingTarget:
+      properties:
+        apiBaseUrl:
+          maxLength: 2048
+          minLength: 1
+          title: Apibaseurl
+          type: string
+        apiKey:
+          maxLength: 1024
+          minLength: 1
+          title: Apikey
+          type: string
+        name:
+          maxLength: 255
+          minLength: 1
+          title: Name
+          type: string
+      required:
+      - name
+      - apiBaseUrl
+      - apiKey
+      title: CreatePublishingTarget
+      type: object
     CreateSourceWork:
       description: "Pydantic schema to validate forms for creating a source work.\n\
         \nAttributes:\n    source_work_title: Title of the source work to create.\n\
@@ -2603,6 +2626,62 @@ components:
       - contributorRole
       title: NovelContributor
       type: object
+    NovelPublishStatus:
+      properties:
+        activeJob:
+          anyOf:
+          - $ref: '#/components/schemas/PublishJobRead'
+          - type: 'null'
+        existsOnReader:
+          title: Existsonreader
+          type: boolean
+        latestJob:
+          anyOf:
+          - $ref: '#/components/schemas/PublishJobRead'
+          - type: 'null'
+        newCount:
+          title: Newcount
+          type: integer
+        outdatedCount:
+          title: Outdatedcount
+          type: integer
+        publicUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Publicurl
+        readerChapterCount:
+          title: Readerchaptercount
+          type: integer
+        readerNovelId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Readernovelid
+        readerOnlyCount:
+          title: Readeronlycount
+          type: integer
+        studioChapterCount:
+          title: Studiochaptercount
+          type: integer
+        upToDateCount:
+          title: Uptodatecount
+          type: integer
+      required:
+      - existsOnReader
+      - readerNovelId
+      - publicUrl
+      - studioChapterCount
+      - readerChapterCount
+      - newCount
+      - outdatedCount
+      - upToDateCount
+      - readerOnlyCount
+      - activeJob
+      - latestJob
+      title: NovelPublishStatus
+      type: object
     NovelTermSearch:
       description: "Pydantic schema for one page of a term search across a novel's\
         \ chapters.\n\nAttributes:\n    total_chapters: The number of chapters in\
@@ -2763,6 +2842,209 @@ components:
       - glossary
       - continuity
       type: string
+    PublishJobRead:
+      properties:
+        completedAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Completedat
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        cursorChapterNum:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Cursorchapternum
+        endChapter:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Endchapter
+        errorMessage:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Errormessage
+        includeNovelMetadata:
+          title: Includenovelmetadata
+          type: boolean
+        initiatedByUserId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Initiatedbyuserid
+        jobId:
+          format: uuid
+          title: Jobid
+          type: string
+        mode:
+          $ref: '#/components/schemas/PublishMode'
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        publicUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Publicurl
+        readerNovelId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Readernovelid
+        startChapter:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Startchapter
+        status:
+          $ref: '#/components/schemas/PublishJobStatus'
+        syncedChapters:
+          title: Syncedchapters
+          type: integer
+        targetId:
+          format: uuid
+          title: Targetid
+          type: string
+        totalChapters:
+          title: Totalchapters
+          type: integer
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+      required:
+      - jobId
+      - novelId
+      - targetId
+      - initiatedByUserId
+      - status
+      - mode
+      - startChapter
+      - endChapter
+      - includeNovelMetadata
+      - cursorChapterNum
+      - totalChapters
+      - syncedChapters
+      - readerNovelId
+      - publicUrl
+      - errorMessage
+      - createdAt
+      - updatedAt
+      - completedAt
+      title: PublishJobRead
+      type: object
+    PublishJobStatus:
+      enum:
+      - pending
+      - processing
+      - completed
+      - failed
+      type: string
+    PublishMode:
+      enum:
+      - all
+      - outdated
+      - range
+      type: string
+    PublishingTargetMemberRead:
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        role:
+          $ref: '#/components/schemas/TargetRole'
+        userId:
+          format: uuid
+          title: Userid
+          type: string
+        userName:
+          title: Username
+          type: string
+      required:
+      - userId
+      - userName
+      - role
+      - createdAt
+      title: PublishingTargetMemberRead
+      type: object
+    PublishingTargetRead:
+      properties:
+        apiBaseUrl:
+          title: Apibaseurl
+          type: string
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        createdByUserId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Createdbyuserid
+        keyPrefix:
+          title: Keyprefix
+          type: string
+        name:
+          title: Name
+          type: string
+        publicBaseUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Publicbaseurl
+        role:
+          $ref: '#/components/schemas/TargetRole'
+        targetId:
+          format: uuid
+          title: Targetid
+          type: string
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+      required:
+      - targetId
+      - name
+      - apiBaseUrl
+      - publicBaseUrl
+      - keyPrefix
+      - role
+      - createdByUserId
+      - createdAt
+      - updatedAt
+      title: PublishingTargetRead
+      type: object
+    PublishingTargetTestResult:
+      properties:
+        name:
+          title: Name
+          type: string
+        ok:
+          title: Ok
+          type: boolean
+        protocolVersion:
+          title: Protocolversion
+          type: integer
+        publicBaseUrl:
+          title: Publicbaseurl
+          type: string
+      required:
+      - ok
+      - protocolVersion
+      - name
+      - publicBaseUrl
+      title: PublishingTargetTestResult
+      type: object
     PythonAnnotationRequest:
       additionalProperties: false
       properties:
@@ -3157,6 +3439,35 @@ components:
       - $ref: '#/components/schemas/RecordMemoriesStageConfig'
       - $ref: '#/components/schemas/SummarizeConventionsStageConfig'
       - $ref: '#/components/schemas/TranslateTermsStageConfig'
+    StartPublishRequest:
+      properties:
+        endChapter:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Endchapter
+        includeNovelMetadata:
+          default: true
+          title: Includenovelmetadata
+          type: boolean
+        mode:
+          $ref: '#/components/schemas/PublishMode'
+          default: outdated
+        startChapter:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Startchapter
+        targetId:
+          format: uuid
+          title: Targetid
+          type: string
+      required:
+      - targetId
+      title: StartPublishRequest
+      type: object
     StreamType:
       enum:
       - chapter
@@ -3241,6 +3552,11 @@ components:
       - modelName
       title: SummarizeConventionsStageConfig
       type: object
+    TargetRole:
+      enum:
+      - owner
+      - publisher
+      type: string
     TermKind:
       enum:
       - person
@@ -4515,6 +4831,31 @@ components:
           - type: 'null'
       title: UpdateNovel
       type: object
+    UpdatePublishingTarget:
+      properties:
+        apiBaseUrl:
+          anyOf:
+          - maxLength: 2048
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Apibaseurl
+        apiKey:
+          anyOf:
+          - maxLength: 1024
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Apikey
+        name:
+          anyOf:
+          - maxLength: 255
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Name
+      title: UpdatePublishingTarget
+      type: object
     UpdateReviewStatus:
       properties:
         reviewStatus:
@@ -4554,6 +4895,26 @@ components:
       - updatedChapterNums
       - isPublic
       title: UpdatedChaptersVisibility
+      type: object
+    UpsertPublishingTargetMember:
+      properties:
+        role:
+          $ref: '#/components/schemas/TargetRole'
+          default: publisher
+        userId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Userid
+        userName:
+          anyOf:
+          - maxLength: 255
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Username
+      title: UpsertPublishingTargetMember
       type: object
     User:
       description: "Pydantic model for user information.\n\nAttributes:\n    user_id:\
@@ -9257,6 +9618,164 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Label Promotions
+  /novels/{novelId}/publish:
+    post:
+      operationId: start_novel_publish_novels__novelId__publish_post
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartPublishRequest'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishJobRead'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Start Novel Publish
+      tags:
+      - publishing
+  /novels/{novelId}/publish/jobs:
+    get:
+      operationId: read_novel_publish_jobs_novels__novelId__publish_jobs_get
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      - in: query
+        name: targetId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Targetid
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PublishJobRead'
+                title: Response Read Novel Publish Jobs Novels  Novelid  Publish Jobs
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Novel Publish Jobs
+      tags:
+      - publishing
+  /novels/{novelId}/publish/jobs/{jobId}:
+    get:
+      operationId: read_novel_publish_job_novels__novelId__publish_jobs__jobId__get
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishJobRead'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Novel Publish Job
+      tags:
+      - publishing
+  /novels/{novelId}/publish/status:
+    get:
+      operationId: read_novel_publish_status_novels__novelId__publish_status_get
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      - in: query
+        name: targetId
+        required: true
+        schema:
+          format: uuid
+          title: Targetid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NovelPublishStatus'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Novel Publish Status
+      tags:
+      - publishing
   /novels/{novelId}/term-search:
     get:
       description: "Endpoint for finding every occurrence of a term in the latest\
@@ -9362,6 +9881,245 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Novel With Contributors
+  /publishing/targets:
+    get:
+      operationId: read_publishing_targets_publishing_targets_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PublishingTargetRead'
+                title: Response Read Publishing Targets Publishing Targets Get
+                type: array
+          description: Successful Response
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Publishing Targets
+      tags:
+      - publishing
+    post:
+      operationId: create_publishing_target_publishing_targets_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePublishingTarget'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishingTargetRead'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Publishing Target
+      tags:
+      - publishing
+  /publishing/targets/{targetId}:
+    delete:
+      operationId: delete_publishing_target_publishing_targets__targetId__delete
+      parameters:
+      - in: path
+        name: targetId
+        required: true
+        schema:
+          format: uuid
+          title: Targetid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Delete Publishing Target
+      tags:
+      - publishing
+    patch:
+      operationId: update_publishing_target_publishing_targets__targetId__patch
+      parameters:
+      - in: path
+        name: targetId
+        required: true
+        schema:
+          format: uuid
+          title: Targetid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePublishingTarget'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishingTargetRead'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Update Publishing Target
+      tags:
+      - publishing
+  /publishing/targets/{targetId}/members:
+    get:
+      operationId: read_publishing_target_members_publishing_targets__targetId__members_get
+      parameters:
+      - in: path
+        name: targetId
+        required: true
+        schema:
+          format: uuid
+          title: Targetid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PublishingTargetMemberRead'
+                title: Response Read Publishing Target Members Publishing Targets  Targetid  Members
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Publishing Target Members
+      tags:
+      - publishing
+    post:
+      operationId: upsert_publishing_target_member_publishing_targets__targetId__members_post
+      parameters:
+      - in: path
+        name: targetId
+        required: true
+        schema:
+          format: uuid
+          title: Targetid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertPublishingTargetMember'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishingTargetMemberRead'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Upsert Publishing Target Member
+      tags:
+      - publishing
+  /publishing/targets/{targetId}/members/{userId}:
+    delete:
+      operationId: delete_publishing_target_member_publishing_targets__targetId__members__userId__delete
+      parameters:
+      - in: path
+        name: targetId
+        required: true
+        schema:
+          format: uuid
+          title: Targetid
+          type: string
+      - in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          title: Userid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Delete Publishing Target Member
+      tags:
+      - publishing
+  /publishing/targets/{targetId}/test:
+    post:
+      operationId: test_publishing_target_publishing_targets__targetId__test_post
+      parameters:
+      - in: path
+        name: targetId
+        required: true
+        schema:
+          format: uuid
+          title: Targetid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishingTargetTestResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Test Publishing Target
+      tags:
+      - publishing
   /register:
     post:
       description: "Endpoint for registering a new user. Client with registration\

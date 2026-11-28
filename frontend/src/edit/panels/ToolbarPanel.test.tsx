@@ -190,4 +190,30 @@ describe("ToolbarPanel", () => {
 		expect(nav.getByRole("button", { name: "Previous chapter" })).toBeEnabled();
 		expect(nav.getByRole("button", { name: "Next chapter" })).toBeDisabled();
 	});
+
+	it("shows the Publish button only when canPublish is true", () => {
+		const { rerender } = renderToolbar({ canPublish: false });
+		expect(screen.queryByRole("button", { name: "Publish" })).not.toBeInTheDocument();
+
+		rerender(
+			<ToolbarPanel
+				novelId="novel-1"
+				novelTitle="Test Novel"
+				novelVisibility={Visibility.NUMBER_0}
+				canPublish={true}
+				publicChapterCount={2}
+				totalChapterCount={5}
+				currentChapterNum={null}
+				hasPreviousChapter={false}
+				hasNextChapter={false}
+				mode="view"
+				loading={false}
+				onPreviousChapter={vi.fn()}
+				onNextChapter={vi.fn()}
+				onSetMode={vi.fn()}
+				onVisibilityUpdated={vi.fn()}
+			/>,
+		);
+		expect(screen.getByRole("button", { name: "Publish" })).toBeVisible();
+	});
 });

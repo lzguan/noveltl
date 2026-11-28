@@ -11,6 +11,9 @@ const EditNovelPage = lazy(() =>
 const EditDashboardPage = lazy(() =>
 	import("./edit/pages/EditDashboardPage").then((mod) => ({ default: mod.EditDashboardPage })),
 );
+const SettingsPage = lazy(() =>
+	import("./settings/pages/SettingsPage").then((mod) => ({ default: mod.SettingsPage })),
+);
 
 function App() {
 	return (
@@ -26,6 +29,14 @@ function App() {
 					element={
 						<Suspense fallback={<div>Loading...</div>}>
 							<EditDashboardPage />
+						</Suspense>
+					}
+				/>
+				<Route
+					path={AppRoutes.SETTINGS}
+					element={
+						<Suspense fallback={<div>Loading...</div>}>
+							<SettingsPage />
 						</Suspense>
 					}
 				/>

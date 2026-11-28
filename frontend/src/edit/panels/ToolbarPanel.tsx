@@ -1,11 +1,12 @@
 import { memo, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Eye, Pencil, Tag, type LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Pencil, Tag, Upload, type LucideIcon } from "lucide-react";
 import type { Visibility } from "@/api/models";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { EditorMode } from "../managers/editorManager";
 import { getVisibilityMeta, NovelVisibilityDialog } from "./NovelVisibilityDialog";
+import { PublishNovelDialog } from "./PublishNovelDialog";
 
 const MODES: { mode: EditorMode; label: string; icon: LucideIcon }[] = [
 	{ mode: "view", label: "View", icon: Eye },
@@ -19,6 +20,7 @@ export const ToolbarPanel = memo(function ToolbarPanel({
 	novelId,
 	novelTitle,
 	novelVisibility,
+	canPublish = false,
 	publicChapterCount,
 	totalChapterCount,
 	currentChapterNum,
@@ -36,6 +38,7 @@ export const ToolbarPanel = memo(function ToolbarPanel({
 	novelId: string;
 	novelTitle: string;
 	novelVisibility: Visibility;
+	canPublish?: boolean;
 	publicChapterCount: number;
 	totalChapterCount: number;
 	currentChapterNum: number | null;
@@ -49,6 +52,7 @@ export const ToolbarPanel = memo(function ToolbarPanel({
 	onVisibilityUpdated: (visibility: Visibility) => void;
 }) {
 	const [showVisibility, setShowVisibility] = useState(false);
+	const [showPublish, setShowPublish] = useState(false);
 	const visibilityMeta = getVisibilityMeta(novelVisibility);
 	const VisibilityIcon = visibilityMeta.icon;
 	const canGoPrevious = currentChapterNum !== null && hasPreviousChapter;
@@ -120,6 +124,18 @@ export const ToolbarPanel = memo(function ToolbarPanel({
 				</Button>
 			</div>
 			<div className="flex min-w-0 items-center justify-end gap-2">
+				{canPublish && (
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						className="h-7 shrink-0 gap-1.5 px-2.5 text-xs font-medium"
+						onClick={() => setShowPublish(true)}
+					>
+						<Upload className="size-3" aria-hidden="true" />
+						Publish
+					</Button>
+				)}
 				<Button
 					type="button"
 					variant="outline"
@@ -173,6 +189,13 @@ export const ToolbarPanel = memo(function ToolbarPanel({
 					totalChapterCount={totalChapterCount}
 					onUpdated={onVisibilityUpdated}
 					onClose={() => setShowVisibility(false)}
+				/>
+			)}
+			{canPublish && showPublish && (
+				<PublishNovelDialog
+					novelId={novelId}
+					novelTitle={novelTitle}
+					onClose={() => setShowPublish(false)}
 				/>
 			)}
 		</header>

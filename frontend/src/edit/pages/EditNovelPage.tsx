@@ -36,7 +36,7 @@ import { LeftPanel } from "../panels/LeftPanel";
 import { TranslationsPanel } from "../panels/translations/TranslationsPanel";
 import { RightPanel, type RightPanelTab } from "../panels/RightPanel";
 import { ToolbarPanel } from "../panels/ToolbarPanel";
-import type { Role } from "@/api/models/role";
+import { Role } from "@/api/models/role";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
 import { FiltersPanel } from "../panels/filters/FiltersPanel";
 import type { GotoText } from "../panels/termSearch/TermSearchPanel";
@@ -476,6 +476,7 @@ export function EditNovelPage() {
 				novelId={novel.novel.novelId}
 				novelTitle={novel.novel.novelTitle}
 				novelVisibility={novelVisibility ?? novel.novel.novelVisibility}
+				canPublish={novel.role !== Role.viewer}
 				publicChapterCount={publicChapterCount}
 				totalChapterCount={chapterState.chapterList.length}
 				currentChapterNum={activeChapterNum}

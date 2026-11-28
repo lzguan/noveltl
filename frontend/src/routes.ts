@@ -1,6 +1,7 @@
 export const AppRoutes = {
 	ROOT: "/",
 	LOGIN: "/login",
+	SETTINGS: "/settings",
 	EDIT: {
 		DASHBOARD: "/edit",
 		NOVELS: "/edit/novels",
@@ -10,6 +11,7 @@ export const AppRoutes = {
 } as const;
 
 export const routeTo = {
+	settings: () => "/settings",
 	edit: {
 		dashboard: () => "/edit",
 		novels: () => "/edit/novels",

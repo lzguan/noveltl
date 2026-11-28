@@ -12,8 +12,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { routeTo } from "@/routes";
-import { ChevronDownIcon, LogInIcon, LogOutIcon, UserIcon } from "lucide-react";
+import { AppRoutes, routeTo } from "@/routes";
+import { ChevronDownIcon, LogInIcon, LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
 
 function useAuth() {
 	const [user, setUser] = useState<User | null>(null);
@@ -83,6 +83,13 @@ function UserMenu() {
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-48">
 				<DropdownMenuLabel>{user.userName}</DropdownMenuLabel>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem asChild>
+					<Link to={AppRoutes.SETTINGS}>
+						<SettingsIcon className="size-4" />
+						Settings
+					</Link>
+				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={handleLogout}>
 					<LogOutIcon className="size-4" />

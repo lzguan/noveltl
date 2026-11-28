@@ -57,6 +57,8 @@ See [scripts.md](docs/scripts.md) for more scripts.
 
 Don't run the entire test suite unless your changes span multiple areas of the codebase.
 
+When generating database migrations, start with `uv --directory <service> run alembic revision --autogenerate -m "name of migration"` (e.g. `backend` or `reader-api`) and add any migration-specific logic from there.
+
 If any scripts time out, it may be due to lacking hardware. Confirm with the user before proceeding with a rerun.
 
 ## Other

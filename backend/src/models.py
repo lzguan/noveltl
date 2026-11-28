@@ -16,4 +16,5 @@ from .memory.plugins.conventions import models as _convention_models  # noqa: E4
 from .memory.plugins.glossary import models as _glossary_models  # noqa: E402, F401
 from .memory.plugins.translations import models as _term_translation_models  # noqa: E402, F401
 from .novels import models as _novel_models  # noqa: E402, F401
+from .publishing import models as _publishing_models  # noqa: E402, F401
 from .translations import models as _translation_models  # noqa: E402, F401

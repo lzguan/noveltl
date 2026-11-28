@@ -152,6 +152,8 @@ services:
       <<: [*db-env, *redis-env]
       UV_COMPILE_BYTECODE: false
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
+      ALLOW_PRIVATE_PUBLISH_TARGETS: ${ALLOW_PRIVATE_PUBLISH_TARGETS:-true}
+      PUBLISH_KEY_ENCRYPTION_SECRET: ${PUBLISH_KEY_ENCRYPTION_SECRET:-}
     volumes:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv
@@ -243,6 +245,8 @@ services:
       PYTHONDONTWRITEBYTECODE: "1"
       SECRET_KEY: ${SECRET_KEY}
       BACKEND_LOG_DIR: ${BACKEND_LOG_DIR:-logs}
+      ALLOW_PRIVATE_PUBLISH_TARGETS: ${ALLOW_PRIVATE_PUBLISH_TARGETS:-true}
+      PUBLISH_KEY_ENCRYPTION_SECRET: ${PUBLISH_KEY_ENCRYPTION_SECRET:-}
     # Reload against the bind-mounted source. The image CMD has no --reload,
     # since the same Dockerfile target builds the production image. Watching
     # only src keeps the reloader off the .venv volume; without watchfiles in

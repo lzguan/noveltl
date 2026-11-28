@@ -93,10 +93,19 @@ class InceptionSettings(BaseConfig):
     INCEPTION_API_URL: str = Field(default="https://api.inceptionlabs.ai/v1")
 
 
+class PublishingSettings(BaseConfig):
+    ALLOW_PRIVATE_PUBLISH_TARGETS: bool = Field(default=False)
+    PUBLISH_KEY_ENCRYPTION_SECRET: str = Field(default="")
+    PUBLISH_CHUNK_SIZE: int = Field(default=50, ge=1, le=200)
+    PUBLISH_STALE_SECONDS: int = Field(default=300, ge=30)
+    PUBLISH_HTTP_TIMEOUT_SECONDS: float = Field(default=30.0, gt=0)
+
+
 qwen_settings = QwenSettings()
 openrouter_settings = OpenRouterSettings()
 deepseek_settings = DeepseekSettings()
 inception_settings = InceptionSettings()
+publishing_settings = PublishingSettings()
 
 database_settings = DatabaseSettings()
 auth_settings = AuthSettings()

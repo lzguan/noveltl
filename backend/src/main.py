@@ -19,6 +19,7 @@ from src.memory.plugins.glossary.router import router as glossary_memory_router
 from src.memory.plugins.translations.router import router as term_translations_router
 from src.memory.router import router as memory_router
 from src.novels.router import router as novel_router
+from src.publishing.router import router as publishing_router
 from src.requests.router import router as requests_router
 from src.translations.router import router as translations_router
 
@@ -64,6 +65,7 @@ app.include_router(term_translations_router)
 app.include_router(conventions_router)
 app.include_router(memory_agent_router)
 app.include_router(translations_router)
+app.include_router(publishing_router)
 
 if __name__ == "__main__":
     import uvicorn

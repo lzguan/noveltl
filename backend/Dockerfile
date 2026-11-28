@@ -50,7 +50,7 @@ FROM base AS jobs-worker
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group taskiq --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
-CMD ["uv", "run", "--no-sync", "taskiq", "worker", "src.jobs.broker:broker", "src.autolabels.promotions.tasks"]
+CMD ["uv", "run", "--no-sync", "taskiq", "worker", "src.jobs.broker:broker", "src.autolabels.promotions.tasks", "src.publishing.tasks"]
 
 FROM base AS memory-agent-worker
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group agent --group taskiq --no-install-project

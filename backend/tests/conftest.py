@@ -10,14 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from src.autolabels.dependencies import get_dispatcher, get_promotion_dispatcher
-from src.database import get_async_db, get_db
 from src.datasets import Catalog, NovelDataset, load_catalog, load_config, load_novel
-from src.filters.dependencies import get_dispatcher as get_filter_dispatcher
-from src.main import app
-from src.memory.agent.dispatch.dependencies import get_dispatcher as get_memory_agent_dispatcher
-from src.models import Base
-from src.publishing.dependencies import get_publish_dispatcher
 from test_support.autolabels import RecordingDispatcher, RecordingPromotionDispatcher
 from test_support.filters import RecordingRunnerDispatcher
 from test_support.memory import RecordingMemoryAgentDispatcher
@@ -55,18 +48,6 @@ class FakeTTLCacheAsyncRedis:
         return True
 
 
-def pytest_configure(config: pytest.Config) -> None:
-    """Drop all tables in test_db before the test session begins."""
-    url = os.getenv("TEST_URL")
-    if url is None:
-        return
-    engine = create_engine(url)
-    with engine.connect() as conn:
-        conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
-        conn.commit()
-    engine.dispose()
-
-
 pytest_plugins = [
     "tests.fixtures.scenarios",
     "tests.fixtures.password_hash",
@@ -86,7 +67,7 @@ def ttl_cache_store() -> dict[str, str]:
     return {}
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def fake_ttl_cache_redis(monkeypatch: pytest.MonkeyPatch, ttl_cache_store: dict[str, str]) -> dict[str, Any]:
     import src.requests.cache as cache_module
 
@@ -131,15 +112,20 @@ def testing_async_session_local(test_async_engine: AsyncEngine) -> async_session
 
 @pytest.fixture(scope="session")
 def database_schema(test_engine: Engine) -> Generator[None]:
+    from src.models import Base
+
     with test_engine.begin() as connection:
+        connection.execute(text("DROP SCHEMA public CASCADE"))
+        connection.execute(text("CREATE SCHEMA public"))
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
-    Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
     yield
 
 
 @pytest.fixture(scope="session")
 def _table_reset_plan(database_schema: None, test_engine: Engine) -> tuple[list[str], TextClause]:
+    from src.models import Base
+
     preparer = test_engine.dialect.identifier_preparer
     formatted_tables = [preparer.format_table(t) for t in Base.metadata.sorted_tables]
     non_empty_query = text(
@@ -206,12 +192,20 @@ def recording_publish_dispatcher() -> RecordingPublishDispatcher:
 def client(
     test_db: Session,
     testing_async_session_local: async_sessionmaker[AsyncSession],
+    fake_ttl_cache_redis: dict[str, Any],
     recording_dispatcher: RecordingDispatcher,
     recording_promotion_dispatcher: RecordingPromotionDispatcher,
     recording_runner_dispatcher: RecordingRunnerDispatcher,
     recording_memory_agent_dispatcher: RecordingMemoryAgentDispatcher,
     recording_publish_dispatcher: RecordingPublishDispatcher,
-):
+) -> Generator[TestClient]:
+    from src.autolabels.dependencies import get_dispatcher, get_promotion_dispatcher
+    from src.database import get_async_db, get_db
+    from src.filters.dependencies import get_dispatcher as get_filter_dispatcher
+    from src.main import app
+    from src.memory.agent.dispatch.dependencies import get_dispatcher as get_memory_agent_dispatcher
+    from src.publishing.dependencies import get_publish_dispatcher
+
     def override_get_db():
         yield test_db
 
